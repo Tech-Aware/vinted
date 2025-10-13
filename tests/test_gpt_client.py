@@ -18,6 +18,14 @@ def generator() -> ListingGenerator:
     return ListingGenerator(model="test-model", api_key="test-key")
 
 
+def test_default_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_VISION_MODEL", raising=False)
+
+    generator = ListingGenerator(api_key="dummy")
+
+    assert generator.model == "gpt-4.1"
+
+
 def test_extract_title_and_description_with_markers(generator: ListingGenerator) -> None:
     content = (
         "TITRE\nMon super titre\nDESCRIPTION\nLigne 1\nLigne 2"
@@ -67,4 +75,4 @@ def test_build_messages_wraps_images_in_data_urls(generator: ListingGenerator) -
     assert messages[1]["role"] == "user"
     first_content = messages[1]["content"][0]
     assert first_content["type"] == "input_image"
-    assert first_content["image_url"] == {"url": images[0]}
+    assert first_content["image_url"] == images[0]

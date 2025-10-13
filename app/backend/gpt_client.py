@@ -28,7 +28,7 @@ class ListingGenerator:
     """Generate a Vinted listing from encoded images and user comments."""
 
     def __init__(self, *, model: str | None = None, api_key: str | None = None) -> None:
-        self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4o-mini")
+        self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4.1")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self._client: OpenAI | None = None
         logger.step("ListingGenerator initialisé avec le modèle %s", self.model)
@@ -79,7 +79,7 @@ class ListingGenerator:
             user_content.append(
                 {
                     "type": "input_image",
-                    "image_url": {"url": image},
+                    "image_url": image,
                 }
             )
         logger.info("%d image(s) intégrée(s) dans le prompt", len(images_list))
