@@ -54,3 +54,17 @@ def test_extract_title_and_description_strips_colons(generator: ListingGenerator
 
     assert title == "Mon titre"
     assert description == "Premiere ligne\nDeuxieme"
+
+
+def test_build_messages_wraps_images_in_data_urls(generator: ListingGenerator) -> None:
+    images = ["data:image/jpeg;base64,AAA"]
+    comment = "Tâches visibles"
+    template_prompt = "Template"
+
+    messages = generator._build_messages(images, comment, template_prompt)
+
+    assert messages[0]["role"] == "system"
+    assert messages[1]["role"] == "user"
+    first_content = messages[1]["content"][0]
+    assert first_content["type"] == "input_image"
+    assert first_content["image_url"] == {"url": images[0]}
