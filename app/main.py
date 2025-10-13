@@ -9,7 +9,7 @@ from typing import Iterable, List
 from tkinter import filedialog
 
 import customtkinter as ctk
-from PIL import Image, ImageTk, UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError
 
 from app.backend.gpt_client import ListingGenerator, ListingResult
 from app.backend.templates import ListingTemplateRegistry
@@ -22,14 +22,18 @@ class ImagePreview(ctk.CTkFrame):
         super().__init__(master)
         self._thumb_width = width
         self._max_height = height
-        self._preview_images: List[ImageTk.PhotoImage] = []
-        self._image_items: List[ImageTk.PhotoImage] = []
+        self._preview_images: List[ctk.CTkImage] = []
+        self._image_items: List[ctk.CTkImage] = []
         self._labels: List[ctk.CTkLabel] = []
         self._column_frames: List[ctk.CTkFrame] = []
-        self._relayout_pending = False
+        self._relayout_job: str | None = None
 
         self._scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll_frame.pack_forget()
+
+        self._gallery_container = ctk.CTkFrame(self._scroll_frame, fg_color="transparent")
+        self._gallery_container.grid(row=0, column=0, sticky="nwe")
+        self._scroll_frame.grid_columnconfigure(0, weight=1)
 
         self._empty_label = ctk.CTkLabel(self, text="Aucune image sélectionnée")
         self._empty_label.pack(expand=True, fill="both")
@@ -41,10 +45,9 @@ class ImagePreview(ctk.CTkFrame):
         self._schedule_relayout()
 
     def _schedule_relayout(self) -> None:
-        if self._relayout_pending:
-            return
-        self._relayout_pending = True
-        self.after_idle(self._relayout)
+        if self._relayout_job is not None:
+            self.after_cancel(self._relayout_job)
+        self._relayout_job = self.after(50, self._relayout)
 
     def _show_empty_state(self, message: str = "Aucune image sélectionnée") -> None:
         self._scroll_frame.pack_forget()
@@ -76,8 +79,9 @@ class ImagePreview(ctk.CTkFrame):
         for path in image_paths:
             try:
                 with Image.open(path) as pil_img:
+                    pil_img = pil_img.copy()
                     pil_img.thumbnail((self._thumb_width, self._max_height))
-                    tk_img = ImageTk.PhotoImage(pil_img)
+                    tk_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=pil_img.size)
             except (UnidentifiedImageError, OSError):
                 continue
             self._preview_images.append(tk_img)
@@ -92,9 +96,9 @@ class ImagePreview(ctk.CTkFrame):
         self._schedule_relayout()
 
     def _relayout(self) -> None:
-        if not self._relayout_pending:
-            # When invoked directly we ensure re-entrancy protection is enabled.
-            self._relayout_pending = True
+        if self._relayout_job is not None:
+            self.after_cancel(self._relayout_job)
+            self._relayout_job = None
 
         for label in self._labels:
             label.destroy()
@@ -104,8 +108,11 @@ class ImagePreview(ctk.CTkFrame):
             frame.destroy()
         self._column_frames.clear()
 
+        existing_cols, _ = self._gallery_container.grid_size()
+        for col in range(existing_cols):
+            self._gallery_container.grid_columnconfigure(col, weight=0)
+
         if not self._image_items:
-            self._relayout_pending = False
             return
 
         available_width = max(self._scroll_frame.winfo_width(), self.winfo_width())
@@ -120,9 +127,9 @@ class ImagePreview(ctk.CTkFrame):
 
         column_heights: List[int] = []
         for col in range(column_count):
-            frame = ctk.CTkFrame(self._scroll_frame, fg_color="transparent")
+            frame = ctk.CTkFrame(self._gallery_container, fg_color="transparent")
             frame.grid(row=0, column=col, sticky="n")
-            self._scroll_frame.grid_columnconfigure(col, weight=1, uniform="masonry")
+            self._gallery_container.grid_columnconfigure(col, weight=1, uniform="masonry")
             self._column_frames.append(frame)
             column_heights.append(0)
 
@@ -131,9 +138,11 @@ class ImagePreview(ctk.CTkFrame):
             label = ctk.CTkLabel(self._column_frames[target_col], image=image, text="")
             label.pack(padx=6, pady=6)
             self._labels.append(label)
-            column_heights[target_col] += image.height() + 12
-
-        self._relayout_pending = False
+            if isinstance(image, ctk.CTkImage):
+                _, image_height = image.cget("size")
+            else:
+                image_height = image.height()
+            column_heights[target_col] += image_height + 12
 
 
 
