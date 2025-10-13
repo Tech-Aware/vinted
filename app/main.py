@@ -89,11 +89,12 @@ class ImagePreview(ctk.CTkFrame):
             return
 
         self._show_gallery()
-        self._relayout_pending = False
-        self._relayout()
+        self._schedule_relayout()
 
     def _relayout(self) -> None:
-        self._relayout_pending = False
+        if not self._relayout_pending:
+            # When invoked directly we ensure re-entrancy protection is enabled.
+            self._relayout_pending = True
 
         for label in self._labels:
             label.destroy()
@@ -104,6 +105,7 @@ class ImagePreview(ctk.CTkFrame):
         self._column_frames.clear()
 
         if not self._image_items:
+            self._relayout_pending = False
             return
 
         available_width = max(self._scroll_frame.winfo_width(), self.winfo_width())
@@ -130,6 +132,8 @@ class ImagePreview(ctk.CTkFrame):
             label.pack(padx=6, pady=6)
             self._labels.append(label)
             column_heights[target_col] += image.height() + 12
+
+        self._relayout_pending = False
 
 
 
