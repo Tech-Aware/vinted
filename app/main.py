@@ -16,50 +16,121 @@ from app.backend.templates import ListingTemplateRegistry
 
 
 class ImagePreview(ctk.CTkFrame):
-    """Widget showing thumbnails for the selected images."""
+    """Widget showing thumbnails for the selected images in a responsive masonry grid."""
 
-    def __init__(self, master: ctk.CTkBaseClass, width: int = 320, height: int = 240) -> None:
+    def __init__(self, master: ctk.CTkBaseClass, width: int = 220, height: int = 320) -> None:
         super().__init__(master)
-        self._width = width
-        self._height = height
+        self._thumb_width = width
+        self._max_height = height
         self._preview_images: List[ImageTk.PhotoImage] = []
+        self._image_items: List[ImageTk.PhotoImage] = []
         self._labels: List[ctk.CTkLabel] = []
+        self._column_frames: List[ctk.CTkFrame] = []
+        self._relayout_pending = False
+
+        self._scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self._scroll_frame.pack_forget()
+
         self._empty_label = ctk.CTkLabel(self, text="Aucune image sélectionnée")
         self._empty_label.pack(expand=True, fill="both")
+
+        self.bind("<Configure>", self._on_configure, add="+")
+        self._scroll_frame.bind("<Configure>", self._on_configure, add="+")
+
+    def _on_configure(self, _event: object) -> None:
+        self._schedule_relayout()
+
+    def _schedule_relayout(self) -> None:
+        if self._relayout_pending:
+            return
+        self._relayout_pending = True
+        self.after_idle(self._relayout)
+
+    def _show_empty_state(self, message: str = "Aucune image sélectionnée") -> None:
+        self._scroll_frame.pack_forget()
+        self._empty_label.configure(text=message)
+        self._empty_label.pack(expand=True, fill="both")
+
+    def _show_gallery(self) -> None:
+        self._empty_label.pack_forget()
+        self._scroll_frame.pack(expand=True, fill="both")
 
     def update_images(self, paths: Iterable[Path]) -> None:
         for label in self._labels:
             label.destroy()
         self._labels.clear()
-        self._preview_images.clear()
 
-        if hasattr(self, "_empty_label"):
-            self._empty_label.pack_forget()
-            self._empty_label.destroy()
+        for frame in self._column_frames:
+            frame.destroy()
+        self._column_frames.clear()
+
+        self._preview_images.clear()
+        self._image_items.clear()
 
         image_paths = list(paths)
         if not image_paths:
-            self._empty_label = ctk.CTkLabel(self, text="Aucune image sélectionnée")
-            self._empty_label.pack(expand=True, fill="both")
+            self._show_empty_state()
             return
 
         displayed = 0
         for path in image_paths:
             try:
                 with Image.open(path) as pil_img:
-                    pil_img.thumbnail((self._width, self._height))
+                    pil_img.thumbnail((self._thumb_width, self._max_height))
                     tk_img = ImageTk.PhotoImage(pil_img)
             except (UnidentifiedImageError, OSError):
                 continue
-            label = ctk.CTkLabel(self, image=tk_img, text="")
-            label.pack(side="left", padx=6, pady=6)
             self._preview_images.append(tk_img)
-            self._labels.append(label)
+            self._image_items.append(tk_img)
             displayed += 1
 
         if not displayed:
-            self._empty_label = ctk.CTkLabel(self, text="Impossible de lire les images sélectionnées")
-            self._empty_label.pack(expand=True, fill="both")
+            self._show_empty_state("Impossible de lire les images sélectionnées")
+            return
+
+        self._show_gallery()
+        self._relayout_pending = False
+        self._relayout()
+
+    def _relayout(self) -> None:
+        self._relayout_pending = False
+
+        for label in self._labels:
+            label.destroy()
+        self._labels.clear()
+
+        for frame in self._column_frames:
+            frame.destroy()
+        self._column_frames.clear()
+
+        if not self._image_items:
+            return
+
+        available_width = max(self._scroll_frame.winfo_width(), self.winfo_width())
+        if available_width <= 1:
+            available_width = self._thumb_width + 24
+
+        estimated_column_width = self._thumb_width + 24
+        column_count = max(1, min(len(self._image_items), available_width // estimated_column_width))
+
+        if column_count == 0:
+            column_count = 1
+
+        column_heights: List[int] = []
+        for col in range(column_count):
+            frame = ctk.CTkFrame(self._scroll_frame, fg_color="transparent")
+            frame.grid(row=0, column=col, sticky="n")
+            self._scroll_frame.grid_columnconfigure(col, weight=1, uniform="masonry")
+            self._column_frames.append(frame)
+            column_heights.append(0)
+
+        for image in self._image_items:
+            target_col = min(range(column_count), key=lambda idx: column_heights[idx])
+            label = ctk.CTkLabel(self._column_frames[target_col], image=image, text="")
+            label.pack(padx=6, pady=6)
+            self._labels.append(label)
+            column_heights[target_col] += image.height() + 12
+
 
 
 def encode_images_to_base64(paths: Iterable[Path]) -> List[str]:
@@ -135,7 +206,14 @@ class VintedListingApp(ctk.CTk):
             title="Sélectionnez les photos de l'article",
             filetypes=[("Images", "*.png *.jpg *.jpeg *.webp")],
         )
-        self.selected_images = [Path(path) for path in file_paths]
+        if not file_paths:
+            return
+
+        for path in file_paths:
+            path_obj = Path(path)
+            if path_obj not in self.selected_images:
+                self.selected_images.append(path_obj)
+
         self.preview_frame.update_images(self.selected_images)
         self.status_label.configure(text=f"{len(self.selected_images)} photo(s) chargée(s)")
 
