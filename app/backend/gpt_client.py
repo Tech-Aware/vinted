@@ -62,11 +62,16 @@ class ListingGenerator:
         messages: List[dict] = [
             {
                 "role": "system",
-                "content": (
-                    "Tu es un assistant vendeur Vinted. Analyse les photos fournies, "
-                    "identifie les caractéristiques importantes (taille, couleur, défauts) et "
-                    "produis un titre et une description suivant le template donné."
-                ),
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": (
+                            "Tu es un assistant vendeur Vinted. Analyse les photos fournies, "
+                            "identifie les caractéristiques importantes (taille, couleur, défauts) et "
+                            "produis un titre et une description suivant le template donné."
+                        ),
+                    }
+                ],
             }
         ]
         user_content: List[dict] = []
@@ -74,19 +79,19 @@ class ListingGenerator:
             user_content.append(
                 {
                     "type": "input_image",
-                    "image_url": image,
+                    "image_url": {"url": image},
                 }
             )
         logger.info("%d image(s) intégrée(s) dans le prompt", len(images_list))
         if user_comment:
             user_content.append({
-                "type": "text",
+                "type": "input_text",
                 "text": f"Commentaires utilisateur (tâches/défauts): {user_comment}",
             })
             logger.info("Commentaire utilisateur ajouté au prompt (%d caractère(s))", len(user_comment))
         else:
             logger.info("Aucun commentaire utilisateur fourni")
-        user_content.append({"type": "text", "text": template_prompt})
+        user_content.append({"type": "input_text", "text": template_prompt})
         logger.step("Template de description ajouté au prompt")
         messages.append({"role": "user", "content": user_content})
         return messages
