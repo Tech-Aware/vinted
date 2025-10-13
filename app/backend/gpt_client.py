@@ -10,6 +10,11 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     OpenAI = None  # type: ignore
 
+from app.logger import get_logger
+
+
+logger = get_logger(__name__)
+
 
 @dataclass
 class ListingResult:
@@ -26,20 +31,24 @@ class ListingGenerator:
         self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4o-mini")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self._client: OpenAI | None = None
+        logger.step("ListingGenerator initialisé avec le modèle %s", self.model)
 
     @property
     def client(self) -> OpenAI:
         if OpenAI is None:
+            logger.error("Le package 'openai' est requis mais non disponible")
             raise RuntimeError(
                 "Le package 'openai' est requis. Installez-le via 'pip install openai'."
             )
         if self._client is None:
             api_key = self.api_key or os.getenv("OPENAI_API_KEY")
             if not api_key:
+                logger.error("Clé API OpenAI manquante")
                 raise RuntimeError(
                     "Clé API OpenAI manquante. Définissez la variable d'environnement OPENAI_API_KEY."
                 )
             self._client = OpenAI(api_key=api_key)
+            logger.success("Client OpenAI initialisé")
         return self._client
 
     def _build_messages(
@@ -48,6 +57,8 @@ class ListingGenerator:
         user_comment: str,
         template_prompt: str,
     ) -> List[dict]:
+        logger.step("Construction du prompt pour l'API OpenAI")
+        images_list = list(encoded_images)
         messages: List[dict] = [
             {
                 "role": "system",
@@ -59,30 +70,41 @@ class ListingGenerator:
             }
         ]
         user_content: List[dict] = []
-        for image in encoded_images:
+        for image in images_list:
             user_content.append({
                 "type": "input_image",
                 "image_base64": image,
             })
+        logger.info("%d image(s) intégrée(s) dans le prompt", len(images_list))
         if user_comment:
             user_content.append({
                 "type": "text",
                 "text": f"Commentaires utilisateur (tâches/défauts): {user_comment}",
             })
+            logger.info("Commentaire utilisateur ajouté au prompt (%d caractère(s))", len(user_comment))
+        else:
+            logger.info("Aucun commentaire utilisateur fourni")
         user_content.append({"type": "text", "text": template_prompt})
+        logger.step("Template de description ajouté au prompt")
         messages.append({"role": "user", "content": user_content})
         return messages
 
     def generate_listing(
         self, encoded_images: Iterable[str], user_comment: str, template_prompt: str
     ) -> ListingResult:
-        messages = self._build_messages(encoded_images, user_comment, template_prompt)
-        response = self.client.responses.create(
-            model=self.model,
-            input=messages,
-            max_output_tokens=700,
-            temperature=0.7,
-        )
+        logger.step("Début de la génération d'annonce")
+        try:
+            messages = self._build_messages(encoded_images, user_comment, template_prompt)
+            response = self.client.responses.create(
+                model=self.model,
+                input=messages,
+                max_output_tokens=700,
+                temperature=0.7,
+            )
+        except Exception:
+            logger.exception("Échec de l'appel à l'API OpenAI")
+            raise
+        logger.success("Réponse reçue depuis l'API OpenAI")
         content = ""
         output = getattr(response, "output", None)
         if output:
@@ -93,7 +115,9 @@ class ListingGenerator:
                         content += text
         if not content:
             content = getattr(response, "output_text", "").strip()
+        logger.step("Extraction du titre et de la description")
         title, description = self._extract_title_and_description(content)
+        logger.success("Titre et description extraits")
         return ListingResult(title=title, description=description)
 
     def _extract_title_and_description(self, raw_content: str) -> tuple[str, str]:

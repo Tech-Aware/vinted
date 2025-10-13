@@ -13,6 +13,10 @@ from PIL import Image, UnidentifiedImageError
 
 from app.backend.gpt_client import ListingGenerator, ListingResult
 from app.backend.templates import ListingTemplateRegistry
+from app.logger import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class ImagePreview(ctk.CTkFrame):
@@ -62,11 +66,13 @@ class ImagePreview(ctk.CTkFrame):
                     pil_img = pil_img.copy()
                     pil_img.thumbnail((self._thumb_width, self._max_height))
                     tk_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=pil_img.size)
-            except (UnidentifiedImageError, OSError):
+            except (UnidentifiedImageError, OSError) as exc:
+                logger.error("Impossible de créer la vignette pour %s", path, exc_info=exc)
                 continue
             self._preview_images.append(tk_img)
         if not self._preview_images:
             self._show_empty_state("Impossible de lire les images sélectionnées")
+            logger.error("Aucune vignette valide n'a pu être générée")
             return
 
         self._show_gallery()
@@ -74,14 +80,23 @@ class ImagePreview(ctk.CTkFrame):
             label = ctk.CTkLabel(self._gallery_container, image=image, text="")
             label.grid(row=index, column=0, sticky="ew", padx=8, pady=(8 if index == 0 else 4, 4))
             self._labels.append(label)
+        logger.success("%d vignette(s) générée(s)", len(self._preview_images))
 
 
 
 def encode_images_to_base64(paths: Iterable[Path]) -> List[str]:
-    encoded = []
+    logger.step("Encodage des images en base64")
+    encoded: List[str] = []
     for path in paths:
-        with Path(path).open("rb") as fh:
-            encoded.append(base64.b64encode(fh.read()).decode("utf-8"))
+        try:
+            with Path(path).open("rb") as fh:
+                encoded_data = base64.b64encode(fh.read()).decode("utf-8")
+        except OSError as exc:
+            logger.error("Lecture impossible pour %s", path, exc_info=exc)
+        else:
+            encoded.append(encoded_data)
+            logger.success("Image encodée: %s", path)
+    logger.info("%d image(s) encodée(s)", len(encoded))
     return encoded
 
 
@@ -90,6 +105,7 @@ class VintedListingApp(ctk.CTk):
 
     def __init__(self) -> None:
         super().__init__()
+        logger.step("Initialisation de l'application VintedListingApp")
         self.title("Assistant Listing Vinted")
         self.geometry("1024x720")
         self.resizable(True, True)
@@ -147,44 +163,57 @@ class VintedListingApp(ctk.CTk):
         self.status_label.grid(row=6, column=0, sticky="w", padx=12, pady=(8, 12))
 
     def select_images(self) -> None:
+        logger.step("Ouverture de la boîte de dialogue de sélection d'images")
         file_paths = filedialog.askopenfilenames(
             title="Sélectionnez les photos de l'article",
             filetypes=[("Images", "*.png *.jpg *.jpeg *.webp")],
         )
         if not file_paths:
+            logger.info("Aucune image sélectionnée")
             return
 
         for path in file_paths:
             path_obj = Path(path)
             if path_obj not in self.selected_images:
                 self.selected_images.append(path_obj)
+                logger.success("Image ajoutée: %s", path_obj)
 
         self.preview_frame.update_images(self.selected_images)
         self.status_label.configure(text=f"{len(self.selected_images)} photo(s) chargée(s)")
+        logger.info("%d image(s) actuellement sélectionnée(s)", len(self.selected_images))
 
     def generate_listing(self) -> None:
         if not self.selected_images:
             self.status_label.configure(text="Ajoutez au moins une image avant d'analyser")
+            logger.error("Analyse annulée: aucune image sélectionnée")
             return
 
         comment = self.comment_box.get("1.0", "end").strip()
         template_name = self.template_var.get()
+        logger.step("Récupération du template: %s", template_name)
         try:
             template_prompt = self.template_registry.get_prompt(template_name)
         except KeyError as exc:
             self.status_label.configure(text=str(exc))
+            logger.error("Template introuvable: %s", template_name, exc_info=exc)
             return
+        logger.success("Template '%s' récupéré", template_name)
         self.status_label.configure(text="Analyse en cours...")
+        logger.info("Lancement de l'analyse (%d image(s), %d caractère(s) de commentaire)", len(self.selected_images), len(comment))
 
         def worker() -> None:
             try:
+                logger.step("Thread d'analyse démarré")
                 encoded_images = encode_images_to_base64(self.selected_images)
                 result = self.generator.generate_listing(encoded_images, comment, template_prompt)
+                logger.success("Analyse terminée avec succès")
                 self.after(0, lambda: self.display_result(result))
             except Exception as exc:  # pragma: no cover - UI feedback
+                logger.exception("Erreur lors de la génération de l'annonce")
                 self.after(0, lambda err=exc: self.status_label.configure(text=f"Erreur: {err}"))
 
         threading.Thread(target=worker, daemon=True).start()
+        logger.step("Thread d'analyse lancé")
 
     def display_result(self, result: ListingResult) -> None:
         self.title_box.delete("1.0", "end")
@@ -194,6 +223,7 @@ class VintedListingApp(ctk.CTk):
         self.description_box.insert("1.0", result.description)
 
         self.status_label.configure(text="Titre et description générés")
+        logger.success("Résultat affiché à l'utilisateur")
 
     def reset(self) -> None:
         self.selected_images.clear()
@@ -203,11 +233,18 @@ class VintedListingApp(ctk.CTk):
         self.description_box.delete("1.0", "end")
         self.comment_box.insert("1.0", "Décrivez tâches et défauts...")
         self.status_label.configure(text="Prêt à analyser")
+        logger.step("Application réinitialisée")
 
 
 def main() -> None:
-    app = VintedListingApp()
-    app.mainloop()
+    logger.step("Démarrage de l'application principale")
+    try:
+        app = VintedListingApp()
+        app.mainloop()
+        logger.success("Application fermée proprement")
+    except Exception:
+        logger.exception("Erreur critique dans la boucle principale")
+        raise
 
 
 if __name__ == "__main__":
