@@ -93,19 +93,45 @@ class ListingGenerator:
                         content += text
         if not content:
             content = getattr(response, "output_text", "").strip()
-        content = content.strip()
+        title, description = self._extract_title_and_description(content)
+        return ListingResult(title=title, description=description)
+
+    def _extract_title_and_description(self, raw_content: str) -> tuple[str, str]:
+        content = raw_content.strip()
         title_marker = "TITRE"
         description_marker = "DESCRIPTION"
-        title = content
-        description = ""
-        if title_marker in content and description_marker in content:
-            _, rest = content.split(title_marker, 1)
-            title_text, desc_block = rest.split(description_marker, 1)
-            title = title_text.strip().replace("\n", " ")
-            description = desc_block.strip()
+
+        # Start by removing the optional markers to avoid splitting errors when the
+        # model omits one of them or returns unexpected formatting.
+        after_title = content
+        if title_marker in content:
+            title_parts = content.split(title_marker, 1)
+            if len(title_parts) == 2:
+                after_title = title_parts[1]
+            else:
+                after_title = title_parts[0]
+
+        title_text = after_title.strip()
+        description_text = ""
+
+        if description_marker in after_title:
+            desc_parts = after_title.split(description_marker, 1)
+            if len(desc_parts) == 2:
+                title_text, description_text = desc_parts
+            else:
+                title_text = desc_parts[0]
         else:
-            lines = content.splitlines()
+            lines = after_title.splitlines()
+            while lines and not lines[0].strip():
+                lines.pop(0)
             if lines:
-                title = lines[0].strip()
-                description = "\n".join(line.strip() for line in lines[1:]).strip()
-        return ListingResult(title=title, description=description)
+                title_text = lines[0]
+                description_text = "\n".join(lines[1:])
+
+        title = title_text.strip().replace("\n", " ")
+        if title.startswith(":"):
+            title = title[1:].strip()
+
+        description = "\n".join(line.strip() for line in description_text.splitlines()).strip()
+        description = description.lstrip(": ")
+        return title, description
