@@ -71,10 +71,12 @@ class ListingGenerator:
         ]
         user_content: List[dict] = []
         for image in images_list:
-            user_content.append({
-                "type": "input_image",
-                "image_base64": image,
-            })
+            user_content.append(
+                {
+                    "type": "input_image",
+                    "image_url": {"url": image},
+                }
+            )
         logger.info("%d image(s) intégrée(s) dans le prompt", len(images_list))
         if user_comment:
             user_content.append({
