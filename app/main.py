@@ -182,7 +182,7 @@ class VintedListingApp(ctk.CTk):
                 result = self.generator.generate_listing(encoded_images, comment, template_prompt)
                 self.after(0, lambda: self.display_result(result))
             except Exception as exc:  # pragma: no cover - UI feedback
-                self.after(0, lambda: self.status_label.configure(text=f"Erreur: {exc}"))
+                self.after(0, lambda err=exc: self.status_label.configure(text=f"Erreur: {err}"))
 
         threading.Thread(target=worker, daemon=True).start()
 
