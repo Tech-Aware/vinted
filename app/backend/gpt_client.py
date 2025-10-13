@@ -74,7 +74,7 @@ class ListingGenerator:
             user_content.append(
                 {
                     "type": "input_image",
-                    "image_url": {"url": image},
+                    "image_url": image,
                 }
             )
         logger.info("%d image(s) intégrée(s) dans le prompt", len(images_list))
