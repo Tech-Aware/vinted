@@ -16,17 +16,14 @@ from app.backend.templates import ListingTemplateRegistry
 
 
 class ImagePreview(ctk.CTkFrame):
-    """Widget showing thumbnails for the selected images in a responsive masonry grid."""
+    """Widget showing thumbnails for the selected images in a vertical scrollable list."""
 
     def __init__(self, master: ctk.CTkBaseClass, width: int = 220, height: int = 320) -> None:
         super().__init__(master)
         self._thumb_width = width
         self._max_height = height
         self._preview_images: List[ctk.CTkImage] = []
-        self._image_items: List[ctk.CTkImage] = []
         self._labels: List[ctk.CTkLabel] = []
-        self._column_frames: List[ctk.CTkFrame] = []
-        self._relayout_job: str | None = None
 
         self._scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll_frame.pack_forget()
@@ -34,20 +31,10 @@ class ImagePreview(ctk.CTkFrame):
         self._gallery_container = ctk.CTkFrame(self._scroll_frame, fg_color="transparent")
         self._gallery_container.grid(row=0, column=0, sticky="nwe")
         self._scroll_frame.grid_columnconfigure(0, weight=1)
+        self._gallery_container.grid_columnconfigure(0, weight=1)
 
         self._empty_label = ctk.CTkLabel(self, text="Aucune image sélectionnée")
         self._empty_label.pack(expand=True, fill="both")
-
-        self.bind("<Configure>", self._on_configure, add="+")
-        self._scroll_frame.bind("<Configure>", self._on_configure, add="+")
-
-    def _on_configure(self, _event: object) -> None:
-        self._schedule_relayout()
-
-    def _schedule_relayout(self) -> None:
-        if self._relayout_job is not None:
-            self.after_cancel(self._relayout_job)
-        self._relayout_job = self.after(50, self._relayout)
 
     def _show_empty_state(self, message: str = "Aucune image sélectionnée") -> None:
         self._scroll_frame.pack_forget()
@@ -59,23 +46,16 @@ class ImagePreview(ctk.CTkFrame):
         self._scroll_frame.pack(expand=True, fill="both")
 
     def update_images(self, paths: Iterable[Path]) -> None:
-        for label in self._labels:
-            label.destroy()
+        for widget in self._gallery_container.winfo_children():
+            widget.destroy()
         self._labels.clear()
-
-        for frame in self._column_frames:
-            frame.destroy()
-        self._column_frames.clear()
-
         self._preview_images.clear()
-        self._image_items.clear()
 
         image_paths = list(paths)
         if not image_paths:
             self._show_empty_state()
             return
 
-        displayed = 0
         for path in image_paths:
             try:
                 with Image.open(path) as pil_img:
@@ -85,64 +65,15 @@ class ImagePreview(ctk.CTkFrame):
             except (UnidentifiedImageError, OSError):
                 continue
             self._preview_images.append(tk_img)
-            self._image_items.append(tk_img)
-            displayed += 1
-
-        if not displayed:
+        if not self._preview_images:
             self._show_empty_state("Impossible de lire les images sélectionnées")
             return
 
         self._show_gallery()
-        self._schedule_relayout()
-
-    def _relayout(self) -> None:
-        if self._relayout_job is not None:
-            self.after_cancel(self._relayout_job)
-            self._relayout_job = None
-
-        for label in self._labels:
-            label.destroy()
-        self._labels.clear()
-
-        for frame in self._column_frames:
-            frame.destroy()
-        self._column_frames.clear()
-
-        existing_cols, _ = self._gallery_container.grid_size()
-        for col in range(existing_cols):
-            self._gallery_container.grid_columnconfigure(col, weight=0)
-
-        if not self._image_items:
-            return
-
-        available_width = max(self._scroll_frame.winfo_width(), self.winfo_width())
-        if available_width <= 1:
-            available_width = self._thumb_width + 24
-
-        estimated_column_width = self._thumb_width + 24
-        column_count = max(1, min(len(self._image_items), available_width // estimated_column_width))
-
-        if column_count == 0:
-            column_count = 1
-
-        column_heights: List[int] = []
-        for col in range(column_count):
-            frame = ctk.CTkFrame(self._gallery_container, fg_color="transparent")
-            frame.grid(row=0, column=col, sticky="n")
-            self._gallery_container.grid_columnconfigure(col, weight=1, uniform="masonry")
-            self._column_frames.append(frame)
-            column_heights.append(0)
-
-        for image in self._image_items:
-            target_col = min(range(column_count), key=lambda idx: column_heights[idx])
-            label = ctk.CTkLabel(self._column_frames[target_col], image=image, text="")
-            label.pack(padx=6, pady=6)
+        for index, image in enumerate(self._preview_images):
+            label = ctk.CTkLabel(self._gallery_container, image=image, text="")
+            label.grid(row=index, column=0, sticky="ew", padx=8, pady=(8 if index == 0 else 4, 4))
             self._labels.append(label)
-            if isinstance(image, ctk.CTkImage):
-                _, image_height = image.cget("size")
-            else:
-                image_height = image.height()
-            column_heights[target_col] += image_height + 12
 
 
 
@@ -161,6 +92,7 @@ class VintedListingApp(ctk.CTk):
         super().__init__()
         self.title("Assistant Listing Vinted")
         self.geometry("1024x720")
+        self.resizable(True, True)
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("dark-blue")
 
