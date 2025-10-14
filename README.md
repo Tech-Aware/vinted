@@ -92,7 +92,9 @@ renvoyée par l'API est affichée dans la barre de statut de l'application.
 
 ## Licence
 
-- **Code source** : distribué sous licence [Apache License 2.0](LICENSE).
+- **Code source** : distribué sous double licence [Apache License 2.0](LICENSE)
+  *ou* [MIT](LICENSE-MIT). Vous êtes libre de choisir la licence la mieux
+  adaptée à votre usage.
 - **Ressources non-code** (images, données, templates, documents non techniques) :
   sous licence [Creative Commons Attribution-NonCommercial 4.0 International](LICENSE-RESOURCES).
 
