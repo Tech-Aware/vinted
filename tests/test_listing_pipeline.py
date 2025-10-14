@@ -42,6 +42,35 @@ def test_listing_fields_from_dict_requires_all_keys() -> None:
         ListingFields.from_dict(payload)
 
 
+def test_listing_fields_enforces_sku_prefix_by_gender() -> None:
+    base_payload = {
+        "model": "501",
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "haute",
+        "cotton_pct": "99",
+        "elastane_pct": "1",
+        "color_main": "bleu",
+        "defects": "aucun défaut",
+    }
+
+    femme_payload = {**base_payload, "gender": "Femme", "sku": "JLF6"}
+    homme_payload = {**base_payload, "gender": "Homme", "sku": "JLH12"}
+    mix_payload = {**base_payload, "gender": "Mixte", "sku": "JLF3"}
+
+    assert ListingFields.from_dict(femme_payload).sku == "JLF6"
+    assert ListingFields.from_dict(homme_payload).sku == "JLH12"
+    assert ListingFields.from_dict(mix_payload).sku == "JLF3"
+
+    with pytest.raises(ValueError):
+        ListingFields.from_dict({**base_payload, "gender": "Femme", "sku": "JLH7"})
+
+    with pytest.raises(ValueError):
+        ListingFields.from_dict({**base_payload, "gender": "Homme", "sku": "JLF9"})
+
+
 def test_normalize_fit_terms_applies_double_wording() -> None:
     title_term, description_term, hashtag_term = normalize_fit_terms("Bootcut")
     assert title_term == "évasé"
@@ -84,6 +113,7 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert "évasé" in title
     assert "bootcut/évasé" in description
     assert "Mesure FR" not in description
+    assert "Fermeture zippée + bouton gravé Levi’s.\n\nTrès bon état général" in description
 
 
 def test_generator_parses_json_and_renders(template_registry: ListingTemplateRegistry) -> None:

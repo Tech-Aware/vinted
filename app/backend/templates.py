@@ -76,29 +76,45 @@ class ListingTemplate:
         else:
             size_sentence = f"Coupe {fit_description_text} à taille {rise}, pour une silhouette ajustée et confortable."
 
-        description_lines = [
+        first_paragraph_lines = [
             f"Jean Levi’s modèle {model} pour {gender}.",
             size_sentence,
         ]
         if size_note:
-            description_lines.append(size_note)
-        description_lines.extend(
+            first_paragraph_lines.append(size_note)
+
+        second_paragraph_lines = [
+            f"Coloris {color} légèrement délavé, très polyvalent et facile à assortir.",
+            f"Composition : {cotton} coton{elastane} pour une touche de stretch et plus de confort.",
+            "Fermeture zippée + bouton gravé Levi’s.",
+        ]
+
+        third_paragraph_lines = [
+            f"Très bon état général {defects} (voir photos)",
+            "📏 Mesures précises visibles en photo.",
+            "📦 Envoi rapide et soigné",
+        ]
+
+        fourth_paragraph_lines = [
+            f"✨ Retrouvez tous mes articles Levi’s à votre taille ici 👉 #durin31fr{fr_display or 'nc'}",
+            "💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !",
+        ]
+
+        hashtags_paragraph_lines = [
+            "#levis #jeanlevis "
+            f"#levis{gender.lower()} #{fit_hashtag_text}jean #jeandenim #{rise} #jean{color.lower().replace(' ', '')} #vintedfr "
+            f"#durin31fr{fr_display or 'nc'}",
+        ]
+
+        description = "\n\n".join(
             [
-                f"Coloris {color} légèrement délavé, très polyvalent et facile à assortir.",
-                f"Composition : {cotton} coton{elastane} pour une touche de stretch et plus de confort.",
-                "Fermeture zippée + bouton gravé Levi’s.",
-                f"Très bon état général {defects} (voir photos)",
-                "📏 Mesures précises visibles en photo.",
-                "📦 Envoi rapide et soigné",
-                f"✨ Retrouvez tous mes articles Levi’s à votre taille ici 👉 #durin31fr{fr_display or 'nc'}",
-                "💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !",
-                "",
-                "#levis #jeanlevis "
-                f"#levis{gender.lower()} #{fit_hashtag_text}jean #jeandenim #{rise} #jean{color.lower().replace(' ', '')} #vintedfr "
-                f"#durin31fr{fr_display or 'nc'}",
+                "\n".join(first_paragraph_lines),
+                "\n".join(second_paragraph_lines),
+                "\n".join(third_paragraph_lines),
+                "\n".join(fourth_paragraph_lines),
+                "\n".join(hashtags_paragraph_lines),
             ]
-        )
-        description = "\n".join(description_lines).strip()
+        ).strip()
 
         return title, description
 
@@ -121,7 +137,8 @@ class ListingTemplateRegistry:
                     - Matière = {{cotton_pct}}% coton (+ {{elastane_pct}}% élasthanne si présent)
                     - Genre = {{gender}}  (valeurs attendues : femme, homme, mix)
                     - Tâches et défauts = Ce qui doit impérativement apparaître dans l'annonce si identifié sur photos ou fournit en commentaire {{defects}}
-                    - SKU = {{sku}} (ex. JLF6)
+                    - SKU = {{sku}} (utilise JLF + numéro (1 à 3 chiffres) si jean femme, JLH + numéro si jean homme ;
+                      reprends exactement le numéro présent sur l’étiquette blanche visible sur le jean)
 
                     Utilise ce format :
                     TITRE
