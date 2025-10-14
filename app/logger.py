@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
-from typing import Dict
+from typing import Dict, TextIO
 
 
 # Custom log levels for workflow steps and successes.
@@ -60,6 +61,19 @@ def _register_custom_levels() -> None:
     _CUSTOM_LEVELS_REGISTERED = True
 
 
+def _resolve_stream() -> TextIO | None:
+    """Return a writable stream for logging, even without a console."""
+
+    stream = getattr(sys, "stdout", None)
+    if stream is not None:
+        return stream
+
+    try:
+        return open(os.devnull, "w", encoding="utf-8")
+    except OSError:
+        return None
+
+
 def get_logger(name: str) -> logging.Logger:
     """Return a module-level logger configured with colored console output."""
 
@@ -70,14 +84,19 @@ def get_logger(name: str) -> logging.Logger:
         return logger
 
     logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler(stream=sys.stdout)
-    use_color = bool(getattr(handler.stream, "isatty", lambda: False)())
-    formatter = _ColorFormatter(
-        "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
-        "%H:%M:%S",
-        use_color=use_color,
-    )
-    handler.setFormatter(formatter)
+    stream = _resolve_stream()
+    if stream is None:
+        handler: logging.Handler = logging.NullHandler()
+    else:
+        handler = logging.StreamHandler(stream=stream)
+        use_color = bool(getattr(handler.stream, "isatty", lambda: False)())
+        formatter = _ColorFormatter(
+            "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
+            "%H:%M:%S",
+            use_color=use_color,
+        )
+        handler.setFormatter(formatter)
+
     logger.addHandler(handler)
     logger.propagate = False
     return logger
