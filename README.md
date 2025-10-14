@@ -73,10 +73,36 @@ renvoyée par l'API est affichée dans la barre de statut de l'application.
 
 ## Déploiement sur Chromebook
 
-- Activez Linux (Crostini) et installez Python 3.10.
-- Copiez le projet et suivez les instructions d'installation.
-- Lancez `python -m app.main` depuis le terminal Linux. L'application s'exécute
-  dans une fenêtre dédiée.
+1. Activez Linux (Crostini) et installez un interpréteur Python récent (3.10 ou
+   supérieur) depuis le terminal Linux.
+2. Rendez les nouveaux scripts exécutables :
+
+   ```bash
+   chmod +x scripts/crostini/*.sh
+   ```
+
+3. Préparez l'environnement virtuel et installez les dépendances via :
+
+   ```bash
+   ./scripts/crostini/setup.sh
+   ```
+
+   Le script accepte un argument `--python /chemin/vers/python` si vous devez
+   cibler un interpréteur spécifique. À la fin, vérifiez que la variable
+   d'environnement `OPENAI_API_KEY` est exportée dans votre session Crostini :
+
+   ```bash
+   export OPENAI_API_KEY="votre_cle"
+   ```
+
+4. Lancez l'application depuis Crostini avec :
+
+   ```bash
+   ./scripts/crostini/run.sh
+   ```
+
+   Le script active automatiquement l'environnement virtuel `.venv` et relaie
+   les arguments supplémentaires passés à `run.sh` vers `python -m app.main`.
 
 ## Déploiement sur Windows
 
