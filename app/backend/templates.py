@@ -102,6 +102,14 @@ class ListingTemplate:
             third_paragraph_lines.append(
                 "Étiquettes composition/taille coupées pour plus de confort."
             )
+        elif not fields.size_label_visible:
+            third_paragraph_lines.append(
+                "Étiquette taille coupée pour plus de confort."
+            )
+        elif not fields.fabric_label_visible:
+            third_paragraph_lines.append(
+                "Étiquette composition coupée pour plus de confort."
+            )
 
         third_paragraph_lines.extend(
             [
