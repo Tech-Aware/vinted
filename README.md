@@ -84,6 +84,19 @@ renvoyée par l'API est affichée dans la barre de statut de l'application.
 - Ouvrez PowerShell, créez l'environnement virtuel et installez les dépendances.
 - Lancement identique : `python -m app.main`.
 
+### Créer un package MSIX signé
+
+Un exemple complet de chaîne de packaging (PyInstaller → MakeAppx → signature)
+est disponible dans `packaging/windows/msix/`. Le dossier contient :
+
+- un fichier `vinted_msix.spec` pour générer l'exécutable autonome avec PyInstaller ;
+- un manifeste `AppxManifest.xml` à personnaliser avec votre identité éditeur ;
+- un script PowerShell `SignMsix.ps1` pour signer le package `*.msix` avec `signtool` ;
+- une documentation pas-à-pas (`README.md`).
+
+Reportez-vous à cette documentation pour adapter l'identité, ajouter vos logos
+et signer le package avec votre certificat de signature de code.
+
 ## Limitations connues
 
 - Une connexion Internet est nécessaire pour l'appel OpenAI.
