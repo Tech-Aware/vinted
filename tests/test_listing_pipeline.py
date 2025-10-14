@@ -54,6 +54,8 @@ def test_listing_fields_enforces_sku_prefix_by_gender() -> None:
         "elastane_pct": "1",
         "color_main": "bleu",
         "defects": "aucun défaut",
+        "size_label_visible": True,
+        "fabric_label_visible": True,
     }
 
     femme_payload = {**base_payload, "gender": "Femme", "sku": "JLF6"}
@@ -69,6 +71,50 @@ def test_listing_fields_enforces_sku_prefix_by_gender() -> None:
 
     with pytest.raises(ValueError):
         ListingFields.from_dict({**base_payload, "gender": "Homme", "sku": "JLF9"})
+
+
+def test_listing_fields_rejects_unknown_defect_tags() -> None:
+    payload = {
+        "model": "501",
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "haute",
+        "cotton_pct": "99",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "bleu",
+        "defects": "aucun défaut",
+        "sku": "JLF6",
+        "defect_tags": ["unknown"],
+    }
+
+    with pytest.raises(ValueError):
+        ListingFields.from_dict(payload)
+
+
+def test_listing_fields_parses_visibility_flags() -> None:
+    payload = {
+        "model": "501",
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "haute",
+        "cotton_pct": "99",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "bleu",
+        "defects": "aucun défaut",
+        "sku": "JLF6",
+        "size_label_visible": "false",
+        "fabric_label_visible": 0,
+    }
+
+    fields = ListingFields.from_dict(payload)
+    assert fields.size_label_visible is False
+    assert fields.fabric_label_visible is False
 
 
 def test_normalize_fit_terms_applies_double_wording() -> None:
@@ -106,6 +152,9 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
             "color_main": "Bleu",
             "defects": "très légères traces d'usure",
             "sku": "JLF6",
+            "defect_tags": ["faded_crotch"],
+            "size_label_visible": False,
+            "fabric_label_visible": False,
         }
     )
 
@@ -113,7 +162,8 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert "évasé" in title
     assert "bootcut/évasé" in description
     assert "Mesure FR" not in description
-    assert "Fermeture zippée + bouton gravé Levi’s.\n\nTrès bon état général" in description
+    assert "Entrejambe légèrement délavée, voir photos" in description
+    assert "Étiquettes composition/taille coupées pour plus de confort." in description
 
 
 def test_generator_parses_json_and_renders(template_registry: ListingTemplateRegistry) -> None:
@@ -146,6 +196,9 @@ def test_generator_parses_json_and_renders(template_registry: ListingTemplateReg
             "color_main": "Bleu",
             "defects": "aucune anomalie",
             "sku": "JLF6",
+            "defect_tags": [],
+            "size_label_visible": True,
+            "fabric_label_visible": True,
         }
     }
 
@@ -167,4 +220,30 @@ def test_generator_parses_json_and_renders(template_registry: ListingTemplateReg
 
     assert "skinny" in result.title
     assert "skinny/slim" in result.description
+
+
+def test_template_render_falls_back_to_free_text(template_registry: ListingTemplateRegistry) -> None:
+    template = template_registry.get_template(template_registry.default_template)
+    fields = ListingFields.from_dict(
+        {
+            "model": "501",
+            "fr_size": "38",
+            "us_w": "28",
+            "us_l": "30",
+            "fit_leg": "bootcut",
+            "rise_class": "haute",
+            "cotton_pct": "99",
+            "elastane_pct": "1",
+            "gender": "Femme",
+            "color_main": "Bleu",
+            "defects": "usure légère sur la poche arrière",
+            "sku": "JLF6",
+            "defect_tags": [],
+            "size_label_visible": True,
+            "fabric_label_visible": True,
+        }
+    )
+
+    _title, description = template.render(fields)
+    assert "usure légère sur la poche arrière" in description
 

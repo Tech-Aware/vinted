@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional
+
+from app.backend.defect_catalog import known_defect_slugs
 
 
 FieldValue = Optional[str]
@@ -24,6 +27,9 @@ class ListingFields:
     gender: FieldValue
     color_main: FieldValue
     defects: FieldValue
+    defect_tags: Sequence[str]
+    size_label_visible: bool
+    fabric_label_visible: bool
     sku: FieldValue
 
     @classmethod
@@ -70,6 +76,16 @@ class ListingFields:
         color_main = normalize(data.get("color_main"))
         defects = normalize(data.get("defects"))
         sku_raw = normalize(data.get("sku"))
+
+        defect_tags_raw = data.get("defect_tags", [])
+        defect_tags: Sequence[str] = ListingFields._normalize_defect_tags(defect_tags_raw)
+
+        size_label_visible = ListingFields._normalize_visibility_flag(
+            data.get("size_label_visible"), default=True
+        )
+        fabric_label_visible = ListingFields._normalize_visibility_flag(
+            data.get("fabric_label_visible"), default=True
+        )
         sku = sku_raw.upper() if sku_raw else sku_raw
 
         if sku:
@@ -99,6 +115,9 @@ class ListingFields:
             gender=gender,
             color_main=color_main,
             defects=defects,
+            defect_tags=defect_tags,
+            size_label_visible=size_label_visible,
+            fabric_label_visible=fabric_label_visible,
             sku=sku,
         )
 
@@ -114,6 +133,7 @@ class ListingFields:
 
     @staticmethod
     def json_instruction() -> str:
+        slugs = ", ".join(known_defect_slugs()) or "aucun"
         return (
             "Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :\n"
             "{\n"
@@ -129,11 +149,56 @@ class ListingFields:
             "    \"gender\": \"genre ciblé (femme, homme, mixte)\",\n"
             "    \"color_main\": \"couleur principale\",\n"
             "    \"defects\": \"défauts ou taches identifiés\",\n"
+            f"    \"defect_tags\": \"liste de slugs parmi [{slugs}] à renseigner UNIQUEMENT si le défaut est visible sur les photos, même légèrement\",\n"
+            "    \"size_label_visible\": \"true/false : indique si une étiquette de taille est lisible sur les photos\",\n"
+            "    \"fabric_label_visible\": \"true/false : indique si une étiquette de composition est lisible sur les photos\",\n"
             "    \"sku\": \"SKU Levi's : JLF + numéro (1-3 chiffres) pour un jean femme,"
             " JLH + numéro (1-3 chiffres) pour un jean homme ; utilise le numéro de l'étiquette blanche\"\n"
             "  }\n"
             "}\n"
-            "N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne.\n"
-            "Indique la coupe en anglais dans 'fit_leg' (ex: bootcut, straight, slim)."
+            "N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.\n"
+            "Indique la coupe en anglais dans 'fit_leg' (ex: bootcut, straight, slim).\n"
+            "Renseigne size_label_visible et fabric_label_visible à false dès qu'aucune étiquette lisible n'est visible sur les photos."
         )
+
+    @staticmethod
+    def _normalize_defect_tags(raw_tags: Any) -> Sequence[str]:
+        if raw_tags is None:
+            return ()
+        if isinstance(raw_tags, str):
+            raw_iterable: Iterable[Any] = [raw_tags]
+        elif isinstance(raw_tags, Iterable) and not isinstance(raw_tags, (bytes, bytearray)):
+            raw_iterable = raw_tags
+        else:
+            raise ValueError("'defect_tags' doit être une liste de slugs")
+
+        slugs = []
+        valid_slugs = set(known_defect_slugs())
+        for item in raw_iterable:
+            if not isinstance(item, str):
+                raise ValueError("Chaque élément de 'defect_tags' doit être une chaîne")
+            slug = item.strip()
+            if not slug:
+                continue
+            if slug not in valid_slugs:
+                raise ValueError(f"Slug de défaut inconnu: {slug}")
+            slugs.append(slug)
+        return tuple(slugs)
+
+    @staticmethod
+    def _normalize_visibility_flag(value: Any, *, default: bool) -> bool:
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            if value in (0, 1):
+                return bool(value)
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in {"true", "vrai", "1"}:
+                return True
+            if lowered in {"false", "faux", "0"}:
+                return False
+        raise ValueError("Les indicateurs d'étiquette doivent être des booléens")
 
