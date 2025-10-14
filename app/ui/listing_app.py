@@ -111,7 +111,7 @@ class VintedListingApp(ctk.CTk):
         template_name = self.template_var.get()
         logger.step("Récupération du template: %s", template_name)
         try:
-            template_prompt = self.template_registry.get_prompt(template_name)
+            template = self.template_registry.get_template(template_name)
         except KeyError as exc:
             self.status_label.configure(text=str(exc))
             logger.error("Template introuvable: %s", template_name, exc_info=exc)
@@ -128,7 +128,7 @@ class VintedListingApp(ctk.CTk):
             try:
                 logger.step("Thread d'analyse démarré")
                 encoded_images = encode_images_to_base64(self.selected_images)
-                result = self.generator.generate_listing(encoded_images, comment, template_prompt)
+                result = self.generator.generate_listing(encoded_images, comment, template)
                 logger.success("Analyse terminée avec succès")
                 self.after(0, lambda: self.display_result(result))
             except Exception as exc:  # pragma: no cover - UI feedback
