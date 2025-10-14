@@ -166,6 +166,39 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert "Étiquettes composition/taille coupées pour plus de confort." in description
 
 
+def test_template_render_mentions_missing_labels_individually(
+    template_registry: ListingTemplateRegistry,
+) -> None:
+    template = template_registry.get_template(template_registry.default_template)
+    base_payload = {
+        "model": "501",
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "haute",
+        "cotton_pct": "99",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "Bleu",
+        "defects": "aucune anomalie",
+        "sku": "JLF6",
+        "defect_tags": [],
+    }
+
+    size_hidden = ListingFields.from_dict(
+        {**base_payload, "size_label_visible": False, "fabric_label_visible": True}
+    )
+    _title, size_description = template.render(size_hidden)
+    assert "Étiquette taille coupée pour plus de confort." in size_description
+
+    fabric_hidden = ListingFields.from_dict(
+        {**base_payload, "size_label_visible": True, "fabric_label_visible": False}
+    )
+    _title, fabric_description = template.render(fabric_hidden)
+    assert "Étiquette composition coupée pour plus de confort." in fabric_description
+
+
 def test_generator_parses_json_and_renders(template_registry: ListingTemplateRegistry) -> None:
     template = template_registry.get_template(template_registry.default_template)
     generator = ListingGenerator(model="test-model", api_key="dummy")
