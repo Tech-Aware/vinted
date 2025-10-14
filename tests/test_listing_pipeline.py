@@ -119,7 +119,7 @@ def test_listing_fields_parses_visibility_flags() -> None:
 
 def test_normalize_fit_terms_applies_double_wording() -> None:
     title_term, description_term, hashtag_term = normalize_fit_terms("Bootcut")
-    assert title_term == "évasé"
+    assert title_term == "Bootcut/Évasé"
     assert description_term == "bootcut/évasé"
     assert hashtag_term == "bootcut"
 
@@ -159,7 +159,7 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     )
 
     title, description = template.render(fields)
-    assert "évasé" in title
+    assert "Bootcut/Évasé" in title
     assert "bootcut/évasé" in description
     assert "Mesure FR" not in description
     assert "Entrejambe légèrement délavée, voir photos" in description
@@ -251,7 +251,7 @@ def test_generator_parses_json_and_renders(template_registry: ListingTemplateReg
 
     result = generator.generate_listing([], "", template)
 
-    assert "skinny" in result.title
+    assert "Skinny/Slim" in result.title
     assert "skinny/slim" in result.description
 
 
