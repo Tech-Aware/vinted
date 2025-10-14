@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import Dict, List, Tuple
 
+from app.backend.defect_catalog import get_defect_descriptions
 from app.backend.listing_fields import ListingFields
 from app.backend.sizing import NormalizedSizes, normalize_sizes
 from app.backend.text_normalization import normalize_fit_terms
@@ -47,7 +48,11 @@ class ListingTemplate:
         elastane = (
             f", {_ensure_percent(elastane_pct)} élasthanne" if fields.has_elastane else ""
         )
-        defects = _clean(fields.defects, "aucun défaut majeur")
+        defect_texts = get_defect_descriptions(fields.defect_tags)
+        if defect_texts:
+            defects = "; ".join(defect_texts)
+        else:
+            defects = _clean(fields.defects, "aucun défaut majeur")
         sku = _clean(fields.sku, "SKU")
         fit_title_text = fit_title or _clean(fields.fit_leg)
         fit_description_text = fit_description or _clean(fields.fit_leg)
@@ -91,9 +96,19 @@ class ListingTemplate:
 
         third_paragraph_lines = [
             f"Très bon état général {defects} (voir photos)",
-            "📏 Mesures précises visibles en photo.",
-            "📦 Envoi rapide et soigné",
         ]
+
+        if not fields.size_label_visible and not fields.fabric_label_visible:
+            third_paragraph_lines.append(
+                "Étiquettes composition/taille coupées pour plus de confort."
+            )
+
+        third_paragraph_lines.extend(
+            [
+                "📏 Mesures précises visibles en photo.",
+                "📦 Envoi rapide et soigné",
+            ]
+        )
 
         fourth_paragraph_lines = [
             f"✨ Retrouvez tous mes articles Levi’s à votre taille ici 👉 #durin31fr{fr_display or 'nc'}",
