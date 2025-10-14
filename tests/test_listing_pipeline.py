@@ -117,11 +117,17 @@ def test_listing_fields_parses_visibility_flags() -> None:
     assert fields.fabric_label_visible is False
 
 
-def test_normalize_fit_terms_applies_double_wording() -> None:
-    title_term, description_term, hashtag_term = normalize_fit_terms("Bootcut")
-    assert title_term == "Bootcut/Évasé"
-    assert description_term == "bootcut/évasé"
-    assert hashtag_term == "bootcut"
+@pytest.mark.parametrize(
+    "fit_leg,expected",
+    [
+        ("Bootcut", ("Bootcut/Évasé", "bootcut/évasé", "bootcut")),
+        ("bootcut / evase", ("Bootcut/Évasé", "bootcut/évasé", "bootcut")),
+        ("Skinny", ("Skinny/Slim", "skinny/slim", "slim")),
+        ("droit", ("Straight/Droit", "straight/droit", "straight")),
+    ],
+)
+def test_normalize_fit_terms_applies_double_wording(fit_leg: str, expected: tuple[str, str, str]) -> None:
+    assert normalize_fit_terms(fit_leg) == expected
 
 
 def test_normalize_sizes_applies_business_rules() -> None:
@@ -144,7 +150,7 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
             "fr_size": "38",
             "us_w": "28",
             "us_l": "30",
-            "fit_leg": "bootcut",
+            "fit_leg": "bootcut / evase",
             "rise_class": "haute",
             "cotton_pct": "99",
             "elastane_pct": "1",

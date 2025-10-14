@@ -16,12 +16,59 @@ limitations under the License.
 
 from typing import Tuple
 
+import re
+import unicodedata
+
 
 _FIT_NORMALIZATION = {
     "bootcut": ("Bootcut/Évasé", "bootcut/évasé"),
     "straight": ("Straight/Droit", "straight/droit"),
     "slim": ("Skinny/Slim", "skinny/slim"),
 }
+
+_FIT_ALIASES = {
+    "bootcut": "bootcut",
+    "evase": "bootcut",
+    "bootcut/evase": "bootcut",
+    "straight": "straight",
+    "droit": "straight",
+    "straight/droit": "straight",
+    "slim": "slim",
+    "skinny": "slim",
+    "skinny/slim": "slim",
+}
+
+
+def _strip_accents(value: str) -> str:
+    """Return a lowercase string without diacritics."""
+
+    normalized = unicodedata.normalize("NFD", value)
+    return "".join(char for char in normalized if unicodedata.category(char) != "Mn")
+
+
+def _normalize_fit_lookup(raw_value: str) -> str:
+    """Normalize raw fit descriptions to the lookup keys used internally."""
+
+    cleaned = raw_value.strip().lower()
+    if not cleaned:
+        return ""
+
+    cleaned = cleaned.replace("-", "/")
+    cleaned = cleaned.replace("(", "").replace(")", "")
+    cleaned = re.sub(r"\s*/\s*", "/", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    cleaned = _strip_accents(cleaned)
+
+    alias = _FIT_ALIASES.get(cleaned)
+    if alias:
+        return alias
+
+    for token in cleaned.replace("/", " ").split():
+        alias = _FIT_ALIASES.get(token)
+        if alias:
+            return alias
+
+    return cleaned
 
 
 def normalize_fit_terms(fit_leg: str | None) -> Tuple[str, str, str]:
@@ -36,13 +83,14 @@ def normalize_fit_terms(fit_leg: str | None) -> Tuple[str, str, str]:
         return "", "", ""
 
     raw = fit_leg.strip()
-    lookup = raw.lower()
+    lookup = _normalize_fit_lookup(raw)
     normalized = _FIT_NORMALIZATION.get(lookup)
     if normalized:
         title_term, description_term = normalized
+        hashtag_term = lookup.replace(" ", "")
     else:
         title_term = raw
         description_term = raw
-    hashtag_term = lookup.replace(" ", "")
+        hashtag_term = _normalize_fit_lookup(raw).replace(" ", "")
     return title_term, description_term, hashtag_term
 
