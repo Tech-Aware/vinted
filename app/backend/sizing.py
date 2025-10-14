@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Copyright 2025 Kevin Andreazza
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +13,6 @@ limitations under the License.
 """
 
 """Utilities handling the size conversion rules between US and FR."""
-from __future__ import annotations
 
 import re
 from dataclasses import dataclass
