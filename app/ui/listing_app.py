@@ -9,6 +9,7 @@ from tkinter import filedialog
 
 import customtkinter as ctk
 
+from app.backend.api_key_manager import ensure_api_key
 from app.backend.gpt_client import ListingGenerator, ListingResult
 from app.backend.image_encoding import encode_images_to_base64
 from app.backend.templates import ListingTemplateRegistry
@@ -30,6 +31,13 @@ class VintedListingApp(ctk.CTk):
         self.resizable(True, True)
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("dark-blue")
+
+        try:
+            ensure_api_key(self)
+        except RuntimeError:
+            logger.error("Fermeture de l'application faute de clé API")
+            self.destroy()
+            raise
 
         self.generator = ListingGenerator()
         self.template_registry = ListingTemplateRegistry()
