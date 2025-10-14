@@ -1,6 +1,7 @@
 """Structured representation of the fields required to render a listing."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional
 
@@ -57,19 +58,48 @@ class ListingFields:
                 return value.strip()
             raise ValueError(f"Type de valeur inattendu pour un champ: {type(value)!r}")
 
+        model = normalize(data.get("model"))
+        fr_size = normalize(data.get("fr_size"))
+        us_w = normalize(data.get("us_w"))
+        us_l = normalize(data.get("us_l"))
+        fit_leg = normalize(data.get("fit_leg"))
+        rise_class = normalize(data.get("rise_class"))
+        cotton_pct = normalize(data.get("cotton_pct"))
+        elastane_pct = normalize(data.get("elastane_pct"))
+        gender = normalize(data.get("gender"))
+        color_main = normalize(data.get("color_main"))
+        defects = normalize(data.get("defects"))
+        sku_raw = normalize(data.get("sku"))
+        sku = sku_raw.upper() if sku_raw else sku_raw
+
+        if sku:
+            gender_normalized = (gender or "").lower()
+            if "homme" in gender_normalized:
+                pattern = r"^JLH\d{1,3}$"
+            elif "femme" in gender_normalized:
+                pattern = r"^JLF\d{1,3}$"
+            else:
+                pattern = r"^JL[HF]\d{1,3}$"
+
+            if not re.fullmatch(pattern, sku):
+                raise ValueError(
+                    "SKU invalide: il doit suivre le format JLF/JLH + numéro (1 à 3 chiffres)"
+                    " correspondant au genre détecté."
+                )
+
         return cls(
-            model=normalize(data.get("model")),
-            fr_size=normalize(data.get("fr_size")),
-            us_w=normalize(data.get("us_w")),
-            us_l=normalize(data.get("us_l")),
-            fit_leg=normalize(data.get("fit_leg")),
-            rise_class=normalize(data.get("rise_class")),
-            cotton_pct=normalize(data.get("cotton_pct")),
-            elastane_pct=normalize(data.get("elastane_pct")),
-            gender=normalize(data.get("gender")),
-            color_main=normalize(data.get("color_main")),
-            defects=normalize(data.get("defects")),
-            sku=normalize(data.get("sku")),
+            model=model,
+            fr_size=fr_size,
+            us_w=us_w,
+            us_l=us_l,
+            fit_leg=fit_leg,
+            rise_class=rise_class,
+            cotton_pct=cotton_pct,
+            elastane_pct=elastane_pct,
+            gender=gender,
+            color_main=color_main,
+            defects=defects,
+            sku=sku,
         )
 
     @property
@@ -99,7 +129,8 @@ class ListingFields:
             "    \"gender\": \"genre ciblé (femme, homme, mixte)\",\n"
             "    \"color_main\": \"couleur principale\",\n"
             "    \"defects\": \"défauts ou taches identifiés\",\n"
-            "    \"sku\": \"référence interne\"\n"
+            "    \"sku\": \"SKU Levi's : JLF + numéro (1-3 chiffres) pour un jean femme,"
+            " JLH + numéro (1-3 chiffres) pour un jean homme ; utilise le numéro de l'étiquette blanche\"\n"
             "  }\n"
             "}\n"
             "N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne.\n"
