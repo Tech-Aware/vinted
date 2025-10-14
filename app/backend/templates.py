@@ -3,7 +3,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Dict, List
+from typing import Dict, List, Tuple
+
+from app.backend.listing_fields import ListingFields
+from app.backend.sizing import NormalizedSizes, normalize_sizes
+from app.backend.text_normalization import normalize_fit_terms
+
+
+def _ensure_percent(value: str | None) -> str:
+    if not value:
+        return "0%"
+    stripped = value.strip()
+    if stripped.endswith("%"):
+        return stripped
+    return f"{stripped}%"
+
+
+def _clean(value: str | None, fallback: str = "NC") -> str:
+    text = (value or "").strip()
+    return text if text else fallback
 
 
 @dataclass
@@ -11,6 +29,78 @@ class ListingTemplate:
     name: str
     description: str
     prompt: str
+
+    def render(self, fields: ListingFields) -> Tuple[str, str]:
+        fit_title, fit_description, fit_hashtag = normalize_fit_terms(fields.fit_leg)
+        normalized_sizes: NormalizedSizes = normalize_sizes(fields.us_w, fields.fr_size, fields.has_elastane)
+
+        fr_display = normalized_sizes.fr_size or (fields.fr_size or "")
+        us_display = normalized_sizes.us_size
+        size_note = normalized_sizes.note
+
+        model = _clean(fields.model, "Levi's")
+        gender = _clean(fields.gender, "femme")
+        color = _clean(fields.color_main, "bleu")
+        rise = _clean(fields.rise_class, "moyenne")
+        cotton = _ensure_percent(fields.cotton_pct)
+        elastane_pct = fields.elastane_pct
+        elastane = (
+            f", {_ensure_percent(elastane_pct)} élasthanne" if fields.has_elastane else ""
+        )
+        defects = _clean(fields.defects, "aucun défaut majeur")
+        sku = _clean(fields.sku, "SKU")
+        fit_title_text = fit_title or _clean(fields.fit_leg)
+        fit_description_text = fit_description or _clean(fields.fit_leg)
+        fit_hashtag_text = fit_hashtag or _clean(fields.fit_leg).lower().replace(" ", "")
+
+        title_parts = [
+            f"Jean Levi’s {model}",
+            f"FR{fr_display}" if fr_display else "",
+            f"W{us_display}" if us_display else "",
+            f"L{fields.us_l}" if fields.us_l else "",
+            "coupe",
+            rise,
+            fit_title_text,
+            f"{cotton} coton",
+            gender,
+            color,
+            "-",
+            sku,
+        ]
+        title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
+
+        if us_display:
+            size_sentence = f"Taille {us_display} US (équivalent {fr_display} FR), coupe {fit_description_text} à taille {rise}, pour une silhouette ajustée et confortable."
+        elif fr_display:
+            size_sentence = f"Taille {fr_display} FR, coupe {fit_description_text} à taille {rise}, pour une silhouette ajustée et confortable."
+        else:
+            size_sentence = f"Coupe {fit_description_text} à taille {rise}, pour une silhouette ajustée et confortable."
+
+        description_lines = [
+            f"Jean Levi’s modèle {model} pour {gender}.",
+            size_sentence,
+        ]
+        if size_note:
+            description_lines.append(size_note)
+        description_lines.extend(
+            [
+                f"Coloris {color} légèrement délavé, très polyvalent et facile à assortir.",
+                f"Composition : {cotton} coton{elastane} pour une touche de stretch et plus de confort.",
+                "Fermeture zippée + bouton gravé Levi’s.",
+                f"Très bon état général {defects} (voir photos)",
+                "📏 Mesures précises visibles en photo.",
+                "📦 Envoi rapide et soigné",
+                f"✨ Retrouvez tous mes articles Levi’s à votre taille ici 👉 #durin31fr{fr_display or 'nc'}",
+                "💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !",
+                "",
+                "#levis #jeanlevis "
+                f"#levis{gender.lower()} #{fit_hashtag_text}jean #jeandenim #{rise} #jean{color.lower().replace(' ', '')} #vintedfr "
+                f"#durin31fr{fr_display or 'nc'}",
+            ]
+        )
+        description = "\n".join(description_lines).strip()
+
+        return title, description
 
 
 class ListingTemplateRegistry:

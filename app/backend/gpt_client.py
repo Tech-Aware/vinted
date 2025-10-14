@@ -1,6 +1,7 @@
 """Wrapper around OpenAI's API to generate Vinted listing content."""
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from typing import Iterable, List
@@ -11,6 +12,8 @@ except ImportError:  # pragma: no cover - optional dependency
     OpenAI = None  # type: ignore
 
 from app.logger import get_logger
+from app.backend.listing_fields import ListingFields
+from app.backend.templates import ListingTemplate
 
 
 logger = get_logger(__name__)
@@ -55,7 +58,7 @@ class ListingGenerator:
         self,
         encoded_images: Iterable[str],
         user_comment: str,
-        template_prompt: str,
+        template: ListingTemplate,
     ) -> List[dict]:
         logger.step("Construction du prompt pour l'API OpenAI")
         images_list = list(encoded_images)
@@ -91,17 +94,18 @@ class ListingGenerator:
             logger.info("Commentaire utilisateur ajouté au prompt (%d caractère(s))", len(user_comment))
         else:
             logger.info("Aucun commentaire utilisateur fourni")
-        user_content.append({"type": "input_text", "text": template_prompt})
+        structured_prompt = f"{template.prompt}\n\n{ListingFields.json_instruction()}"
+        user_content.append({"type": "input_text", "text": structured_prompt})
         logger.step("Template de description ajouté au prompt")
         messages.append({"role": "user", "content": user_content})
         return messages
 
     def generate_listing(
-        self, encoded_images: Iterable[str], user_comment: str, template_prompt: str
+        self, encoded_images: Iterable[str], user_comment: str, template: ListingTemplate
     ) -> ListingResult:
         logger.step("Début de la génération d'annonce")
         try:
-            messages = self._build_messages(encoded_images, user_comment, template_prompt)
+            messages = self._build_messages(encoded_images, user_comment, template)
             response = self.client.responses.create(
                 model=self.model,
                 input=messages,
@@ -122,47 +126,17 @@ class ListingGenerator:
                         content += text
         if not content:
             content = getattr(response, "output_text", "").strip()
-        logger.step("Extraction du titre et de la description")
-        title, description = self._extract_title_and_description(content)
-        logger.success("Titre et description extraits")
+        logger.step("Analyse de la réponse JSON")
+        try:
+            payload = json.loads(content)
+            fields_payload = payload.get("fields")
+            if not isinstance(fields_payload, dict):
+                raise ValueError("Structure JSON invalide: clé 'fields' manquante ou incorrecte")
+            fields = ListingFields.from_dict(fields_payload)
+        except Exception as exc:
+            logger.exception("Échec de l'analyse de la réponse JSON")
+            raise ValueError("Réponse du modèle invalide, impossible de parser le JSON") from exc
+
+        title, description = template.render(fields)
+        logger.success("Titre et description générés depuis les données structurées")
         return ListingResult(title=title, description=description)
-
-    def _extract_title_and_description(self, raw_content: str) -> tuple[str, str]:
-        content = raw_content.strip()
-        title_marker = "TITRE"
-        description_marker = "DESCRIPTION"
-
-        # Start by removing the optional markers to avoid splitting errors when the
-        # model omits one of them or returns unexpected formatting.
-        after_title = content
-        if title_marker in content:
-            title_parts = content.split(title_marker, 1)
-            if len(title_parts) == 2:
-                after_title = title_parts[1]
-            else:
-                after_title = title_parts[0]
-
-        title_text = after_title.strip()
-        description_text = ""
-
-        if description_marker in after_title:
-            desc_parts = after_title.split(description_marker, 1)
-            if len(desc_parts) == 2:
-                title_text, description_text = desc_parts
-            else:
-                title_text = desc_parts[0]
-        else:
-            lines = after_title.splitlines()
-            while lines and not lines[0].strip():
-                lines.pop(0)
-            if lines:
-                title_text = lines[0]
-                description_text = "\n".join(lines[1:])
-
-        title = title_text.strip().replace("\n", " ")
-        if title.startswith(":"):
-            title = title[1:].strip()
-
-        description = "\n".join(line.strip() for line in description_text.splitlines()).strip()
-        description = description.lstrip(": ")
-        return title, description

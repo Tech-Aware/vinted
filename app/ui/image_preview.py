@@ -22,6 +22,7 @@ class ImagePreview(ctk.CTkFrame):
         self._max_height = height
         self._preview_images: List[ctk.CTkImage] = []
         self._labels: List[ctk.CTkLabel] = []
+        self._image_paths: List[Path] = []
 
         self._scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll_frame.pack_forget()
@@ -48,13 +49,13 @@ class ImagePreview(ctk.CTkFrame):
             widget.destroy()
         self._labels.clear()
         self._preview_images.clear()
+        self._image_paths = list(paths)
 
-        image_paths = list(paths)
-        if not image_paths:
+        if not self._image_paths:
             self._show_empty_state()
             return
 
-        for path in image_paths:
+        for path in self._image_paths:
             try:
                 with Image.open(path) as pil_img:
                     pil_img = pil_img.copy()
@@ -70,8 +71,37 @@ class ImagePreview(ctk.CTkFrame):
             return
 
         self._show_gallery()
-        for index, image in enumerate(self._preview_images):
-            label = ctk.CTkLabel(self._gallery_container, image=image, text="")
+        for index, (image, path) in enumerate(zip(self._preview_images, self._image_paths)):
+            label = ctk.CTkLabel(self._gallery_container, image=image, text="", cursor="hand2")
             label.grid(row=index, column=0, sticky="ew", padx=8, pady=(8 if index == 0 else 4, 4))
+            label.bind("<Button-1>", lambda _event, p=path: self._open_full_image(p))
             self._labels.append(label)
         logger.success("%d vignette(s) générée(s)", len(self._preview_images))
+
+    def _open_full_image(self, path: Path) -> None:
+        try:
+            with Image.open(path) as pil_img:
+                display_img = pil_img.copy()
+        except (UnidentifiedImageError, OSError) as exc:
+            logger.error("Impossible d'ouvrir l'image %s", path, exc_info=exc)
+            return
+
+        top = ctk.CTkToplevel(self)
+        top.title(path.name)
+        top.transient(self.winfo_toplevel())
+        top.focus()
+
+        screen_w = top.winfo_screenwidth()
+        screen_h = top.winfo_screenheight()
+        max_size = (int(screen_w * 0.8), int(screen_h * 0.8))
+        display_img.thumbnail(max_size)
+
+        tk_img = ctk.CTkImage(light_image=display_img, dark_image=display_img, size=display_img.size)
+        image_label = ctk.CTkLabel(top, image=tk_img, text="")
+        image_label.pack(padx=16, pady=16)
+
+        close_button = ctk.CTkButton(top, text="Fermer", command=top.destroy)
+        close_button.pack(pady=(0, 16))
+
+        top.bind("<Escape>", lambda _event: top.destroy())
+        top._image_ref = tk_img  # type: ignore[attr-defined]
