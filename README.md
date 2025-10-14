@@ -92,4 +92,9 @@ renvoyée par l'API est affichée dans la barre de statut de l'application.
 
 ## Licence
 
-Projet fourni à titre d'exemple pédagogique, sans licence spécifique.
+- **Code source** : distribué sous licence [Apache License 2.0](LICENSE).
+- **Ressources non-code** (images, données, templates, documents non techniques) :
+  sous licence [Creative Commons Attribution-NonCommercial 4.0 International](LICENSE-RESOURCES).
+
+Voir les fichiers de licence correspondants pour les termes complets et les
+conditions détaillées.
