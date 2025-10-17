@@ -40,6 +40,41 @@ _FIT_ALIASES = {
 
 _MODEL_CODE_PATTERN = re.compile(r"(?<!\d)(\d{3,4})(?!\d)")
 
+# Levi's women's catalogue references shared by the product team (non Premium variants).
+# Premium suffix is handled separately when the keyword is detected in the text.
+LEVIS_MODEL_CODES = frozenset(
+    {
+        "311",
+        "312",
+        "314",
+        "315",
+        "318",
+        "414",
+        "415",
+        "501",
+        "505",
+        "512",
+        "515",
+        "518",
+        "524",
+        "525",
+        "528",
+        "529",
+        "535",
+        "701",
+        "710",
+        "711",
+        "712",
+        "714",
+        "715",
+        "720",
+        "721",
+        "724",
+        "725",
+        "726",
+    }
+)
+
 
 def _strip_accents(value: str) -> str:
     """Return a lowercase string without diacritics."""
@@ -100,18 +135,21 @@ def normalize_fit_terms(fit_leg: Optional[str]) -> Tuple[str, str, str]:
 def normalize_model_code(model: Optional[str]) -> Optional[str]:
     """Extract the Levi's model code and optionally append the Premium suffix."""
 
-    if not model:
-        return model
+    if model is None:
+        return None
 
     cleaned = model.strip()
     if not cleaned:
-        return model
+        return ""
 
     match = _MODEL_CODE_PATTERN.search(cleaned)
     if not match:
-        return model
+        return ""
 
     code = match.group(1)
+    if code not in LEVIS_MODEL_CODES:
+        return ""
+
     has_premium = "premium" in cleaned.lower()
     return f"{code} Premium" if has_premium else code
 
