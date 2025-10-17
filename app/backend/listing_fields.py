@@ -166,7 +166,7 @@ class ListingFields:
             "Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :\n"
             "{\n"
             "  \"fields\": {\n"
-            "    \"model\": \"code numérique du modèle Levi's (ex: 501) avec le suffixe 'Premium' uniquement si indiqué\",\n"
+            "    \"model\": \"code numérique du modèle Levi's (ex: 501) avec le suffixe 'Premium' uniquement si indiqué ; laisse ce champ vide si le code n'est pas visible ou confirmé sur les photos\",\n"
             "    \"fr_size\": \"taille française visible (ex: 38)\",\n"
             "    \"us_w\": \"largeur US W (ex: 28)\",\n"
             "    \"us_l\": \"longueur US L (ex: 30)\",\n"
