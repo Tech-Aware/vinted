@@ -17,7 +17,7 @@ limitations under the License.
 import json
 import os
 from dataclasses import dataclass
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 
 try:
     from openai import OpenAI
@@ -43,10 +43,10 @@ class ListingResult:
 class ListingGenerator:
     """Generate a Vinted listing from encoded images and user comments."""
 
-    def __init__(self, *, model: str | None = None, api_key: str | None = None) -> None:
+    def __init__(self, *, model: Optional[str] = None, api_key: Optional[str] = None) -> None:
         self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4.1")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self._client: OpenAI | None = None
+        self._client: Optional[OpenAI] = None
         logger.step("ListingGenerator initialisé avec le modèle %s", self.model)
 
     @property

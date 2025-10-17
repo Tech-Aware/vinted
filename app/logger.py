@@ -17,7 +17,7 @@ limitations under the License.
 import logging
 import os
 import sys
-from typing import Dict, TextIO
+from typing import Dict, Optional, TextIO
 
 
 # Custom log levels for workflow steps and successes.
@@ -41,7 +41,7 @@ class _ColorFormatter(logging.Formatter):
     }
     _RESET = "\033[0m"
 
-    def __init__(self, fmt: str, datefmt: str | None = None, *, use_color: bool = True) -> None:
+    def __init__(self, fmt: str, datefmt: Optional[str] = None, *, use_color: bool = True) -> None:
         super().__init__(fmt, datefmt)
         self._use_color = use_color
 
@@ -74,7 +74,7 @@ def _register_custom_levels() -> None:
     _CUSTOM_LEVELS_REGISTERED = True
 
 
-def _resolve_stream() -> TextIO | None:
+def _resolve_stream() -> Optional[TextIO]:
     """Return a writable stream for logging, even without a console."""
 
     stream = getattr(sys, "stdout", None)

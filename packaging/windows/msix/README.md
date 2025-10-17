@@ -4,7 +4,7 @@ Ce dossier fournit un exemple de chaîne de construction pour livrer et signer
 l'assistant Vinted sous forme de package MSIX. Les commandes sont à exécuter
 sur un poste Windows disposant :
 
-- de Python 3.10+ et `pip` ;
+- de Python 3.8+ et `pip` ;
 - de [PyInstaller](https://pyinstaller.org/en/stable/) (`pip install pyinstaller`);
 - du [Windows App SDK](https://developer.microsoft.com/fr-fr/windows/downloads/windows-sdk/)
   incluant `makeappx.exe` et `signtool.exe` ;
@@ -13,6 +13,10 @@ sur un poste Windows disposant :
 
 > ⚠️ Remplacez systématiquement les valeurs d'exemple (nom du publisher,
 > certificats, logos) par vos propres éléments avant diffusion.
+
+> ℹ️ Le format MSIX requiert Windows 10 build 19041 ou ultérieur. Pour les
+> versions plus anciennes (Windows 7/8), utilisez le packaging standalone décrit
+> dans `packaging/windows/standalone/`.
 
 ## 1. Générer l'exécutable autonome
 

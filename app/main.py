@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import TextIO
+from typing import Optional, TextIO
 
 from app.logger import get_logger
 from app.ui.listing_app import VintedListingApp
@@ -28,7 +28,7 @@ from app.ui.listing_app import VintedListingApp
 logger = get_logger(__name__)
 
 
-def _redirect_stream_to_null() -> TextIO | None:
+def _redirect_stream_to_null() -> Optional[TextIO]:
     """Redirect a stream to ``os.devnull`` and return the opened descriptor."""
 
     try:

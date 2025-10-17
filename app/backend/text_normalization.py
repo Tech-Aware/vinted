@@ -14,7 +14,7 @@ limitations under the License.
 
 """Utilities dedicated to post-processing natural language fields."""
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 import re
 import unicodedata
@@ -73,7 +73,7 @@ def _normalize_fit_lookup(raw_value: str) -> str:
     return cleaned
 
 
-def normalize_fit_terms(fit_leg: str | None) -> Tuple[str, str, str]:
+def normalize_fit_terms(fit_leg: Optional[str]) -> Tuple[str, str, str]:
     """Return the preferred wording for the title, description and hashtag.
 
     The first element corresponds to the bilingual wording that must appear in the
@@ -97,7 +97,7 @@ def normalize_fit_terms(fit_leg: str | None) -> Tuple[str, str, str]:
     return title_term, description_term, hashtag_term
 
 
-def normalize_model_code(model: str | None) -> str | None:
+def normalize_model_code(model: Optional[str]) -> Optional[str]:
     """Extract the Levi's model code and optionally append the Premium suffix."""
 
     if not model:
