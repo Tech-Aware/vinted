@@ -66,10 +66,19 @@ class ListingTemplate:
             composition_parts.append(f"{_ensure_percent(elastane_pct)} élasthanne")
         composition = ", ".join(composition_parts)
         defect_texts = get_defect_descriptions(fields.defect_tags)
+        raw_defects = (fields.defects or "").strip()
+
+        positive_state_aliases = {
+            "très bon état",
+            "très bon état général",
+        }
+        positive_state_aliases_casefold = {alias.casefold() for alias in positive_state_aliases}
+        if raw_defects.casefold() in positive_state_aliases_casefold:
+            raw_defects = ""
+
         if defect_texts:
             defects = "; ".join(defect_texts)
         else:
-            raw_defects = (fields.defects or "").strip()
             defects = raw_defects if raw_defects else ""
         sku = _clean(fields.sku, "SKU")
         fit_title_text = fit_title or _clean(fields.fit_leg)
@@ -113,7 +122,7 @@ class ListingTemplate:
 
         third_paragraph_lines: List[str] = []
         if defects:
-            third_paragraph_lines.append(f"Très bon état général {defects} (voir photos)")
+            third_paragraph_lines.append(f"Très bon état {defects} (voir photos)")
         else:
             third_paragraph_lines.append("Très bon état")
 

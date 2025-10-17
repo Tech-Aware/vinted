@@ -349,3 +349,66 @@ def test_template_render_falls_back_to_free_text(template_registry: ListingTempl
     _title, description = template.render(fields)
     assert "usure légère sur la poche arrière" in description
 
+
+def test_template_render_ignores_positive_defect_phrase(
+    template_registry: ListingTemplateRegistry,
+) -> None:
+    template = template_registry.get_template(template_registry.default_template)
+    fields = ListingFields.from_dict(
+        {
+            "model": "501",
+            "fr_size": "38",
+            "us_w": "28",
+            "us_l": "30",
+            "fit_leg": "bootcut",
+            "rise_class": "haute",
+            "cotton_pct": "99",
+            "polyester_pct": "0",
+            "elastane_pct": "1",
+            "gender": "Femme",
+            "color_main": "Bleu",
+            "defects": "Très bon état",
+            "sku": "JLF6",
+            "defect_tags": [],
+            "size_label_visible": True,
+            "fabric_label_visible": True,
+        }
+    )
+
+    _title, description = template.render(fields)
+    third_paragraph = description.split("\n\n")[2].split("\n")[0]
+    assert third_paragraph == "Très bon état"
+
+
+def test_template_render_mentions_catalog_defect_without_duplication(
+    template_registry: ListingTemplateRegistry,
+) -> None:
+    template = template_registry.get_template(template_registry.default_template)
+    fields = ListingFields.from_dict(
+        {
+            "model": "501",
+            "fr_size": "38",
+            "us_w": "28",
+            "us_l": "30",
+            "fit_leg": "bootcut",
+            "rise_class": "haute",
+            "cotton_pct": "99",
+            "polyester_pct": "0",
+            "elastane_pct": "1",
+            "gender": "Femme",
+            "color_main": "Bleu",
+            "defects": "",
+            "sku": "JLF6",
+            "defect_tags": ["faded_crotch"],
+            "size_label_visible": True,
+            "fabric_label_visible": True,
+        }
+    )
+
+    _title, description = template.render(fields)
+    third_paragraph = description.split("\n\n")[2].split("\n")[0]
+    assert third_paragraph.startswith(
+        "Très bon état Entrejambe légèrement délavée, voir photos"
+    )
+    assert "Très bon état général" not in third_paragraph
+
