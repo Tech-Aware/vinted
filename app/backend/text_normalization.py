@@ -38,7 +38,7 @@ _FIT_ALIASES = {
     "skinny/slim": "slim",
 }
 
-_MODEL_CODE_PATTERN = re.compile(r"(?<![A-Za-z])(\d{3,4})(?!\d)")
+_MODEL_CODE_PATTERN = re.compile(r"(?<!\d)(\d{3,4})(?!\d)")
 
 
 def _strip_accents(value: str) -> str:
