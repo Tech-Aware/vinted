@@ -195,7 +195,11 @@ class ListingFields:
         if raw_tags is None:
             return ()
         if isinstance(raw_tags, str):
-            raw_iterable: Iterable[Any] = [raw_tags]
+            # Les modèles ont tendance à renvoyer une chaîne unique contenant
+            # plusieurs slugs séparés par des virgules. On découpe donc la
+            # chaîne afin de valider chaque slug individuellement.
+            split_tags = [part for part in re.split(r"[,;\n]+", raw_tags) if part]
+            raw_iterable: Iterable[Any] = split_tags or [raw_tags]
         elif isinstance(raw_tags, Iterable) and not isinstance(raw_tags, (bytes, bytearray)):
             raw_iterable = raw_tags
         else:

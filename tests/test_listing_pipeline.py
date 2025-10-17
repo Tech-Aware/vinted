@@ -97,6 +97,28 @@ def test_listing_fields_rejects_unknown_defect_tags() -> None:
         ListingFields.from_dict(payload)
 
 
+def test_listing_fields_splits_comma_separated_defect_tags() -> None:
+    payload = {
+        "model": "501",
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "haute",
+        "cotton_pct": "99",
+        "polyester_pct": "0",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "bleu",
+        "defects": "effets d'usure stylés",
+        "sku": "JLF6",
+        "defect_tags": "stylish_holes, ripped",
+    }
+
+    fields = ListingFields.from_dict(payload)
+    assert fields.defect_tags == ("stylish_holes", "ripped")
+
+
 def test_listing_fields_parses_visibility_flags() -> None:
     payload = {
         "model": "501",
