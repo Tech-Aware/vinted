@@ -52,7 +52,7 @@ class ListingTemplate:
         us_display = normalized_sizes.us_size
         size_note = normalized_sizes.note
 
-        model = _clean(fields.model, "Levi's")
+        model = (fields.model or "").strip()
         gender = _clean(fields.gender, "femme")
         color = _clean(fields.color_main, "bleu")
         rise = _clean(fields.rise_class, "moyenne")
@@ -85,8 +85,12 @@ class ListingTemplate:
         fit_description_text = fit_description or _clean(fields.fit_leg)
         fit_hashtag_text = fit_hashtag or _clean(fields.fit_leg).lower().replace(" ", "")
 
+        title_intro = "Jean Levi’s"
+        if model:
+            title_intro = f"{title_intro} {model}"
+
         title_parts = [
-            f"Jean Levi’s {model}",
+            title_intro,
             f"FR{fr_display}" if fr_display else "",
             f"W{us_display}" if us_display else "",
             f"L{fields.us_l}" if fields.us_l else "",
@@ -107,8 +111,13 @@ class ListingTemplate:
         else:
             size_sentence = f"Coupe {fit_description_text} à taille {rise}, pour une silhouette ajustée et confortable."
 
+        if model:
+            first_sentence = f"Jean Levi’s modèle {model} pour {gender}."
+        else:
+            first_sentence = f"Jean Levi’s pour {gender}."
+
         first_paragraph_lines = [
-            f"Jean Levi’s modèle {model} pour {gender}.",
+            first_sentence,
             size_sentence,
         ]
         if size_note:

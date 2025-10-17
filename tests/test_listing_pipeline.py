@@ -269,6 +269,43 @@ def test_template_render_mentions_polyester(template_registry: ListingTemplateRe
     assert "60% coton, 35% polyester, 5% élasthanne" in description
 
 
+@pytest.mark.parametrize("model_value", [None, ""])
+def test_template_render_omits_model_when_missing(
+    template_registry: ListingTemplateRegistry, model_value: str | None
+) -> None:
+    template = template_registry.get_template(template_registry.default_template)
+    payload = {
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "haute",
+        "cotton_pct": "99",
+        "polyester_pct": "0",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "Bleu",
+        "defects": "aucune anomalie",
+        "sku": "JLF6",
+        "defect_tags": [],
+        "size_label_visible": True,
+        "fabric_label_visible": True,
+        "model": model_value,
+    }
+
+    fields = ListingFields.from_dict(payload)
+    title, description = template.render(fields)
+
+    assert "  " not in title
+    assert not title.startswith("Jean Levi’s  ")
+    assert title.split()[0:2] == ["Jean", "Levi’s"]
+
+    first_paragraph = description.split("\n\n")[0]
+    first_sentence = first_paragraph.split("\n")[0]
+    assert first_sentence == "Jean Levi’s pour Femme."
+    assert "modèle" not in first_sentence
+
+
 def test_generator_parses_json_and_renders(template_registry: ListingTemplateRegistry) -> None:
     template = template_registry.get_template(template_registry.default_template)
     generator = ListingGenerator(model="test-model", api_key="dummy")
