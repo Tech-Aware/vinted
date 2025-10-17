@@ -139,14 +139,36 @@ def test_listing_fields_normalizes_model_code() -> None:
         "fabric_label_visible": True,
     }
 
-    fields = ListingFields.from_dict({"model": "470 Signature super skinny", **base_payload})
-    assert fields.model == "470"
+    fields = ListingFields.from_dict({"model": "710 Signature super skinny", **base_payload})
+    assert fields.model == "710"
 
     premium_fields = ListingFields.from_dict({"model": "501 premium stretch", **base_payload})
     assert premium_fields.model == "501 Premium"
 
     wedgie_fields = ListingFields.from_dict({"model": "Wedgie501 premium", **base_payload})
     assert wedgie_fields.model == "501 Premium"
+
+
+def test_listing_fields_drops_non_whitelisted_model_code() -> None:
+    base_payload = {
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "haute",
+        "cotton_pct": "99",
+        "polyester_pct": "0",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "Bleu",
+        "defects": "aucun défaut",
+        "sku": "JLF6",
+        "size_label_visible": True,
+        "fabric_label_visible": True,
+    }
+
+    fields = ListingFields.from_dict({"model": "1997 Premium", **base_payload})
+    assert fields.model == ""
 
 
 @pytest.mark.parametrize(
