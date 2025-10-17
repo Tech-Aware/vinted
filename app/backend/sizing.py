@@ -41,28 +41,43 @@ def _extract_int(value: Optional[str]) -> Optional[int]:
         return None
 
 
-def normalize_sizes(us_w: Optional[str], fr_size: Optional[str], has_elastane: bool) -> NormalizedSizes:
+def normalize_sizes(
+    us_w: Optional[str],
+    fr_size: Optional[str],
+    has_elastane: bool,
+    *,
+    ensure_even_fr: bool = False,
+) -> NormalizedSizes:
     """Apply the business rule converting US W to FR sizes.
 
     - When both values exist, compute the difference ``delta = FR - US``. If ``delta``
       is outside the expected range [8, 12], only keep the FR value. When the delta is
       greater than 12 and elastane is present, add a dedicated note.
     - Otherwise fall back to computing ``FR = US + 10`` when a US size exists.
+    - When ``ensure_even_fr`` is ``True``, an FR size derived from the US measurement
+      is rounded up to the next even number.
     """
 
     us_value = _extract_int(us_w)
     fr_value = _extract_int(fr_size)
+
+    def _from_us(value: int) -> int:
+        computed = value + 10
+        if ensure_even_fr and computed % 2:
+            computed += 1
+        return computed
 
     if us_value is not None and fr_value is not None:
         delta = fr_value - us_value
         if delta > 12 or delta < 8:
             note = _ELASTANE_NOTE if has_elastane and delta > 12 else None
             return NormalizedSizes(fr_size=str(fr_value), us_size=None, note=note)
-        computed_fr = us_value + 10
+        computed_fr = _from_us(us_value)
         return NormalizedSizes(fr_size=str(computed_fr), us_size=str(us_value), note=None)
 
     if us_value is not None:
-        return NormalizedSizes(fr_size=str(us_value + 10), us_size=str(us_value), note=None)
+        computed_fr = _from_us(us_value)
+        return NormalizedSizes(fr_size=str(computed_fr), us_size=str(us_value), note=None)
 
     if fr_value is not None:
         return NormalizedSizes(fr_size=str(fr_value), us_size=None, note=None)

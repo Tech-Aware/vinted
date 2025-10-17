@@ -46,7 +46,12 @@ class ListingTemplate:
 
     def render(self, fields: ListingFields) -> Tuple[str, str]:
         fit_title, fit_description, fit_hashtag = normalize_fit_terms(fields.fit_leg)
-        normalized_sizes: NormalizedSizes = normalize_sizes(fields.us_w, fields.fr_size, fields.has_elastane)
+        normalized_sizes: NormalizedSizes = normalize_sizes(
+            fields.us_w,
+            fields.fr_size,
+            fields.has_elastane,
+            ensure_even_fr=True,
+        )
 
         fr_display = normalized_sizes.fr_size or (fields.fr_size or "")
         us_display = normalized_sizes.us_size
