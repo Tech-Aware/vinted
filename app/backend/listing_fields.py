@@ -195,7 +195,11 @@ class ListingFields:
         if raw_tags is None:
             return ()
         if isinstance(raw_tags, str):
-            raw_iterable: Iterable[Any] = [raw_tags]
+            # Some model responses incorrectly return a single comma-separated
+            # string instead of a proper JSON array. Accept that format by
+            # splitting it into individual entries so that validation can still
+            # occur on each slug.
+            raw_iterable: Iterable[Any] = re.split(r"[,;]", raw_tags)
         elif isinstance(raw_tags, Iterable) and not isinstance(raw_tags, (bytes, bytearray)):
             raw_iterable = raw_tags
         else:
