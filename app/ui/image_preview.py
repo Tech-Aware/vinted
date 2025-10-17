@@ -48,6 +48,9 @@ class ImagePreview(ctk.CTkFrame):
 
         self._scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll_frame.pack_forget()
+        self._scroll_frame.bind("<Enter>", self._bind_mousewheel)
+        self._scroll_frame.bind("<Leave>", self._unbind_mousewheel)
+        self._scroll_frame.bind("<Destroy>", self._unbind_mousewheel)
 
         self._gallery_container = ctk.CTkFrame(self._scroll_frame, fg_color="transparent")
         self._gallery_container.grid(row=0, column=0, sticky="nwe")
@@ -189,3 +192,46 @@ class ImagePreview(ctk.CTkFrame):
             return
         logger.info("Suppression demandée pour %s", path)
         self._on_remove(path)
+
+    def _bind_mousewheel(self, _event: object) -> None:
+        canvas = self._get_scroll_canvas()
+        if canvas is None:
+            return
+        canvas.bind_all("<MouseWheel>", self._on_mousewheel_windows)
+        canvas.bind_all("<Button-4>", self._on_mousewheel_linux)
+        canvas.bind_all("<Button-5>", self._on_mousewheel_linux)
+
+    def _unbind_mousewheel(self, _event: object) -> None:
+        canvas = self._get_scroll_canvas()
+        if canvas is None:
+            return
+        canvas.unbind_all("<MouseWheel>")
+        canvas.unbind_all("<Button-4>")
+        canvas.unbind_all("<Button-5>")
+
+    def _on_mousewheel_windows(self, event: object) -> None:
+        canvas = self._get_scroll_canvas()
+        if canvas is None:
+            return
+        delta = int(getattr(event, "delta", 0))
+        if delta == 0:
+            return
+        steps = -1 if delta > 0 else 1
+        # Windows usually returns multiples of 120, macOS values are smaller but keep the sign.
+        canvas.yview_scroll(steps, "units")
+
+    def _on_mousewheel_linux(self, event: object) -> None:
+        canvas = self._get_scroll_canvas()
+        if canvas is None:
+            return
+        event_num = getattr(event, "num", None)
+        if event_num == 4:
+            canvas.yview_scroll(-1, "units")
+        elif event_num == 5:
+            canvas.yview_scroll(1, "units")
+
+    def _get_scroll_canvas(self) -> Optional[object]:
+        canvas = getattr(self._scroll_frame, "_parent_canvas", None)
+        if canvas is None:
+            canvas = getattr(self._scroll_frame, "_scrollable_canvas", None)
+        return canvas
