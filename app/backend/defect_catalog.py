@@ -48,8 +48,17 @@ _CATALOG_SPECS: Sequence[DefectSpec] = (
             "effet troué",
             "distressed hole",
         ),
-        description="Effets troués pour un style plus affirmé",
+        description="Effets troués pour plus style, voir photos",
     ),
+    DefectSpec(
+            slug="ripped",
+            synonyms=(
+                "Déchiré",
+                "effet déchiré",
+                "Slightly ripped",
+            ),
+            description="Effets déchiré pour un style plus affirmé, voir photos",
+        ),
 )
 
 
