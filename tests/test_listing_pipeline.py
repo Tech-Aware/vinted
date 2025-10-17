@@ -163,15 +163,22 @@ def test_normalize_fit_terms_applies_double_wording(fit_leg: str, expected: tupl
 
 
 def test_normalize_sizes_applies_business_rules() -> None:
-    with_elastane: NormalizedSizes = normalize_sizes("28", "44", True)
+    with_elastane: NormalizedSizes = normalize_sizes("28", "44", True, ensure_even_fr=False)
     assert with_elastane.fr_size == "44"
     assert with_elastane.us_size is None
     assert with_elastane.note is not None
 
-    regular: NormalizedSizes = normalize_sizes("28", "38", False)
+    regular: NormalizedSizes = normalize_sizes("28", "38", False, ensure_even_fr=False)
     assert regular.fr_size == "38"
     assert regular.us_size == "28"
     assert regular.note is None
+
+
+def test_normalize_sizes_rounds_up_odd_us_when_requested() -> None:
+    computed: NormalizedSizes = normalize_sizes("31", None, False, ensure_even_fr=True)
+    assert computed.fr_size == "42"
+    assert computed.us_size == "31"
+    assert computed.note is None
 
 
 def test_template_render_injects_normalized_terms(template_registry: ListingTemplateRegistry) -> None:
