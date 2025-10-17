@@ -16,7 +16,7 @@ limitations under the License.
 
 import threading
 from pathlib import Path
-from typing import List
+from typing import List, Set
 
 from tkinter import filedialog
 
@@ -28,6 +28,8 @@ from app.backend.image_encoding import encode_images_to_base64
 from app.backend.templates import ListingTemplateRegistry
 from app.logger import get_logger
 from app.ui.image_preview import ImagePreview
+
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
 
 logger = get_logger(__name__)
@@ -55,12 +57,13 @@ class VintedListingApp(ctk.CTk):
         self.generator = ListingGenerator()
         self.template_registry = ListingTemplateRegistry()
         self.selected_images: List[Path] = []
+        self._image_directories: Set[Path] = set()
 
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
 
-        self.preview_frame = ImagePreview(self)
+        self.preview_frame = ImagePreview(self, on_remove=self._remove_image)
         self.preview_frame.grid(row=0, column=0, padx=16, pady=16, sticky="nsew")
 
         right_panel = ctk.CTkFrame(self)
@@ -117,6 +120,7 @@ class VintedListingApp(ctk.CTk):
             if path_obj not in self.selected_images:
                 self.selected_images.append(path_obj)
                 logger.success("Image ajoutée: %s", path_obj)
+                self._image_directories.add(path_obj.parent)
 
         self.preview_frame.update_images(self.selected_images)
         self.status_label.configure(text=f"{len(self.selected_images)} photo(s) chargée(s)")
@@ -170,7 +174,9 @@ class VintedListingApp(ctk.CTk):
         logger.success("Résultat affiché à l'utilisateur")
 
     def reset(self) -> None:
+        self._cleanup_image_directories()
         self.selected_images.clear()
+        self._image_directories.clear()
         self.preview_frame.update_images([])
         self.comment_box.delete("1.0", "end")
         self.title_box.delete("1.0", "end")
@@ -178,3 +184,44 @@ class VintedListingApp(ctk.CTk):
         self.comment_box.insert("1.0", "Décrivez tâches et défauts...")
         self.status_label.configure(text="Prêt à analyser")
         logger.step("Application réinitialisée")
+
+    def _remove_image(self, path: Path) -> None:
+        try:
+            self.selected_images.remove(path)
+        except ValueError:
+            logger.warning("Impossible de supprimer %s: image inconnue", path)
+            return
+
+        logger.info("Image retirée avant analyse: %s", path)
+        remaining_directories = {p.parent for p in self.selected_images}
+        self._image_directories.intersection_update(remaining_directories)
+        self.preview_frame.update_images(self.selected_images)
+
+        if self.selected_images:
+            self.status_label.configure(text=f"{len(self.selected_images)} photo(s) chargée(s)")
+        else:
+            self.status_label.configure(text="Prêt à analyser")
+
+    def _cleanup_image_directories(self) -> None:
+        if not self.selected_images or not self._image_directories:
+            return
+
+        for directory in list(self._image_directories):
+            try:
+                image_files = [
+                    file
+                    for file in directory.iterdir()
+                    if file.is_file() and file.suffix.lower() in IMAGE_EXTENSIONS
+                ]
+            except OSError as exc:
+                logger.error("Impossible de lister le dossier %s", directory, exc_info=exc)
+                continue
+
+            for file in image_files:
+                try:
+                    file.unlink()
+                    logger.info("Suppression du fichier %s", file)
+                except FileNotFoundError:
+                    logger.warning("Fichier déjà supprimé: %s", file)
+                except OSError as exc:
+                    logger.error("Suppression impossible pour %s", file, exc_info=exc)
