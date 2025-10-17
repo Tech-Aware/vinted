@@ -45,9 +45,13 @@ class ImagePreview(ctk.CTkFrame):
         self._image_paths: List[Path] = []
         self._on_remove = on_remove
         self._resize_after_id: Optional[str] = None
+        self._mousewheel_bind_ids: dict[str, str] = {}
+        self._mousewheel_target: Optional[ctk.CTkBaseClass] = None
 
         self._scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll_frame.pack_forget()
+        self._scroll_frame.bind("<Enter>", self._on_scroll_enter, add="+")
+        self._scroll_frame.bind("<Leave>", self._on_scroll_leave, add="+")
 
         self._gallery_container = ctk.CTkFrame(self._scroll_frame, fg_color="transparent")
         self._gallery_container.grid(row=0, column=0, sticky="nwe")
@@ -57,6 +61,7 @@ class ImagePreview(ctk.CTkFrame):
         self._empty_label.pack(expand=True, fill="both")
 
         self.bind("<Configure>", self._on_resize)
+        self.bind("<Destroy>", self._on_destroy, add="+")
 
     def _show_empty_state(self, message: str = "Aucune image sélectionnée") -> None:
         self._scroll_frame.pack_forget()
@@ -177,6 +182,84 @@ class ImagePreview(ctk.CTkFrame):
 
         top.bind("<Escape>", lambda _event: top.destroy())
         top._image_ref = tk_img  # type: ignore[attr-defined]
+
+    def _on_scroll_enter(self, _event: object) -> None:
+        self._bind_mousewheel()
+
+    def _on_scroll_leave(self, event: object) -> None:
+        x_root = getattr(event, "x_root", None)
+        y_root = getattr(event, "y_root", None)
+        if x_root is not None and y_root is not None:
+            widget = self.winfo_containing(x_root, y_root)
+            if widget is not None and self._is_descendant(widget, self._scroll_frame):
+                return
+        self._unbind_mousewheel()
+
+    def _bind_mousewheel(self) -> None:
+        if self._mousewheel_bind_ids:
+            return
+        target = self.winfo_toplevel()
+        bindings = {
+            "<MouseWheel>": target.bind("<MouseWheel>", self._on_mousewheel_windows, add="+"),
+            "<Button-4>": target.bind("<Button-4>", self._on_mousewheel_linux, add="+"),
+            "<Button-5>": target.bind("<Button-5>", self._on_mousewheel_linux, add="+"),
+        }
+        self._mousewheel_bind_ids = {seq: funcid for seq, funcid in bindings.items() if funcid}
+        self._mousewheel_target = target if self._mousewheel_bind_ids else None
+
+    def _unbind_mousewheel(self) -> None:
+        if not self._mousewheel_bind_ids:
+            return
+        target = self._mousewheel_target or self.winfo_toplevel()
+        for sequence, funcid in self._mousewheel_bind_ids.items():
+            try:
+                target.unbind(sequence, funcid)
+            except Exception:
+                continue
+        self._mousewheel_bind_ids.clear()
+        self._mousewheel_target = None
+
+    def _on_destroy(self, event: object) -> None:
+        if getattr(event, "widget", None) is self:
+            self._unbind_mousewheel()
+
+    def _on_mousewheel_windows(self, event: object) -> None:
+        delta = getattr(event, "delta", 0)
+        if delta == 0:
+            return
+        steps = int(-delta / 120)
+        if steps == 0:
+            steps = -1 if delta > 0 else 1
+        self._scroll_by(steps)
+
+    def _on_mousewheel_linux(self, event: object) -> None:
+        num = getattr(event, "num", None)
+        if num == 4:
+            self._scroll_by(-1)
+        elif num == 5:
+            self._scroll_by(1)
+
+    def _scroll_by(self, units: int) -> None:
+        if units == 0:
+            return
+        canvas = self._get_scroll_canvas()
+        if canvas is None:
+            return
+        canvas.yview_scroll(units, "units")
+
+    def _get_scroll_canvas(self):
+        canvas = getattr(self._scroll_frame, "_parent_canvas", None)
+        if canvas is None:
+            canvas = getattr(self._scroll_frame, "_canvas", None)
+        return canvas
+
+    def _is_descendant(self, widget: object, ancestor: object) -> bool:
+        current = widget
+        while current is not None:
+            if current is ancestor:
+                return True
+            current = getattr(current, "master", None)
+        return False
 
     def _calculate_columns(self) -> int:
         available_width = max(self._scroll_frame.winfo_width(), self._thumb_min_width)
