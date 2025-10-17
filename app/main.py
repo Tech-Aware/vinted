@@ -19,10 +19,12 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Optional, TextIO
+from typing import TYPE_CHECKING, Optional, TextIO
 
 from app.logger import get_logger
-from app.ui.listing_app import VintedListingApp
+
+if TYPE_CHECKING:  # pragma: no cover - import only used for type checking
+    from app.ui.listing_app import VintedListingApp
 
 
 logger = get_logger(__name__)
@@ -39,6 +41,45 @@ def _redirect_stream_to_null() -> Optional[TextIO]:
 
 _DEVNULL_STDOUT = None
 _DEVNULL_STDERR = None
+
+
+def _ensure_runtime_dependencies() -> None:
+    """Verify that GUI dependencies are installed and usable."""
+
+    try:
+        import tkinter  # noqa: F401  # pylint: disable=import-outside-toplevel,unused-import
+    except ModuleNotFoundError as exc:
+        message = (
+            "Tkinter est introuvable. Installez le paquet système "
+            "(ex. 'python3-tk') avant de relancer l'application."
+        )
+        logger.critical(message)
+        raise SystemExit(1) from exc
+
+    try:
+        import customtkinter  # noqa: F401  # pylint: disable=import-outside-toplevel,unused-import
+    except ModuleNotFoundError as exc:  # pragma: no cover - dépendance manquante en production
+        message = (
+            "La dépendance Python 'customtkinter' est absente. Exécutez "
+            "'pip install -r requirements.txt' puis relancez l'application."
+        )
+        logger.critical(message)
+        raise SystemExit(1) from exc
+
+    try:
+        import tkinter as _tk  # pylint: disable=import-outside-toplevel
+
+        root = _tk.Tk()
+        root.withdraw()
+        root.destroy()
+    except _tk.TclError as exc:  # pragma: no cover - dépendant de l'environnement graphique
+        message = (
+            "Impossible d'initialiser l'interface graphique Tk. Vérifiez "
+            "qu'un environnement d'affichage est disponible (variable DISPLAY "
+            "ou équivalent)."
+        )
+        logger.critical(message)
+        raise SystemExit(1) from exc
 
 
 def _detach_console_on_windows() -> None:
@@ -75,6 +116,10 @@ def _detach_console_on_windows() -> None:
 
 def main() -> None:
     """Start the Tkinter event loop."""
+
+    _ensure_runtime_dependencies()
+
+    from app.ui.listing_app import VintedListingApp  # pylint: disable=import-outside-toplevel
 
     _detach_console_on_windows()
 
