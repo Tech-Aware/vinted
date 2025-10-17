@@ -124,7 +124,7 @@ class ListingGenerator:
                 input=messages,
                 max_output_tokens=700,
                 temperature=0.7,
-                response_format={"type": "json_object"},
+                text={"format": {"type": "json_object"}},
             )
         except Exception:
             logger.exception("Échec de l'appel à l'API OpenAI")
