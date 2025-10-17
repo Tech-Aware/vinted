@@ -38,6 +38,8 @@ _FIT_ALIASES = {
     "skinny/slim": "slim",
 }
 
+_MODEL_CODE_PATTERN = re.compile(r"(?<![A-Za-z])(\d{3,4})(?!\d)")
+
 
 def _strip_accents(value: str) -> str:
     """Return a lowercase string without diacritics."""
@@ -93,4 +95,23 @@ def normalize_fit_terms(fit_leg: str | None) -> Tuple[str, str, str]:
         description_term = raw
         hashtag_term = _normalize_fit_lookup(raw).replace(" ", "")
     return title_term, description_term, hashtag_term
+
+
+def normalize_model_code(model: str | None) -> str | None:
+    """Extract the Levi's model code and optionally append the Premium suffix."""
+
+    if not model:
+        return model
+
+    cleaned = model.strip()
+    if not cleaned:
+        return model
+
+    match = _MODEL_CODE_PATTERN.search(cleaned)
+    if not match:
+        return model
+
+    code = match.group(1)
+    has_premium = "premium" in cleaned.lower()
+    return f"{code} Premium" if has_premium else code
 

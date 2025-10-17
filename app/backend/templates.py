@@ -57,10 +57,14 @@ class ListingTemplate:
         color = _clean(fields.color_main, "bleu")
         rise = _clean(fields.rise_class, "moyenne")
         cotton = _ensure_percent(fields.cotton_pct)
+        polyester_pct = fields.polyester_pct
         elastane_pct = fields.elastane_pct
-        elastane = (
-            f", {_ensure_percent(elastane_pct)} élasthanne" if fields.has_elastane else ""
-        )
+        composition_parts = [f"{cotton} coton"]
+        if fields.has_polyester:
+            composition_parts.append(f"{_ensure_percent(polyester_pct)} polyester")
+        if fields.has_elastane:
+            composition_parts.append(f"{_ensure_percent(elastane_pct)} élasthanne")
+        composition = ", ".join(composition_parts)
         defect_texts = get_defect_descriptions(fields.defect_tags)
         if defect_texts:
             defects = "; ".join(defect_texts)
@@ -77,7 +81,6 @@ class ListingTemplate:
             f"W{us_display}" if us_display else "",
             f"L{fields.us_l}" if fields.us_l else "",
             "coupe",
-            rise,
             fit_title_text,
             f"{cotton} coton",
             gender,
@@ -103,7 +106,7 @@ class ListingTemplate:
 
         second_paragraph_lines = [
             f"Coloris {color} légèrement délavé, très polyvalent et facile à assortir.",
-            f"Composition : {cotton} coton{elastane} pour une touche de stretch et plus de confort.",
+            f"Composition : {composition} pour une touche de stretch et plus de confort.",
             "Fermeture zippée + bouton gravé Levi’s.",
         ]
 
@@ -167,10 +170,10 @@ class ListingTemplateRegistry:
                     """
                     Prend en considération cette légende : 
                     - Taille FR = taille française en cm, au format FR{{fr_size}}
-                    - Modèle = Modèle du Jean si fournit {{model}}
+                    - Modèle = code numérique du jean (ex: 501). Ajoute uniquement le mot "Premium" si et seulement si indiqué sur l'étiquette.
                     - Wn Ln = valeurs d’étiquette, {{w}} et {{l}}
-                    - Coupe + taille = {{fit_leg}} + {{rise_class}} (basse/moyenne/haute)
-                    - Matière = {{cotton_pct}}% coton (+ {{elastane_pct}}% élasthanne si présent)
+                    - Coupe = {{fit_leg}} (insère la hauteur de taille {{rise_class}} dans la description uniquement, jamais dans le titre)
+                    - Matière = {{cotton_pct}}% coton (+ {{polyester_pct}}% polyester si présent, + {{elastane_pct}}% élasthanne si présent)
                     - Genre = {{gender}}  (valeurs attendues : femme, homme, mix)
                     - Tâches et défauts = Ce qui doit impérativement apparaître dans l'annonce si identifié sur photos ou fournit en commentaire {{defects}}
                     - SKU = {{sku}} (utilise JLF + numéro (1 à 3 chiffres) si jean femme, JLH + numéro si jean homme ;
@@ -178,13 +181,13 @@ class ListingTemplateRegistry:
 
                     Utilise ce format :
                     TITRE
-                    Jean Levi’s {{model}} FR{{fr_size}} W{{w}} L{{l}} coupe {{rise_class}} {{fit_leg}} {{cotton_pct}}% coton {{gender}} {{color_main}} - {{sku}}
+                    Jean Levi’s {{model}} FR{{fr_size}} W{{w}} L{{l}} coupe {{fit_leg}} {{cotton_pct}}% coton {{gender}} {{color_main}} - {{sku}}
                     
                     DESCRIPTION + HASHTAG
                     Jean Levi’s modèle {{model}} pour {{gender}}.
                     Taille {{w}} US (équivalent {{fr_size}} FR), coupe {{fit_leg}} à taille {{rise_class}}, pour une silhouette ajustée et confortable.
                     Coloris {{color_main}} légèrement délavé, très polyvalent et facile à assortir.
-                    Composition : {{cotton_pct}}% coton{{#if elastane_pct}}, {{elastane_pct}}% élasthanne{{/if}} pour une touche de stretch et plus de confort.
+                    Composition : {{cotton_pct}}% coton{{#if polyester_pct}}, {{polyester_pct}}% polyester{{/if}}{{#if elastane_pct}}, {{elastane_pct}}% élasthanne{{/if}} pour une touche de stretch et plus de confort.
                     Fermeture zippée + bouton gravé Levi’s.
                     
                     Très bon états général {{defects}} (voir photos)
