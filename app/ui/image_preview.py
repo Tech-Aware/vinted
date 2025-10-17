@@ -15,7 +15,7 @@ limitations under the License.
 """Widgets used to preview selected images in the UI."""
 
 from pathlib import Path
-from typing import Iterable, List
+from typing import Callable, Iterable, List, Optional
 
 import customtkinter as ctk
 from PIL import Image, UnidentifiedImageError
@@ -27,15 +27,24 @@ logger = get_logger(__name__)
 
 
 class ImagePreview(ctk.CTkFrame):
-    """Widget showing thumbnails for the selected images in a vertical scrollable list."""
+    """Widget showing thumbnails for the selected images in a responsive gallery."""
 
-    def __init__(self, master: ctk.CTkBaseClass, width: int = 220, height: int = 320) -> None:
+    def __init__(
+        self,
+        master: ctk.CTkBaseClass,
+        width: int = 220,
+        height: int = 320,
+        on_remove: Optional[Callable[[Path], None]] = None,
+    ) -> None:
         super().__init__(master)
-        self._thumb_width = width
+        self._thumb_min_width = width
         self._max_height = height
         self._preview_images: List[ctk.CTkImage] = []
+        self._pil_images: List[Image.Image] = []
         self._labels: List[ctk.CTkLabel] = []
         self._image_paths: List[Path] = []
+        self._on_remove = on_remove
+        self._resize_after_id: Optional[str] = None
 
         self._scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll_frame.pack_forget()
@@ -43,10 +52,11 @@ class ImagePreview(ctk.CTkFrame):
         self._gallery_container = ctk.CTkFrame(self._scroll_frame, fg_color="transparent")
         self._gallery_container.grid(row=0, column=0, sticky="nwe")
         self._scroll_frame.grid_columnconfigure(0, weight=1)
-        self._gallery_container.grid_columnconfigure(0, weight=1)
 
         self._empty_label = ctk.CTkLabel(self, text="Aucune image sélectionnée")
         self._empty_label.pack(expand=True, fill="both")
+
+        self.bind("<Configure>", self._on_resize)
 
     def _show_empty_state(self, message: str = "Aucune image sélectionnée") -> None:
         self._scroll_frame.pack_forget()
@@ -58,38 +68,87 @@ class ImagePreview(ctk.CTkFrame):
         self._scroll_frame.pack(expand=True, fill="both")
 
     def update_images(self, paths: Iterable[Path]) -> None:
-        for widget in self._gallery_container.winfo_children():
-            widget.destroy()
         self._labels.clear()
         self._preview_images.clear()
+        self._pil_images.clear()
         self._image_paths = list(paths)
+
+        for widget in self._gallery_container.winfo_children():
+            widget.destroy()
 
         if not self._image_paths:
             self._show_empty_state()
+            logger.info("Aucune image à afficher dans la galerie")
             return
 
         for path in self._image_paths:
             try:
                 with Image.open(path) as pil_img:
-                    pil_img = pil_img.copy()
-                    pil_img.thumbnail((self._thumb_width, self._max_height))
-                    tk_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=pil_img.size)
+                    self._pil_images.append(pil_img.copy())
             except (UnidentifiedImageError, OSError) as exc:
                 logger.error("Impossible de créer la vignette pour %s", path, exc_info=exc)
-                continue
-            self._preview_images.append(tk_img)
-        if not self._preview_images:
+
+        if not self._pil_images:
             self._show_empty_state("Impossible de lire les images sélectionnées")
             logger.error("Aucune vignette valide n'a pu être générée")
             return
 
         self._show_gallery()
-        for index, (image, path) in enumerate(zip(self._preview_images, self._image_paths)):
-            label = ctk.CTkLabel(self._gallery_container, image=image, text="", cursor="hand2")
-            label.grid(row=index, column=0, sticky="ew", padx=8, pady=(8 if index == 0 else 4, 4))
+        self._render_gallery()
+        logger.success("%d vignette(s) générée(s)", len(self._pil_images))
+
+    def _on_resize(self, _event: object) -> None:
+        if not self._pil_images:
+            return
+        if self._resize_after_id is not None:
+            self.after_cancel(self._resize_after_id)
+        self._resize_after_id = self.after(120, self._render_gallery)
+
+    def _render_gallery(self) -> None:
+        self._resize_after_id = None
+        for widget in self._gallery_container.winfo_children():
+            widget.destroy()
+        self._labels.clear()
+        self._preview_images.clear()
+
+        column_count = self._calculate_columns()
+        for column in range(column_count):
+            self._gallery_container.grid_columnconfigure(column, weight=1)
+
+        gap = 12
+        available_width = max(self._scroll_frame.winfo_width(), self._thumb_min_width)
+        column_width = max(self._thumb_min_width, (available_width - gap * (column_count + 1)) // column_count)
+        max_height = max(self._max_height, int(column_width * 1.2))
+
+        for index, (image, path) in enumerate(zip(self._pil_images, self._image_paths)):
+            thumbnail = image.copy()
+            thumbnail.thumbnail((column_width, max_height))
+            tk_img = ctk.CTkImage(light_image=thumbnail, dark_image=thumbnail, size=thumbnail.size)
+            self._preview_images.append(tk_img)
+
+            card = ctk.CTkFrame(self._gallery_container)
+            row, column = divmod(index, column_count)
+            card.grid(row=row, column=column, padx=gap, pady=gap, sticky="nsew")
+
+            label = ctk.CTkLabel(card, image=tk_img, text="", cursor="hand2")
+            label.pack(expand=True, fill="both", padx=6, pady=6)
             label.bind("<Button-1>", lambda _event, p=path: self._open_full_image(p))
             self._labels.append(label)
-        logger.success("%d vignette(s) générée(s)", len(self._preview_images))
+
+            if self._on_remove is not None:
+                remove_button = ctk.CTkButton(
+                    card,
+                    text="✕",
+                    width=24,
+                    height=24,
+                    corner_radius=12,
+                    fg_color="#2A2A2A",
+                    hover_color="#444444",
+                    command=lambda p=path: self._request_remove(p),
+                )
+                remove_button.place(relx=1.0, rely=0.0, anchor="ne", x=-6, y=6)
+
+        self._gallery_container.update_idletasks()
 
     def _open_full_image(self, path: Path) -> None:
         try:
@@ -118,3 +177,15 @@ class ImagePreview(ctk.CTkFrame):
 
         top.bind("<Escape>", lambda _event: top.destroy())
         top._image_ref = tk_img  # type: ignore[attr-defined]
+
+    def _calculate_columns(self) -> int:
+        available_width = max(self._scroll_frame.winfo_width(), self._thumb_min_width)
+        min_card_width = self._thumb_min_width + 24
+        columns = max(1, available_width // max(min_card_width, 1))
+        return max(1, min(columns, len(self._pil_images)))
+
+    def _request_remove(self, path: Path) -> None:
+        if self._on_remove is None:
+            return
+        logger.info("Suppression demandée pour %s", path)
+        self._on_remove(path)
