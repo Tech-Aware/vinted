@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping, Optional
 
 from app.backend.defect_catalog import known_defect_slugs
+from app.backend.text_normalization import normalize_model_code
 
 
 FieldValue = Optional[str]
@@ -36,6 +37,7 @@ class ListingFields:
     fit_leg: FieldValue
     rise_class: FieldValue
     cotton_pct: FieldValue
+    polyester_pct: FieldValue
     elastane_pct: FieldValue
     gender: FieldValue
     color_main: FieldValue
@@ -57,6 +59,7 @@ class ListingFields:
                 "fit_leg",
                 "rise_class",
                 "cotton_pct",
+                "polyester_pct",
                 "elastane_pct",
                 "gender",
                 "color_main",
@@ -84,6 +87,7 @@ class ListingFields:
         fit_leg = normalize(data.get("fit_leg"))
         rise_class = normalize(data.get("rise_class"))
         cotton_pct = normalize(data.get("cotton_pct"))
+        polyester_pct = normalize(data.get("polyester_pct"))
         elastane_pct = normalize(data.get("elastane_pct"))
         gender = normalize(data.get("gender"))
         color_main = normalize(data.get("color_main"))
@@ -117,13 +121,14 @@ class ListingFields:
                 )
 
         return cls(
-            model=model,
+            model=normalize_model_code(model),
             fr_size=fr_size,
             us_w=us_w,
             us_l=us_l,
             fit_leg=fit_leg,
             rise_class=rise_class,
             cotton_pct=cotton_pct,
+            polyester_pct=polyester_pct,
             elastane_pct=elastane_pct,
             gender=gender,
             color_main=color_main,
@@ -144,6 +149,16 @@ class ListingFields:
         except ValueError:
             return False
 
+    @property
+    def has_polyester(self) -> bool:
+        value = (self.polyester_pct or "").strip()
+        if not value:
+            return False
+        try:
+            return float(value.strip("% ")) > 0
+        except ValueError:
+            return False
+
     @staticmethod
     def json_instruction() -> str:
         slugs = ", ".join(known_defect_slugs()) or "aucun"
@@ -151,13 +166,14 @@ class ListingFields:
             "Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :\n"
             "{\n"
             "  \"fields\": {\n"
-            "    \"model\": \"nom du modèle Levi's (ex: 501)\",\n"
+            "    \"model\": \"code numérique du modèle Levi's (ex: 501) avec le suffixe 'Premium' uniquement si indiqué\",\n"
             "    \"fr_size\": \"taille française visible (ex: 38)\",\n"
             "    \"us_w\": \"largeur US W (ex: 28)\",\n"
             "    \"us_l\": \"longueur US L (ex: 30)\",\n"
             "    \"fit_leg\": \"coupe détectée (bootcut, straight, slim, skinny, etc.)\",\n"
             "    \"rise_class\": \"hauteur de taille (basse, moyenne, haute)\",\n"
             "    \"cotton_pct\": \"pourcentage de coton (ex: 99)\",\n"
+            "    \"polyester_pct\": \"pourcentage de polyester (0 s'il est absent)\",\n"
             "    \"elastane_pct\": \"pourcentage d'élasthanne (0 si absent)\",\n"
             "    \"gender\": \"genre ciblé (femme, homme, mixte)\",\n"
             "    \"color_main\": \"couleur principale\",\n"

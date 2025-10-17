@@ -32,6 +32,7 @@ def test_listing_fields_from_dict_requires_all_keys() -> None:
         "fit_leg": "bootcut",
         "rise_class": "haute",
         "cotton_pct": "99",
+        "polyester_pct": "0",
         "elastane_pct": "1",
         "gender": "femme",
         "color_main": "bleu",
@@ -51,6 +52,7 @@ def test_listing_fields_enforces_sku_prefix_by_gender() -> None:
         "fit_leg": "bootcut",
         "rise_class": "haute",
         "cotton_pct": "99",
+        "polyester_pct": "0",
         "elastane_pct": "1",
         "color_main": "bleu",
         "defects": "aucun défaut",
@@ -82,6 +84,7 @@ def test_listing_fields_rejects_unknown_defect_tags() -> None:
         "fit_leg": "bootcut",
         "rise_class": "haute",
         "cotton_pct": "99",
+        "polyester_pct": "0",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "bleu",
@@ -103,6 +106,7 @@ def test_listing_fields_parses_visibility_flags() -> None:
         "fit_leg": "bootcut",
         "rise_class": "haute",
         "cotton_pct": "99",
+        "polyester_pct": "0",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "bleu",
@@ -115,6 +119,31 @@ def test_listing_fields_parses_visibility_flags() -> None:
     fields = ListingFields.from_dict(payload)
     assert fields.size_label_visible is False
     assert fields.fabric_label_visible is False
+
+
+def test_listing_fields_normalizes_model_code() -> None:
+    base_payload = {
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "haute",
+        "cotton_pct": "99",
+        "polyester_pct": "0",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "Bleu",
+        "defects": "aucun défaut",
+        "sku": "JLF6",
+        "size_label_visible": True,
+        "fabric_label_visible": True,
+    }
+
+    fields = ListingFields.from_dict({"model": "470 Signature super skinny", **base_payload})
+    assert fields.model == "470"
+
+    premium_fields = ListingFields.from_dict({"model": "501 premium stretch", **base_payload})
+    assert premium_fields.model == "501 Premium"
 
 
 @pytest.mark.parametrize(
@@ -153,6 +182,7 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
             "fit_leg": "bootcut / evase",
             "rise_class": "haute",
             "cotton_pct": "99",
+            "polyester_pct": "0",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -167,6 +197,8 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     title, description = template.render(fields)
     assert "Bootcut/Évasé" in title
     assert "bootcut/évasé" in description
+    assert "haute" not in title.lower()
+    assert "taille haute" in description.lower()
     assert "Mesure FR" not in description
     assert "Entrejambe légèrement délavée, voir photos" in description
     assert "Étiquettes composition/taille coupées pour plus de confort." in description
@@ -184,6 +216,7 @@ def test_template_render_mentions_missing_labels_individually(
         "fit_leg": "bootcut",
         "rise_class": "haute",
         "cotton_pct": "99",
+        "polyester_pct": "0",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "Bleu",
@@ -203,6 +236,34 @@ def test_template_render_mentions_missing_labels_individually(
     )
     _title, fabric_description = template.render(fabric_hidden)
     assert "Étiquette composition coupée pour plus de confort." in fabric_description
+
+
+def test_template_render_mentions_polyester(template_registry: ListingTemplateRegistry) -> None:
+    template = template_registry.get_template(template_registry.default_template)
+    fields = ListingFields.from_dict(
+        {
+            "model": "501",
+            "fr_size": "40",
+            "us_w": "30",
+            "us_l": "30",
+            "fit_leg": "slim",
+            "rise_class": "moyenne",
+            "cotton_pct": "60",
+            "polyester_pct": "35",
+            "elastane_pct": "5",
+            "gender": "Femme",
+            "color_main": "Bleu",
+            "defects": "aucune anomalie",
+            "sku": "JLF8",
+            "defect_tags": [],
+            "size_label_visible": True,
+            "fabric_label_visible": True,
+        }
+    )
+
+    assert fields.has_polyester is True
+    _title, description = template.render(fields)
+    assert "60% coton, 35% polyester, 5% élasthanne" in description
 
 
 def test_generator_parses_json_and_renders(template_registry: ListingTemplateRegistry) -> None:
@@ -230,6 +291,7 @@ def test_generator_parses_json_and_renders(template_registry: ListingTemplateReg
             "fit_leg": "slim",
             "rise_class": "moyenne",
             "cotton_pct": "99",
+            "polyester_pct": "0",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -272,6 +334,7 @@ def test_template_render_falls_back_to_free_text(template_registry: ListingTempl
             "fit_leg": "bootcut",
             "rise_class": "haute",
             "cotton_pct": "99",
+            "polyester_pct": "0",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "Bleu",
