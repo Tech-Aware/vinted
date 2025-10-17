@@ -124,21 +124,22 @@ class ListingGenerator:
                 input=messages,
                 max_output_tokens=700,
                 temperature=0.7,
+                response_format={"type": "json_object"},
             )
         except Exception:
             logger.exception("Échec de l'appel à l'API OpenAI")
             raise
         logger.success("Réponse reçue depuis l'API OpenAI")
-        content = ""
-        output = getattr(response, "output", None)
-        if output:
-            for block in output:
-                for item in getattr(block, "content", []):
-                    text = getattr(item, "text", None)
-                    if text:
-                        content += text
+        content = (getattr(response, "output_text", "") or "").strip()
         if not content:
-            content = getattr(response, "output_text", "").strip()
+            output = getattr(response, "output", None)
+            if output:
+                for block in output:
+                    for item in getattr(block, "content", []):
+                        text = getattr(item, "text", None)
+                        if text:
+                            content += text
+                content = content.strip()
         logger.step("Analyse de la réponse JSON")
         try:
             payload = json.loads(content)
