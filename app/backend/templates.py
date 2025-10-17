@@ -69,7 +69,8 @@ class ListingTemplate:
         if defect_texts:
             defects = "; ".join(defect_texts)
         else:
-            defects = _clean(fields.defects, "aucun défaut majeur")
+            raw_defects = (fields.defects or "").strip()
+            defects = raw_defects if raw_defects else ""
         sku = _clean(fields.sku, "SKU")
         fit_title_text = fit_title or _clean(fields.fit_leg)
         fit_description_text = fit_description or _clean(fields.fit_leg)
@@ -110,9 +111,11 @@ class ListingTemplate:
             "Fermeture zippée + bouton gravé Levi’s.",
         ]
 
-        third_paragraph_lines = [
-            f"Très bon état général {defects} (voir photos)",
-        ]
+        third_paragraph_lines: List[str] = []
+        if defects:
+            third_paragraph_lines.append(f"Très bon état général {defects} (voir photos)")
+        else:
+            third_paragraph_lines.append("Très bon état")
 
         if not fields.size_label_visible and not fields.fabric_label_visible:
             third_paragraph_lines.append(
@@ -190,7 +193,7 @@ class ListingTemplateRegistry:
                     Composition : {{cotton_pct}}% coton{{#if polyester_pct}}, {{polyester_pct}}% polyester{{/if}}{{#if elastane_pct}}, {{elastane_pct}}% élasthanne{{/if}} pour une touche de stretch et plus de confort.
                     Fermeture zippée + bouton gravé Levi’s.
                     
-                    Très bon états général {{defects}} (voir photos)
+                    Très bon état général {{defects}} (voir photos). S'il n'y a aucun défaut à signaler, écris simplement « Très bon état ».
                     📏 Mesures précises visibles en photo.
                     📦 Envoi rapide et soigné
                     
