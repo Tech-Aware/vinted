@@ -16,7 +16,7 @@ limitations under the License.
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from app.backend.defect_catalog import get_defect_descriptions
 from app.backend.listing_fields import ListingFields
@@ -24,7 +24,7 @@ from app.backend.sizing import NormalizedSizes, normalize_sizes
 from app.backend.text_normalization import normalize_fit_terms
 
 
-def _ensure_percent(value: str | None) -> str:
+def _ensure_percent(value: Optional[str]) -> str:
     if not value:
         return "0%"
     stripped = value.strip()
@@ -33,7 +33,7 @@ def _ensure_percent(value: str | None) -> str:
     return f"{stripped}%"
 
 
-def _clean(value: str | None, fallback: str = "NC") -> str:
+def _clean(value: Optional[str], fallback: str = "NC") -> str:
     text = (value or "").strip()
     return text if text else fallback
 

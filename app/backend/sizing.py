@@ -29,7 +29,7 @@ class NormalizedSizes:
 _ELASTANE_NOTE = "Mesure FR étendue par la présence d'élasthane dans la composition"
 
 
-def _extract_int(value: str | None) -> Optional[int]:
+def _extract_int(value: Optional[str]) -> Optional[int]:
     if not value:
         return None
     match = re.search(r"\d+", value)
@@ -41,7 +41,7 @@ def _extract_int(value: str | None) -> Optional[int]:
         return None
 
 
-def normalize_sizes(us_w: str | None, fr_size: str | None, has_elastane: bool) -> NormalizedSizes:
+def normalize_sizes(us_w: Optional[str], fr_size: Optional[str], has_elastane: bool) -> NormalizedSizes:
     """Apply the business rule converting US W to FR sizes.
 
     - When both values exist, compute the difference ``delta = FR - US``. If ``delta``

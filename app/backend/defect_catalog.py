@@ -15,7 +15,7 @@ limitations under the License.
 """Reference catalog for standardized defect mentions."""
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Sequence
+from typing import Dict, Iterable, List, Sequence, Set
 
 
 @dataclass(frozen=True)
@@ -73,7 +73,7 @@ def get_defect_descriptions(slugs: Sequence[str]) -> List[str]:
     instructions while still allowing validation upstream.
     """
 
-    seen: set[str] = set()
+    seen: Set[str] = set()
     descriptions: List[str] = []
     for slug in slugs:
         if slug in seen:

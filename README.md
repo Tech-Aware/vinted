@@ -16,7 +16,7 @@ sous Windows que sous Chromebook (via l'environnement Linux).
 
 ## Pré-requis
 
-- Python 3.10 ou plus récent.
+- Python 3.8 ou plus récent (version 64 bits recommandée sur Windows).
 - Accès à l'API OpenAI avec un modèle vision (par exemple `gpt-4o-mini`).
 - Clé API disponible via la variable d'environnement `OPENAI_API_KEY`.
 
@@ -73,7 +73,7 @@ renvoyée par l'API est affichée dans la barre de statut de l'application.
 
 ## Déploiement sur Chromebook
 
-1. Activez Linux (Crostini) et installez un interpréteur Python récent (3.10 ou
+1. Activez Linux (Crostini) et installez un interpréteur Python récent (3.8 ou
    supérieur) depuis le terminal Linux.
 2. Rendez les nouveaux scripts exécutables :
 
@@ -106,9 +106,22 @@ renvoyée par l'API est affichée dans la barre de statut de l'application.
 
 ## Déploiement sur Windows
 
-- Installez Python 3.10 depuis le Microsoft Store ou python.org.
+- Installez Python 3.8 (ou plus récent) depuis python.org.
 - Ouvrez PowerShell, créez l'environnement virtuel et installez les dépendances.
 - Lancement identique : `python -m app.main`.
+
+### Créer un binaire standalone (Windows 7/8/10/11)
+
+Pour cibler des machines ne supportant pas le format MSIX (Windows 7/8), un
+script PowerShell est disponible dans `packaging/windows/standalone/` :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging/windows/standalone/build.ps1 -PythonPath "C:\\Python38\\python.exe"
+```
+
+La commande génère l'exécutable via PyInstaller puis produit
+`dist/VintedAssistant-win64.zip`, prêt à être distribué. Décompressez l'archive
+sur la machine cible et lancez `VintedAssistant.exe`.
 
 ### Créer un package MSIX signé
 
