@@ -15,7 +15,7 @@ limitations under the License.
 """Reference catalog for standardized defect mentions."""
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Sequence, Set
+from typing import Dict, Iterable, List, Sequence, Set, Tuple
 
 
 @dataclass(frozen=True)
@@ -24,6 +24,15 @@ class DefectSpec:
 
     slug: str
     synonyms: Sequence[str]
+    description: str
+
+
+@dataclass(frozen=True)
+class DefectCombinationSpec:
+    """Describe a combination of defects rendered as a single mention."""
+
+    slug: str
+    required_slugs: Sequence[str]
     description: str
 
 
@@ -62,6 +71,15 @@ _CATALOG_SPECS: Sequence[DefectSpec] = (
 )
 
 
+_COMBINATION_SPECS: Sequence[DefectCombinationSpec] = (
+    DefectCombinationSpec(
+        slug="stylish_holes_plus_ripped",
+        required_slugs=("stylish_holes", "ripped"),
+        description="Effets troués déchirés pour un style plus affirmé, voir photos",
+    ),
+)
+
+
 DEFECT_CATALOG: Dict[str, DefectSpec] = _build_catalog(_CATALOG_SPECS)
 """Mapping of defect slug to their specification."""
 
@@ -74,14 +92,39 @@ def get_defect_descriptions(slugs: Sequence[str]) -> List[str]:
     """
 
     seen: Set[str] = set()
-    descriptions: List[str] = []
+    ordered_unique_slugs: List[str] = []
     for slug in slugs:
         if slug in seen:
             continue
         seen.add(slug)
+        ordered_unique_slugs.append(slug)
+
+    if not ordered_unique_slugs:
+        return []
+
+    slug_to_index: Dict[str, int] = {slug: idx for idx, slug in enumerate(ordered_unique_slugs)}
+    remaining: Set[str] = set(ordered_unique_slugs)
+    descriptions: List[str] = []
+
+    combination_queue: List[Tuple[int, DefectCombinationSpec]] = []
+    for combo_spec in _COMBINATION_SPECS:
+        if all(required in remaining for required in combo_spec.required_slugs):
+            first_index = min(slug_to_index[required] for required in combo_spec.required_slugs)
+            combination_queue.append((first_index, combo_spec))
+
+    for _, combo_spec in sorted(combination_queue, key=lambda item: item[0]):
+        descriptions.append(combo_spec.description)
+        for required in combo_spec.required_slugs:
+            remaining.discard(required)
+
+    for slug in ordered_unique_slugs:
+        if slug not in remaining:
+            continue
         spec = DEFECT_CATALOG.get(slug)
         if spec and spec.description:
             descriptions.append(spec.description)
+        remaining.discard(slug)
+
     return descriptions
 
 

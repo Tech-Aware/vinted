@@ -214,6 +214,35 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert "Étiquettes composition/taille coupées pour plus de confort." in description
 
 
+def test_template_render_combines_related_defects(template_registry: ListingTemplateRegistry) -> None:
+    template = template_registry.get_template(template_registry.default_template)
+    fields = ListingFields.from_dict(
+        {
+            "model": "501",
+            "fr_size": "38",
+            "us_w": "28",
+            "us_l": "30",
+            "fit_leg": "bootcut",
+            "rise_class": "haute",
+            "cotton_pct": "99",
+            "polyester_pct": "0",
+            "elastane_pct": "1",
+            "gender": "Femme",
+            "color_main": "Bleu",
+            "defects": "traces stylées",
+            "sku": "JLF6",
+            "defect_tags": ["stylish_holes", "ripped"],
+            "size_label_visible": True,
+            "fabric_label_visible": True,
+        }
+    )
+
+    _title, description = template.render(fields)
+    assert "Effets troués déchirés pour un style plus affirmé" in description
+    assert "Effets troués pour plus style" not in description
+    assert "Effets déchiré pour un style plus affirmé" not in description
+
+
 def test_template_render_mentions_missing_labels_individually(
     template_registry: ListingTemplateRegistry,
 ) -> None:
