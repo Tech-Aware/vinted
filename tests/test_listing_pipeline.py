@@ -145,6 +145,9 @@ def test_listing_fields_normalizes_model_code() -> None:
     premium_fields = ListingFields.from_dict({"model": "501 premium stretch", **base_payload})
     assert premium_fields.model == "501 Premium"
 
+    wedgie_fields = ListingFields.from_dict({"model": "Wedgie501 premium", **base_payload})
+    assert wedgie_fields.model == "501 Premium"
+
 
 @pytest.mark.parametrize(
     "fit_leg,expected",
