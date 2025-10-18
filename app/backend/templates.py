@@ -46,30 +46,41 @@ class ListingTemplate:
 
     def render(self, fields: ListingFields) -> Tuple[str, str]:
         fit_title, fit_description, fit_hashtag = normalize_fit_terms(fields.fit_leg)
-        normalized_sizes: NormalizedSizes = normalize_sizes(
-            fields.us_w,
-            fields.fr_size,
-            fields.has_elastane,
-            ensure_even_fr=True,
-        )
-
-        fr_display = normalized_sizes.fr_size or (fields.fr_size or "")
-        us_display = normalized_sizes.us_size
-        size_note = normalized_sizes.note
+        if fields.size_label_visible:
+            normalized_sizes: NormalizedSizes = normalize_sizes(
+                fields.us_w,
+                fields.fr_size,
+                fields.has_elastane,
+                ensure_even_fr=True,
+            )
+            fr_display = normalized_sizes.fr_size or (fields.fr_size or "")
+            us_display = normalized_sizes.us_size
+            size_note = normalized_sizes.note
+        else:
+            fr_display = fields.fr_size or ""
+            us_display = None
+            size_note = None
 
         model = (fields.model or "").strip()
         gender = _clean(fields.gender, "femme")
         color = _clean(fields.color_main, "bleu")
         rise = _clean(fields.rise_class, "moyenne")
-        cotton = _ensure_percent(fields.cotton_pct)
+        cotton = _ensure_percent(fields.cotton_pct) if fields.fabric_label_visible else None
         polyester_pct = fields.polyester_pct
         elastane_pct = fields.elastane_pct
-        composition_parts = [f"{cotton} coton"]
-        if fields.has_polyester:
-            composition_parts.append(f"{_ensure_percent(polyester_pct)} polyester")
-        if fields.has_elastane:
-            composition_parts.append(f"{_ensure_percent(elastane_pct)} élasthanne")
-        composition = ", ".join(composition_parts)
+        composition_parts: List[str] = []
+        if fields.fabric_label_visible and cotton:
+            composition_parts.append(f"{cotton} coton")
+            if fields.has_polyester:
+                composition_parts.append(f"{_ensure_percent(polyester_pct)} polyester")
+            if fields.has_elastane:
+                composition_parts.append(f"{_ensure_percent(elastane_pct)} élasthanne")
+            composition = ", ".join(composition_parts)
+            composition_sentence = (
+                f"Composition : {composition} pour une touche de stretch et plus de confort."
+            )
+        else:
+            composition_sentence = "Composition non indiquée (étiquette absente)."
         defect_texts = get_defect_descriptions(fields.defect_tags)
         raw_defects = (fields.defects or "").strip()
 
@@ -94,14 +105,15 @@ class ListingTemplate:
         if model:
             title_intro = f"{title_intro} {model}"
 
+        cotton_title_segment = f"{cotton} coton" if cotton else ""
         title_parts = [
             title_intro,
             f"FR{fr_display}" if fr_display else "",
-            f"W{us_display}" if us_display else "",
-            f"L{fields.us_l}" if fields.us_l else "",
+            f"W{us_display}" if fields.size_label_visible and us_display else "",
+            f"L{fields.us_l}" if fields.size_label_visible and fields.us_l else "",
             "coupe",
             fit_title_text,
-            f"{cotton} coton",
+            cotton_title_segment,
             gender,
             color,
             "-",
@@ -130,7 +142,7 @@ class ListingTemplate:
 
         second_paragraph_lines = [
             f"Coloris {color} légèrement délavé, très polyvalent et facile à assortir.",
-            f"Composition : {composition} pour une touche de stretch et plus de confort.",
+            composition_sentence,
             "Fermeture zippée + bouton gravé Levi’s.",
         ]
 

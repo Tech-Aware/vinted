@@ -141,6 +141,8 @@ class ListingFields:
 
     @property
     def has_elastane(self) -> bool:
+        if not self.fabric_label_visible:
+            return False
         value = (self.elastane_pct or "").strip()
         if not value:
             return False
@@ -151,6 +153,8 @@ class ListingFields:
 
     @property
     def has_polyester(self) -> bool:
+        if not self.fabric_label_visible:
+            return False
         value = (self.polyester_pct or "").strip()
         if not value:
             return False
