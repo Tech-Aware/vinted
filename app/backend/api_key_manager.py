@@ -15,8 +15,9 @@ limitations under the License.
 """Helpers to manage the OpenAI API key for the desktop application."""
 
 import os
+import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 from app.logger import get_logger
 
@@ -30,8 +31,36 @@ logger = get_logger(__name__)
 
 _SERVICE_NAME = "VintedListingAssistant"
 _ACCOUNT_NAME = "openai_api_key"
-_CONFIG_DIR = Path.home() / ".vinted_assistant"
-_CONFIG_FILE = _CONFIG_DIR / "openai_api_key"
+_APP_DIR_NAME = "VintedAssistant"
+_CONFIG_FILENAME = "openai_api_key"
+
+
+def _is_windows() -> bool:
+    """Return ``True`` when running on a Windows platform."""
+
+    return sys.platform.startswith("win")
+
+
+def _windows_config_dir() -> Path:
+    """Return the preferred configuration directory on Windows."""
+
+    for env_var in ("APPDATA", "LOCALAPPDATA"):
+        candidate = os.getenv(env_var)
+        if candidate:
+            return Path(candidate) / _APP_DIR_NAME
+
+    return Path.home() / "AppData" / "Roaming" / _APP_DIR_NAME
+
+
+def _config_paths() -> Tuple[Path, Path]:
+    """Return the directory and file used to store the API key."""
+
+    if _is_windows():
+        config_dir = _windows_config_dir()
+    else:
+        config_dir = Path.home() / ".vinted_assistant"
+
+    return config_dir, config_dir / _CONFIG_FILENAME
 
 
 def _read_from_keyring() -> Optional[str]:
@@ -49,11 +78,12 @@ def _read_from_keyring() -> Optional[str]:
 
 
 def _read_from_file() -> Optional[str]:
-    if not _CONFIG_FILE.exists():
-        logger.info("Fichier de configuration absent (%s)", _CONFIG_FILE)
+    config_dir, config_file = _config_paths()
+    if not config_file.exists():
+        logger.info("Fichier de configuration absent (%s)", config_file)
         return None
     try:
-        value = _CONFIG_FILE.read_text(encoding="utf-8").strip()
+        value = config_file.read_text(encoding="utf-8").strip()
         if value:
             logger.success("Clé API chargée depuis le fichier sécurisé")
         return value or None
@@ -75,13 +105,15 @@ def _write_to_keyring(api_key: str) -> bool:
 
 
 def _write_to_file(api_key: str) -> bool:
+    config_dir, config_file = _config_paths()
     try:
-        _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        _CONFIG_FILE.write_text(api_key, encoding="utf-8")
-        try:
-            _CONFIG_FILE.chmod(0o600)  # Meilleur effort, peut échouer sous Windows
-        except OSError:  # pragma: no cover - dépend du système
-            logger.warning("Impossible de restreindre les permissions du fichier")
+        config_dir.mkdir(parents=True, exist_ok=True)
+        config_file.write_text(api_key, encoding="utf-8")
+        if not _is_windows():
+            try:
+                config_file.chmod(0o600)
+            except OSError:  # pragma: no cover - dépend du système
+                logger.warning("Impossible de restreindre les permissions du fichier")
     except OSError:
         logger.exception("Échec de l'écriture du fichier de configuration")
         return False
