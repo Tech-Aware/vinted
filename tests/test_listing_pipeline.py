@@ -232,6 +232,9 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert "haute" not in title.lower()
     assert "taille haute" in description.lower()
     assert "Mesure FR" not in description
+    assert " W" not in title  # no US size injected when label is hidden
+    assert " L30" not in title
+    assert "Composition non indiquée (étiquette absente)." in description
     assert "Entrejambe légèrement délavée, voir photos" in description
     assert "Étiquettes composition/taille coupées pour plus de confort." in description
 
@@ -325,6 +328,64 @@ def test_template_render_mentions_polyester(template_registry: ListingTemplateRe
     assert fields.has_polyester is True
     _title, description = template.render(fields)
     assert "60% coton, 35% polyester, 5% élasthanne" in description
+
+
+def test_template_render_skips_composition_when_label_missing(
+    template_registry: ListingTemplateRegistry,
+) -> None:
+    template = template_registry.get_template(template_registry.default_template)
+    fields = ListingFields.from_dict(
+        {
+            "model": "501",
+            "fr_size": "38",
+            "us_w": "28",
+            "us_l": "30",
+            "fit_leg": "bootcut",
+            "rise_class": "haute",
+            "cotton_pct": "99",
+            "polyester_pct": "0",
+            "elastane_pct": "1",
+            "gender": "Femme",
+            "color_main": "Bleu",
+            "defects": "aucune anomalie",
+            "sku": "JLF6",
+            "defect_tags": [],
+            "size_label_visible": True,
+            "fabric_label_visible": False,
+        }
+    )
+
+    title, description = template.render(fields)
+    assert "coton" not in title.lower()
+    assert "Composition non indiquée (étiquette absente)." in description
+    assert "% polyester" not in description
+    assert "% élasthanne" not in description
+
+
+def test_listing_fields_resets_fiber_flags_when_label_missing() -> None:
+    fields = ListingFields.from_dict(
+        {
+            "model": "501",
+            "fr_size": "38",
+            "us_w": "28",
+            "us_l": "30",
+            "fit_leg": "bootcut",
+            "rise_class": "haute",
+            "cotton_pct": "99",
+            "polyester_pct": "12",
+            "elastane_pct": "2",
+            "gender": "Femme",
+            "color_main": "Bleu",
+            "defects": "aucune anomalie",
+            "sku": "JLF6",
+            "defect_tags": [],
+            "size_label_visible": True,
+            "fabric_label_visible": False,
+        }
+    )
+
+    assert fields.has_polyester is False
+    assert fields.has_elastane is False
 
 
 @pytest.mark.parametrize("model_value", [None, ""])
