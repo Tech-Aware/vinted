@@ -84,7 +84,7 @@ class VintedListingApp(ctk.CTk):
         )
         self.template_combo.grid(row=1, column=0, sticky="ew", padx=12)
 
-        self.comment_box = ctk.CTkTextbox(form_frame, height=70)
+        self.comment_box = ctk.CTkTextbox(form_frame, height=28)
         self.comment_box.insert("1.0", "Décrivez tâches et défauts...")
         self.comment_box.grid(row=2, column=0, sticky="ew", padx=12, pady=(12, 4))
 
@@ -101,7 +101,7 @@ class VintedListingApp(ctk.CTk):
         self.clear_button = ctk.CTkButton(button_frame, text="Réinitialiser", command=self.reset)
         self.clear_button.grid(row=0, column=2, padx=4, pady=4, sticky="ew")
 
-        self.title_box = ctk.CTkTextbox(form_frame, height=60)
+        self.title_box = ctk.CTkTextbox(form_frame, height=40)
         self.title_box.grid(row=4, column=0, sticky="nsew", padx=12, pady=(12, 4))
 
         self.description_box = ctk.CTkTextbox(form_frame, height=220)
