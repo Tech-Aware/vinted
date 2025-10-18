@@ -16,9 +16,9 @@ limitations under the License.
 
 import threading
 from pathlib import Path
-from typing import List, Set
+from typing import List, Optional, Set
 
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
@@ -60,30 +60,35 @@ class VintedListingApp(ctk.CTk):
         self._image_directories: Set[Path] = set()
 
         self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
 
-        self.preview_frame = ImagePreview(self, on_remove=self._remove_image)
-        self.preview_frame.grid(row=0, column=0, padx=16, pady=16, sticky="nsew")
+        content_frame = ctk.CTkFrame(self)
+        content_frame.grid(row=0, column=0, padx=16, pady=(16, 8), sticky="nsew")
+        content_frame.columnconfigure(0, weight=1)
+        content_frame.rowconfigure(0, weight=1)
 
-        right_panel = ctk.CTkFrame(self)
-        right_panel.grid(row=0, column=1, padx=16, pady=16, sticky="nsew")
-        right_panel.columnconfigure(0, weight=1)
-        right_panel.rowconfigure(7, weight=1)
+        self.preview_frame = ImagePreview(content_frame, on_remove=self._remove_image)
+        self.preview_frame.grid(row=0, column=0, padx=12, pady=12, sticky="nsew")
+
+        form_frame = ctk.CTkFrame(self)
+        form_frame.grid(row=1, column=0, padx=16, pady=(8, 16), sticky="nsew")
+        form_frame.columnconfigure(0, weight=1)
+        form_frame.rowconfigure(5, weight=1)
 
         self.template_var = ctk.StringVar(value=self.template_registry.default_template)
-        template_label = ctk.CTkLabel(right_panel, text="Modèle d'annonce")
+        template_label = ctk.CTkLabel(form_frame, text="Modèle d'annonce")
         template_label.grid(row=0, column=0, sticky="w", padx=12, pady=(12, 4))
         self.template_combo = ctk.CTkComboBox(
-            right_panel, values=self.template_registry.available_templates, variable=self.template_var
+            form_frame, values=self.template_registry.available_templates, variable=self.template_var
         )
         self.template_combo.grid(row=1, column=0, sticky="ew", padx=12)
 
-        self.comment_box = ctk.CTkTextbox(right_panel, height=100)
+        self.comment_box = ctk.CTkTextbox(form_frame, height=70)
         self.comment_box.insert("1.0", "Décrivez tâches et défauts...")
         self.comment_box.grid(row=2, column=0, sticky="ew", padx=12, pady=(12, 4))
 
-        button_frame = ctk.CTkFrame(right_panel)
+        button_frame = ctk.CTkFrame(form_frame)
         button_frame.grid(row=3, column=0, sticky="ew", padx=12, pady=(4, 4))
         button_frame.columnconfigure((0, 1, 2), weight=1)
 
@@ -96,14 +101,14 @@ class VintedListingApp(ctk.CTk):
         self.clear_button = ctk.CTkButton(button_frame, text="Réinitialiser", command=self.reset)
         self.clear_button.grid(row=0, column=2, padx=4, pady=4, sticky="ew")
 
-        self.title_box = ctk.CTkTextbox(right_panel, height=80)
+        self.title_box = ctk.CTkTextbox(form_frame, height=60)
         self.title_box.grid(row=4, column=0, sticky="nsew", padx=12, pady=(12, 4))
 
-        self.description_box = ctk.CTkTextbox(right_panel, height=220)
-        self.description_box.grid(row=5, column=0, sticky="nsew", padx=12, pady=(4, 4))
+        self.description_box = ctk.CTkTextbox(form_frame, height=220)
+        self.description_box.grid(row=5, column=0, sticky="nsew", padx=12, pady=(4, 12))
 
-        self.status_label = ctk.CTkLabel(right_panel, text="Prêt à analyser")
-        self.status_label.grid(row=6, column=0, sticky="w", padx=12, pady=(8, 12))
+        self._loading_after_id: Optional[str] = None
+        self._loading_step = 0
 
     def select_images(self) -> None:
         logger.step("Ouverture de la boîte de dialogue de sélection d'images")
@@ -123,12 +128,11 @@ class VintedListingApp(ctk.CTk):
                 self._image_directories.add(path_obj.parent)
 
         self.preview_frame.update_images(self.selected_images)
-        self.status_label.configure(text=f"{len(self.selected_images)} photo(s) chargée(s)")
         logger.info("%d image(s) actuellement sélectionnée(s)", len(self.selected_images))
 
     def generate_listing(self) -> None:
         if not self.selected_images:
-            self.status_label.configure(text="Ajoutez au moins une image avant d'analyser")
+            self._show_error_popup("Ajoutez au moins une image avant d'analyser")
             logger.error("Analyse annulée: aucune image sélectionnée")
             return
 
@@ -138,16 +142,17 @@ class VintedListingApp(ctk.CTk):
         try:
             template = self.template_registry.get_template(template_name)
         except KeyError as exc:
-            self.status_label.configure(text=str(exc))
+            self._show_error_popup(str(exc))
             logger.error("Template introuvable: %s", template_name, exc_info=exc)
             return
         logger.success("Template '%s' récupéré", template_name)
-        self.status_label.configure(text="Analyse en cours...")
         logger.info(
             "Lancement de l'analyse (%d image(s), %d caractère(s) de commentaire)",
             len(self.selected_images),
             len(comment),
         )
+
+        self._start_loading_state()
 
         def worker() -> None:
             try:
@@ -158,22 +163,22 @@ class VintedListingApp(ctk.CTk):
                 self.after(0, lambda: self.display_result(result))
             except Exception as exc:  # pragma: no cover - UI feedback
                 logger.exception("Erreur lors de la génération de l'annonce")
-                self.after(0, lambda err=exc: self.status_label.configure(text=f"Erreur: {err}"))
+                self.after(0, lambda err=exc: self._handle_error(err))
 
         threading.Thread(target=worker, daemon=True).start()
         logger.step("Thread d'analyse lancé")
 
     def display_result(self, result: ListingResult) -> None:
+        self._stop_loading_state()
         self.title_box.delete("1.0", "end")
         self.title_box.insert("1.0", result.title)
 
         self.description_box.delete("1.0", "end")
         self.description_box.insert("1.0", result.description)
-
-        self.status_label.configure(text="Titre et description générés")
         logger.success("Résultat affiché à l'utilisateur")
 
     def reset(self) -> None:
+        self._stop_loading_state()
         self._cleanup_image_directories()
         self.selected_images.clear()
         self._image_directories.clear()
@@ -182,7 +187,6 @@ class VintedListingApp(ctk.CTk):
         self.title_box.delete("1.0", "end")
         self.description_box.delete("1.0", "end")
         self.comment_box.insert("1.0", "Décrivez tâches et défauts...")
-        self.status_label.configure(text="Prêt à analyser")
         logger.step("Application réinitialisée")
 
     def _remove_image(self, path: Path) -> None:
@@ -196,11 +200,6 @@ class VintedListingApp(ctk.CTk):
         remaining_directories = {p.parent for p in self.selected_images}
         self._image_directories.intersection_update(remaining_directories)
         self.preview_frame.update_images(self.selected_images)
-
-        if self.selected_images:
-            self.status_label.configure(text=f"{len(self.selected_images)} photo(s) chargée(s)")
-        else:
-            self.status_label.configure(text="Prêt à analyser")
 
     def _cleanup_image_directories(self) -> None:
         if not self.selected_images or not self._image_directories:
@@ -225,3 +224,28 @@ class VintedListingApp(ctk.CTk):
                     logger.warning("Fichier déjà supprimé: %s", file)
                 except OSError as exc:
                     logger.error("Suppression impossible pour %s", file, exc_info=exc)
+
+    def _start_loading_state(self) -> None:
+        self._stop_loading_state()
+        self.generate_button.configure(state="disabled")
+        self._loading_step = 0
+        self._animate_loading_button()
+
+    def _animate_loading_button(self) -> None:
+        dots = "." * self._loading_step
+        self.generate_button.configure(text=f"Analyser{dots}")
+        self._loading_step = (self._loading_step + 1) % 4
+        self._loading_after_id = self.after(350, self._animate_loading_button)
+
+    def _stop_loading_state(self) -> None:
+        if self._loading_after_id is not None:
+            self.after_cancel(self._loading_after_id)
+            self._loading_after_id = None
+        self.generate_button.configure(text="Analyser", state="normal")
+
+    def _handle_error(self, error: Exception) -> None:
+        self._stop_loading_state()
+        self._show_error_popup(f"Erreur: {error}")
+
+    def _show_error_popup(self, message: str) -> None:
+        messagebox.showerror("Erreur", message)
