@@ -101,11 +101,39 @@ class VintedListingApp(ctk.CTk):
         self.clear_button = ctk.CTkButton(button_frame, text="Réinitialiser", command=self.reset)
         self.clear_button.grid(row=0, column=2, padx=4, pady=4, sticky="ew")
 
-        self.title_box = ctk.CTkTextbox(form_frame, height=40)
-        self.title_box.grid(row=4, column=0, sticky="nsew", padx=12, pady=(12, 4))
+        title_container = ctk.CTkFrame(form_frame)
+        title_container.grid(row=4, column=0, sticky="nsew", padx=12, pady=(12, 4))
+        title_container.columnconfigure(0, weight=1)
+        title_container.rowconfigure(0, weight=1)
 
-        self.description_box = ctk.CTkTextbox(form_frame, height=220)
-        self.description_box.grid(row=5, column=0, sticky="nsew", padx=12, pady=(4, 12))
+        self.title_box = ctk.CTkTextbox(title_container, height=40)
+        self.title_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
+        self._enable_select_all(self.title_box)
+
+        title_copy_button = ctk.CTkButton(
+            title_container,
+            text="Copier",
+            width=90,
+            command=lambda: self._copy_to_clipboard(self.title_box),
+        )
+        title_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
+
+        description_container = ctk.CTkFrame(form_frame)
+        description_container.grid(row=5, column=0, sticky="nsew", padx=12, pady=(4, 12))
+        description_container.columnconfigure(0, weight=1)
+        description_container.rowconfigure(0, weight=1)
+
+        self.description_box = ctk.CTkTextbox(description_container, height=220)
+        self.description_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
+        self._enable_select_all(self.description_box)
+
+        description_copy_button = ctk.CTkButton(
+            description_container,
+            text="Copier",
+            width=90,
+            command=lambda: self._copy_to_clipboard(self.description_box),
+        )
+        description_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
 
         self._loading_after_id: Optional[str] = None
         self._loading_step = 0
@@ -249,3 +277,20 @@ class VintedListingApp(ctk.CTk):
 
     def _show_error_popup(self, message: str) -> None:
         messagebox.showerror("Erreur", message)
+
+    def _enable_select_all(self, textbox: ctk.CTkTextbox) -> None:
+        def handler(event: object) -> str:
+            textbox.event_generate("<<SelectAll>>")
+            return "break"
+
+        textbox.bind("<Control-a>", handler)
+        textbox.bind("<Control-A>", handler)
+
+    def _copy_to_clipboard(self, textbox: ctk.CTkTextbox) -> None:
+        content = textbox.get("1.0", "end-1c")
+        if not content:
+            return
+
+        self.clipboard_clear()
+        self.clipboard_append(content)
+        logger.info("Contenu copié dans le presse-papiers")
