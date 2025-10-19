@@ -37,6 +37,7 @@ class ListingFields:
     us_l: FieldValue
     fit_leg: FieldValue
     rise_class: FieldValue
+    rise_measurement_cm: Optional[float]
     cotton_pct: FieldValue
     polyester_pct: FieldValue
     elastane_pct: FieldValue
@@ -59,6 +60,7 @@ class ListingFields:
                 "us_l",
                 "fit_leg",
                 "rise_class",
+                "rise_measurement_cm",
                 "cotton_pct",
                 "polyester_pct",
                 "elastane_pct",
@@ -87,6 +89,9 @@ class ListingFields:
         us_l = normalize(data.get("us_l"))
         fit_leg = normalize(data.get("fit_leg"))
         rise_class = normalize(data.get("rise_class"))
+        rise_measurement_cm = ListingFields._parse_rise_measurement(
+            data.get("rise_measurement_cm")
+        )
         cotton_pct = normalize(data.get("cotton_pct"))
         polyester_pct = normalize(data.get("polyester_pct"))
         elastane_pct = normalize(data.get("elastane_pct"))
@@ -129,6 +134,7 @@ class ListingFields:
             us_l=us_l,
             fit_leg=fit_leg,
             rise_class=rise_class,
+            rise_measurement_cm=rise_measurement_cm,
             cotton_pct=cotton_pct,
             polyester_pct=polyester_pct,
             elastane_pct=elastane_pct,
@@ -140,6 +146,67 @@ class ListingFields:
             fabric_label_visible=fabric_label_visible,
             sku=sku,
         )
+
+    @staticmethod
+    def _parse_rise_measurement(value: Any) -> Optional[float]:
+        """Convert raw measurement input to a float in centimeters."""
+
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            numeric = float(value)
+        elif isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            lowered = stripped.lower()
+            for variant in ("centimètres", "centimetres", "centimeter", "centimeters"):
+                lowered = lowered.replace(variant, "cm")
+            for space in ("\u202f", "\u00a0"):
+                lowered = lowered.replace(space, " ")
+            match = re.search(r"(\d+(?:[\s]*\d)*)(?:[.,]\s*(\d+))?", lowered)
+            if not match:
+                return None
+            integer_part = match.group(1).replace(" ", "")
+            decimal_part = match.group(2) or ""
+            number_str = integer_part
+            if decimal_part:
+                number_str = f"{integer_part}.{decimal_part}"
+            try:
+                numeric = float(number_str)
+            except ValueError:
+                return None
+        else:
+            raise ValueError("'rise_measurement_cm' doit être une chaîne ou un nombre")
+
+        if numeric <= 0:
+            return None
+        return numeric
+
+    @property
+    def resolved_rise_class(self) -> str:
+        """Return the best effort rise class, falling back to the measurement when available."""
+
+        explicit_value = (self.rise_class or "").strip()
+        if explicit_value:
+            return explicit_value
+
+        if self.size_label_visible:
+            return ""
+
+        measurement = self.rise_measurement_cm
+        if measurement is None:
+            return ""
+
+        if 18 <= measurement <= 22:
+            return "basse"
+        if 23 <= measurement <= 27:
+            return "moyenne"
+        if 28 <= measurement <= 33:
+            return "haute"
+        if measurement >= 34:
+            return "très haute"
+        return ""
 
     @property
     def has_elastane(self) -> bool:
@@ -190,7 +257,8 @@ class ListingFields:
                 \"us_w\": \"largeur US W lisible (ex: 28) ; renvoie \"\" si non lisible\",
                 \"us_l\": \"longueur US L lisible (ex: 30) ; renvoie \"\" si non lisible\",
                 \"fit_leg\": \"coupe détectée (bootcut, straight, slim, skinny, etc.) ; renvoie \"\" si la coupe n'est pas certaine\",
-                \"rise_class\": \"hauteur de taille (basse, moyenne, haute) ; renvoie \"\" si non confirmée\",
+                \"rise_class\": \"hauteur de taille (basse, moyenne, haute, très haute) ; renvoie \"\" si non confirmée\",
+                \"rise_measurement_cm\": \"mesure en cm entre le haut de la ceinture et l'entrejambe lorsque visible ; sinon renvoie \"\"\",
                 \"cotton_pct\": \"pourcentage de coton indiqué sur l'étiquette ; renvoie \"\" si l'information n'est pas lisible\",
                 \"polyester_pct\": \"pourcentage de polyester indiqué ; renvoie \"\" si absent ou illisible\",
                 \"elastane_pct\": \"pourcentage d'élasthanne indiqué ; renvoie \"\" si absent ou illisible\",

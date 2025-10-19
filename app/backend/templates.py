@@ -64,7 +64,7 @@ class ListingTemplate:
         gender = _clean(fields.gender)
         color = translate_color_to_french(fields.color_main)
         color = _clean(color)
-        rise = _clean(fields.rise_class)
+        rise = _clean(fields.resolved_rise_class)
         cotton = _ensure_percent(fields.cotton_pct) if fields.fabric_label_visible else ""
         polyester_value = (
             _ensure_percent(fields.polyester_pct) if fields.fabric_label_visible else ""
