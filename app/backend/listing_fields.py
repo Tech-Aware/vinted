@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import Any, Mapping, Optional
 
-from app.backend.defect_catalog import known_defect_slugs
+from app.backend.defect_catalog import iter_prompt_defects, known_defect_slugs
 from app.backend.text_normalization import normalize_model_code
 
 
@@ -97,6 +97,7 @@ class ListingFields:
 
         defect_tags_raw = data.get("defect_tags", [])
         defect_tags: Sequence[str] = ListingFields._normalize_defect_tags(defect_tags_raw)
+        defect_tags = ListingFields._augment_defect_tags_from_text(defects, defect_tags)
 
         size_label_visible = ListingFields._normalize_visibility_flag(
             data.get("size_label_visible"), default=False
@@ -167,7 +168,19 @@ class ListingFields:
     @staticmethod
     def json_instruction() -> str:
         slugs = ', '.join(known_defect_slugs()) or 'aucun'
-        return dedent(
+        defect_lines = []
+        for spec in iter_prompt_defects():
+            synonyms = ', '.join(spec.synonyms)
+            if synonyms:
+                defect_lines.append(
+                    f"- `{spec.slug}` : {spec.description} (synonymes : {synonyms})"
+                )
+            else:
+                defect_lines.append(f"- `{spec.slug}` : {spec.description}")
+
+        defect_help = "".join(["Défauts disponibles :\n", *[line + "\n" for line in defect_lines]])
+
+        instruction = dedent(
             f"""
             Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :
             {{
@@ -197,6 +210,11 @@ class ListingFields:
             """
         ).strip()
 
+        if defect_lines:
+            instruction = f"{defect_help.strip()}\n\n{instruction}"
+
+        return instruction
+
     @staticmethod
     def _normalize_defect_tags(raw_tags: Any) -> Sequence[str]:
         if raw_tags is None:
@@ -224,6 +242,43 @@ class ListingFields:
                 raise ValueError(f"Slug de défaut inconnu: {slug}")
             slugs.append(slug)
         return tuple(slugs)
+
+    @staticmethod
+    def _augment_defect_tags_from_text(
+        defects: FieldValue, defect_tags: Sequence[str]
+    ) -> Sequence[str]:
+        if not defects:
+            return defect_tags
+
+        normalized_text = defects.lower()
+        if not normalized_text:
+            return defect_tags
+
+        existing = list(defect_tags)
+        seen = set(defect_tags)
+
+        # Iterate over prompt defect order to keep deterministic output.
+        for spec in iter_prompt_defects():
+            slug = spec.slug
+            if slug in seen:
+                continue
+            for synonym in spec.synonyms:
+                normalized_synonym = synonym.lower().strip()
+                if normalized_synonym and normalized_synonym in normalized_text:
+                    existing.append(slug)
+                    seen.add(slug)
+                    break
+            else:
+                normalized_description = (spec.description or "").lower().strip()
+                if (
+                    normalized_description
+                    and slug not in seen
+                    and normalized_description in normalized_text
+                ):
+                    existing.append(slug)
+                    seen.add(slug)
+
+        return tuple(existing)
 
     @staticmethod
     def _normalize_visibility_flag(value: Any, *, default: bool) -> bool:

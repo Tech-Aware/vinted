@@ -23,6 +23,14 @@ def template_registry() -> ListingTemplateRegistry:
     return ListingTemplateRegistry()
 
 
+def test_json_instruction_mentions_defect_synonyms() -> None:
+    instruction = ListingFields.json_instruction()
+    assert "faded_crotch" in instruction
+    assert "entrejambe délavé" in instruction
+    assert "stylish_holes" in instruction
+    assert "effet troué" in instruction
+
+
 def test_listing_fields_from_dict_requires_all_keys() -> None:
     payload = {
         "model": "501",
@@ -166,6 +174,28 @@ def test_listing_fields_defaults_visibility_flags_to_false() -> None:
     assert fields.fabric_label_visible is False
 
 
+def test_listing_fields_infers_defect_tag_from_text() -> None:
+    payload = {
+        "model": "501",
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "haute",
+        "cotton_pct": "99",
+        "polyester_pct": "0",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "Bleu",
+        "defects": "Entrejambe délavée visible",
+        "sku": "JLF6",
+        "defect_tags": [],
+    }
+
+    fields = ListingFields.from_dict(payload)
+    assert fields.defect_tags == ("faded_crotch",)
+
+
 def test_listing_fields_normalizes_model_code() -> None:
     base_payload = {
         "fr_size": "38",
@@ -258,7 +288,7 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert " W" not in title  # no US size injected when label is hidden
     assert " L30" not in title
     assert "Composition non visible sur les photos (étiquette absente ou illisible)." in description
-    assert "Entrejambe légèrement délavée, voir photos" in description
+    assert "Très bon état : entrejambe légèrement délavée (voir photos)" in description
     assert "Étiquettes taille et composition non visibles sur les photos." in description
 
 
@@ -286,9 +316,12 @@ def test_template_render_combines_related_defects(template_registry: ListingTemp
     )
 
     _title, description = template.render(fields)
-    assert "Effets troués déchirés pour un style plus affirmé" in description
-    assert "Effets troués pour plus style" not in description
-    assert "Effets déchiré pour un style plus affirmé" not in description
+    assert (
+        "Très bon état : effets troués déchirés pour un style plus affirmé (voir photos)"
+        in description
+    )
+    assert "effets troués pour un style plus affirmé" not in description
+    assert "effets déchirés pour un style plus affirmé" not in description
 
 
 def test_template_render_mentions_missing_labels_individually(
@@ -623,8 +656,6 @@ def test_template_render_mentions_catalog_defect_without_duplication(
 
     _title, description = template.render(fields)
     third_paragraph = description.split("\n\n")[2].split("\n")[0]
-    assert third_paragraph.startswith(
-        "Très bon état Entrejambe légèrement délavée, voir photos"
-    )
+    assert third_paragraph == "Très bon état : entrejambe légèrement délavée (voir photos)"
     assert "Très bon état général" not in third_paragraph
 

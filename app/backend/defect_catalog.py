@@ -15,7 +15,7 @@ limitations under the License.
 """Reference catalog for standardized defect mentions."""
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Sequence, Set, Tuple
+from typing import Dict, Iterable, Iterator, List, Sequence, Set, Tuple
 
 
 @dataclass(frozen=True)
@@ -45,10 +45,11 @@ _CATALOG_SPECS: Sequence[DefectSpec] = (
         slug="faded_crotch",
         synonyms=(
             "entrejambe délavé",
+            "entrejambe délavée",
             "crotch fade",
             "décoloration entrejambe",
         ),
-        description="Entrejambe légèrement délavée, voir photos",
+        description="entrejambe légèrement délavée",
     ),
     DefectSpec(
         slug="stylish_holes",
@@ -57,17 +58,17 @@ _CATALOG_SPECS: Sequence[DefectSpec] = (
             "effet troué",
             "distressed hole",
         ),
-        description="Effets troués pour plus style, voir photos",
+        description="effets troués pour un style plus affirmé",
     ),
     DefectSpec(
-            slug="ripped",
-            synonyms=(
-                "Déchiré",
-                "effet déchiré",
-                "Slightly ripped",
-            ),
-            description="Effets déchiré pour un style plus affirmé, voir photos",
+        slug="ripped",
+        synonyms=(
+            "Déchiré",
+            "effet déchiré",
+            "Slightly ripped",
         ),
+        description="effets déchirés pour un style plus affirmé",
+    ),
 )
 
 
@@ -75,13 +76,19 @@ _COMBINATION_SPECS: Sequence[DefectCombinationSpec] = (
     DefectCombinationSpec(
         slug="stylish_holes_plus_ripped",
         required_slugs=("stylish_holes", "ripped"),
-        description="Effets troués déchirés pour un style plus affirmé, voir photos",
+        description="effets troués déchirés pour un style plus affirmé",
     ),
 )
 
 
 DEFECT_CATALOG: Dict[str, DefectSpec] = _build_catalog(_CATALOG_SPECS)
 """Mapping of defect slug to their specification."""
+
+
+def iter_prompt_defects() -> Iterator[DefectSpec]:
+    """Yield the base defect specifications exposed to the model."""
+
+    return iter(_CATALOG_SPECS)
 
 
 def get_defect_descriptions(slugs: Sequence[str]) -> List[str]:

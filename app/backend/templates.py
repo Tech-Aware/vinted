@@ -103,7 +103,7 @@ class ListingTemplate:
             raw_defects = ""
 
         if defect_texts:
-            defects = "; ".join(defect_texts)
+            defects = ", ".join(defect_texts)
         else:
             defects = raw_defects if raw_defects else ""
         sku = (fields.sku or "").strip()
@@ -184,7 +184,7 @@ class ListingTemplate:
 
         third_paragraph_lines: List[str] = []
         if defects:
-            third_paragraph_lines.append(f"Très bon état {defects} (voir photos)")
+            third_paragraph_lines.append(f"Très bon état : {defects} (voir photos)")
         else:
             third_paragraph_lines.append("Très bon état")
 
