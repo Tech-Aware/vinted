@@ -17,6 +17,7 @@ limitations under the License.
 import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from textwrap import dedent
 from typing import Any, Mapping, Optional
 
 from app.backend.defect_catalog import known_defect_slugs
@@ -98,10 +99,10 @@ class ListingFields:
         defect_tags: Sequence[str] = ListingFields._normalize_defect_tags(defect_tags_raw)
 
         size_label_visible = ListingFields._normalize_visibility_flag(
-            data.get("size_label_visible"), default=True
+            data.get("size_label_visible"), default=False
         )
         fabric_label_visible = ListingFields._normalize_visibility_flag(
-            data.get("fabric_label_visible"), default=True
+            data.get("fabric_label_visible"), default=False
         )
         sku = sku_raw.upper() if sku_raw else sku_raw
 
@@ -165,34 +166,36 @@ class ListingFields:
 
     @staticmethod
     def json_instruction() -> str:
-        slugs = ", ".join(known_defect_slugs()) or "aucun"
-        return (
-            "Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :\n"
-            "{\n"
-            "  \"fields\": {\n"
-            "    \"model\": \"code numérique du modèle Levi's (ex: 501) avec le suffixe 'Premium' uniquement si indiqué ; laisse ce champ vide si le code n'est pas visible ou confirmé sur les photos\",\n"
-            "    \"fr_size\": \"taille française visible (ex: 38)\",\n"
-            "    \"us_w\": \"largeur US W (ex: 28)\",\n"
-            "    \"us_l\": \"longueur US L (ex: 30)\",\n"
-            "    \"fit_leg\": \"coupe détectée (bootcut, straight, slim, skinny, etc.)\",\n"
-            "    \"rise_class\": \"hauteur de taille (basse, moyenne, haute)\",\n"
-            "    \"cotton_pct\": \"pourcentage de coton (ex: 99)\",\n"
-            "    \"polyester_pct\": \"pourcentage de polyester (0 s'il est absent)\",\n"
-            "    \"elastane_pct\": \"pourcentage d'élasthanne (0 si absent)\",\n"
-            "    \"gender\": \"genre ciblé (femme, homme, mixte)\",\n"
-            "    \"color_main\": \"couleur principale\",\n"
-            "    \"defects\": \"défauts ou taches identifiés\",\n"
-            f"    \"defect_tags\": \"liste de slugs parmi [{slugs}] à renseigner UNIQUEMENT si le défaut est visible sur les photos, même légèrement\",\n"
-            "    \"size_label_visible\": \"true/false : indique si une étiquette de taille est lisible sur les photos\",\n"
-            "    \"fabric_label_visible\": \"true/false : indique si une étiquette de composition est lisible sur les photos\",\n"
-            "    \"sku\": \"SKU Levi's : JLF + numéro (1-3 chiffres) pour un jean femme,"
-            " JLH + numéro (1-3 chiffres) pour un jean homme ; utilise le numéro de l'étiquette blanche\"\n"
-            "  }\n"
-            "}\n"
-            "N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.\n"
-            "Indique la coupe en anglais dans 'fit_leg' (ex: bootcut, straight, slim).\n"
-            "Renseigne size_label_visible et fabric_label_visible à false dès qu'aucune étiquette lisible n'est visible sur les photos."
-        )
+        slugs = ', '.join(known_defect_slugs()) or 'aucun'
+        return dedent(
+            f"""
+            Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :
+            {{
+              \"fields\": {{
+                \"model\": \"code numérique du modèle Levi's (ex: 501) avec le suffixe 'Premium' uniquement si indiqué ; renvoie \"\" si le code n'est pas parfaitement lisible\",
+                \"fr_size\": \"taille française lisible (ex: 38) ; renvoie \"\" si aucune taille fiable n'est visible\",
+                \"us_w\": \"largeur US W lisible (ex: 28) ; renvoie \"\" si non lisible\",
+                \"us_l\": \"longueur US L lisible (ex: 30) ; renvoie \"\" si non lisible\",
+                \"fit_leg\": \"coupe détectée (bootcut, straight, slim, skinny, etc.) ; renvoie \"\" si la coupe n'est pas certaine\",
+                \"rise_class\": \"hauteur de taille (basse, moyenne, haute) ; renvoie \"\" si non confirmée\",
+                \"cotton_pct\": \"pourcentage de coton indiqué sur l'étiquette ; renvoie \"\" si l'information n'est pas lisible\",
+                \"polyester_pct\": \"pourcentage de polyester indiqué ; renvoie \"\" si absent ou illisible\",
+                \"elastane_pct\": \"pourcentage d'élasthanne indiqué ; renvoie \"\" si absent ou illisible\",
+                \"gender\": \"genre ciblé (femme, homme, mixte) uniquement s'il est explicitement mentionné ; sinon renvoie \"\"\",
+                \"color_main\": \"couleur principale visible ; renvoie \"\" si la couleur n'est pas évidente\",
+                \"defects\": \"défauts ou taches identifiés ; renvoie \"\" s'il n'y en a pas ou qu'ils ne sont pas visibles\",
+                \"defect_tags\": \"liste de slugs parmi [{slugs}] à renseigner UNIQUEMENT si le défaut est visible sur les photos\",
+                \"size_label_visible\": \"true/false : true uniquement si une étiquette de taille est réellement lisible\",
+                \"fabric_label_visible\": \"true/false : true uniquement si une étiquette de composition est réellement lisible\",
+                \"sku\": \"SKU Levi's : JLF + numéro (1-3 chiffres) pour un jean femme, JLH + numéro (1-3 chiffres) pour un jean homme ; renvoie \"\" si l'étiquette n'est pas lisible\"
+              }}
+            }}
+            N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
+            Indique la coupe en anglais dans 'fit_leg' (ex: bootcut, straight, slim).
+            Ne remplis jamais un champ avec une valeur estimée ou supposée ; retourne la chaîne vide quand une information est manquante ou incertaine.
+            Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.
+            """
+        ).strip()
 
     @staticmethod
     def _normalize_defect_tags(raw_tags: Any) -> Sequence[str]:
