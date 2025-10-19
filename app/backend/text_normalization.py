@@ -23,7 +23,33 @@ import unicodedata
 _FIT_NORMALIZATION = {
     "bootcut": ("Bootcut/Évasé", "bootcut/évasé"),
     "straight": ("Straight/Droit", "straight/droit"),
-    "slim": ("Skinny/Slim", "skinny/slim"),
+    "slim": ("Skinny", "skinny"),
+}
+
+_COLOR_TRANSLATIONS = {
+    "black": "noir",
+    "blue": "bleu",
+    "dark blue": "bleu foncé",
+    "light blue": "bleu clair",
+    "navy": "bleu marine",
+    "white": "blanc",
+    "red": "rouge",
+    "burgundy": "bordeaux",
+    "pink": "rose",
+    "purple": "violet",
+    "green": "vert",
+    "dark green": "vert foncé",
+    "light green": "vert clair",
+    "yellow": "jaune",
+    "orange": "orange",
+    "brown": "marron",
+    "beige": "beige",
+    "grey": "gris",
+    "gray": "gris",
+    "light grey": "gris clair",
+    "light gray": "gris clair",
+    "dark grey": "gris foncé",
+    "dark gray": "gris foncé",
 }
 
 _FIT_ALIASES = {
@@ -71,6 +97,27 @@ def _normalize_fit_lookup(raw_value: str) -> str:
             return alias
 
     return cleaned
+
+
+def translate_color_to_french(color: Optional[str]) -> Optional[str]:
+    """Translate a color name provided in English into French when known."""
+
+    if color is None:
+        return None
+
+    cleaned = color.strip()
+    if not cleaned:
+        return ""
+
+    normalized = _strip_accents(cleaned.lower())
+    normalized = normalized.replace("-", " ")
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+
+    translation = _COLOR_TRANSLATIONS.get(normalized)
+    if translation:
+        return translation
+
+    return cleaned.lower()
 
 
 def normalize_fit_terms(fit_leg: Optional[str]) -> Tuple[str, str, str]:

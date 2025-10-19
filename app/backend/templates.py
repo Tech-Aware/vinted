@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Tuple
 from app.backend.defect_catalog import get_defect_descriptions
 from app.backend.listing_fields import ListingFields
 from app.backend.sizing import NormalizedSizes, normalize_sizes
-from app.backend.text_normalization import normalize_fit_terms
+from app.backend.text_normalization import normalize_fit_terms, translate_color_to_french
 
 
 def _ensure_percent(value: Optional[str]) -> str:
@@ -62,7 +62,8 @@ class ListingTemplate:
 
         model = (fields.model or "").strip()
         gender = _clean(fields.gender)
-        color = _clean(fields.color_main)
+        color = translate_color_to_french(fields.color_main)
+        color = _clean(color)
         rise = _clean(fields.rise_class)
         cotton = _ensure_percent(fields.cotton_pct) if fields.fabric_label_visible else ""
         polyester_value = (
