@@ -39,6 +39,7 @@ def test_listing_fields_from_dict_requires_all_keys() -> None:
         "us_l": "30",
         "fit_leg": "bootcut",
         "rise_class": "haute",
+        "rise_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
         "elastane_pct": "1",
@@ -59,6 +60,7 @@ def test_listing_fields_enforces_sku_prefix_by_gender() -> None:
         "us_l": "30",
         "fit_leg": "bootcut",
         "rise_class": "haute",
+        "rise_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
         "elastane_pct": "1",
@@ -91,6 +93,7 @@ def test_listing_fields_rejects_unknown_defect_tags() -> None:
         "us_l": "30",
         "fit_leg": "bootcut",
         "rise_class": "haute",
+        "rise_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
         "elastane_pct": "1",
@@ -113,6 +116,7 @@ def test_listing_fields_splits_comma_separated_defect_tags() -> None:
         "us_l": "30",
         "fit_leg": "bootcut",
         "rise_class": "haute",
+        "rise_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
         "elastane_pct": "1",
@@ -135,6 +139,7 @@ def test_listing_fields_parses_visibility_flags() -> None:
         "us_l": "30",
         "fit_leg": "bootcut",
         "rise_class": "haute",
+        "rise_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
         "elastane_pct": "1",
@@ -159,6 +164,7 @@ def test_listing_fields_defaults_visibility_flags_to_false() -> None:
         "us_l": "30",
         "fit_leg": "bootcut",
         "rise_class": "haute",
+        "rise_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
         "elastane_pct": "1",
@@ -174,6 +180,117 @@ def test_listing_fields_defaults_visibility_flags_to_false() -> None:
     assert fields.fabric_label_visible is False
 
 
+@pytest.mark.parametrize(
+    ("measurement", "expected"),
+    [
+        ("18", "basse"),
+        ("23,5", "moyenne"),
+        ("32", "haute"),
+        ("34", "très haute"),
+    ],
+)
+def test_listing_fields_resolves_rise_class_from_measurement(
+    measurement: str, expected: str
+) -> None:
+    payload = {
+        "model": "501",
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "",
+        "rise_measurement_cm": measurement,
+        "cotton_pct": "99",
+        "polyester_pct": "0",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "Bleu",
+        "defects": "aucun défaut",
+        "sku": "JLF6",
+        "defect_tags": [],
+        "size_label_visible": False,
+        "fabric_label_visible": False,
+    }
+
+    fields = ListingFields.from_dict(payload)
+    assert fields.resolved_rise_class == expected
+
+
+def test_listing_fields_resolved_rise_class_handles_invalid_measurement() -> None:
+    payload = {
+        "model": "501",
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "",
+        "rise_measurement_cm": "non lisible",
+        "cotton_pct": "99",
+        "polyester_pct": "0",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "Bleu",
+        "defects": "aucun défaut",
+        "sku": "JLF6",
+        "defect_tags": [],
+        "size_label_visible": False,
+        "fabric_label_visible": False,
+    }
+
+    fields = ListingFields.from_dict(payload)
+    assert fields.resolved_rise_class == ""
+
+
+def test_listing_fields_resolved_rise_class_prefers_explicit_value() -> None:
+    payload = {
+        "model": "501",
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "haute",
+        "rise_measurement_cm": "20",
+        "cotton_pct": "99",
+        "polyester_pct": "0",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "Bleu",
+        "defects": "aucun défaut",
+        "sku": "JLF6",
+        "defect_tags": [],
+        "size_label_visible": False,
+        "fabric_label_visible": False,
+    }
+
+    fields = ListingFields.from_dict(payload)
+    assert fields.resolved_rise_class == "haute"
+
+
+def test_listing_fields_resolved_rise_class_ignores_measurement_when_label_visible() -> None:
+    payload = {
+        "model": "501",
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "",
+        "rise_measurement_cm": "28",
+        "cotton_pct": "99",
+        "polyester_pct": "0",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "Bleu",
+        "defects": "aucun défaut",
+        "sku": "JLF6",
+        "defect_tags": [],
+        "size_label_visible": True,
+        "fabric_label_visible": False,
+    }
+
+    fields = ListingFields.from_dict(payload)
+    assert fields.resolved_rise_class == ""
+
+
 def test_listing_fields_infers_defect_tag_from_text() -> None:
     payload = {
         "model": "501",
@@ -182,6 +299,7 @@ def test_listing_fields_infers_defect_tag_from_text() -> None:
         "us_l": "30",
         "fit_leg": "bootcut",
         "rise_class": "haute",
+        "rise_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
         "elastane_pct": "1",
@@ -203,6 +321,7 @@ def test_listing_fields_normalizes_model_code() -> None:
         "us_l": "30",
         "fit_leg": "bootcut",
         "rise_class": "haute",
+        "rise_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
         "elastane_pct": "1",
@@ -266,6 +385,7 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
             "us_l": "30",
             "fit_leg": "bootcut / evase",
             "rise_class": "haute",
+            "rise_measurement_cm": "",
             "cotton_pct": "99",
             "polyester_pct": "0",
             "elastane_pct": "1",
@@ -304,6 +424,7 @@ def test_template_render_translates_main_color_to_french(
             "us_l": "30",
             "fit_leg": "bootcut",
             "rise_class": "haute",
+            "rise_measurement_cm": "",
             "cotton_pct": "99",
             "polyester_pct": "0",
             "elastane_pct": "1",
@@ -334,6 +455,7 @@ def test_template_render_combines_related_defects(template_registry: ListingTemp
             "us_l": "30",
             "fit_leg": "bootcut",
             "rise_class": "haute",
+            "rise_measurement_cm": "",
             "cotton_pct": "99",
             "polyester_pct": "0",
             "elastane_pct": "1",
@@ -367,6 +489,7 @@ def test_template_render_mentions_missing_labels_individually(
         "us_l": "30",
         "fit_leg": "bootcut",
         "rise_class": "haute",
+        "rise_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
         "elastane_pct": "1",
@@ -400,6 +523,7 @@ def test_template_render_mentions_polyester(template_registry: ListingTemplateRe
             "us_l": "30",
             "fit_leg": "slim",
             "rise_class": "moyenne",
+            "rise_measurement_cm": "",
             "cotton_pct": "60",
             "polyester_pct": "35",
             "elastane_pct": "5",
@@ -430,6 +554,7 @@ def test_template_render_skips_composition_when_label_missing(
             "us_l": "30",
             "fit_leg": "bootcut",
             "rise_class": "haute",
+            "rise_measurement_cm": "",
             "cotton_pct": "99",
             "polyester_pct": "0",
             "elastane_pct": "1",
@@ -459,6 +584,7 @@ def test_listing_fields_resets_fiber_flags_when_label_missing() -> None:
             "us_l": "30",
             "fit_leg": "bootcut",
             "rise_class": "haute",
+            "rise_measurement_cm": "",
             "cotton_pct": "99",
             "polyester_pct": "12",
             "elastane_pct": "2",
@@ -487,6 +613,7 @@ def test_template_render_omits_model_when_missing(
         "us_l": "30",
         "fit_leg": "bootcut",
         "rise_class": "haute",
+        "rise_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
         "elastane_pct": "1",
@@ -525,6 +652,7 @@ def test_template_render_avoids_defaulting_missing_fields(
             "us_l": "",
             "fit_leg": "",
             "rise_class": "",
+            "rise_measurement_cm": "",
             "cotton_pct": "",
             "polyester_pct": "",
             "elastane_pct": "",
@@ -571,6 +699,7 @@ def test_generator_parses_json_and_renders(template_registry: ListingTemplateReg
             "us_l": "30",
             "fit_leg": "slim",
             "rise_class": "moyenne",
+            "rise_measurement_cm": "",
             "cotton_pct": "99",
             "polyester_pct": "0",
             "elastane_pct": "1",
@@ -614,6 +743,7 @@ def test_template_render_falls_back_to_free_text(template_registry: ListingTempl
             "us_l": "30",
             "fit_leg": "bootcut",
             "rise_class": "haute",
+            "rise_measurement_cm": "",
             "cotton_pct": "99",
             "polyester_pct": "0",
             "elastane_pct": "1",
@@ -643,6 +773,7 @@ def test_template_render_ignores_positive_defect_phrase(
             "us_l": "30",
             "fit_leg": "bootcut",
             "rise_class": "haute",
+            "rise_measurement_cm": "",
             "cotton_pct": "99",
             "polyester_pct": "0",
             "elastane_pct": "1",
@@ -673,6 +804,7 @@ def test_template_render_mentions_catalog_defect_without_duplication(
             "us_l": "30",
             "fit_leg": "bootcut",
             "rise_class": "haute",
+            "rise_measurement_cm": "",
             "cotton_pct": "99",
             "polyester_pct": "0",
             "elastane_pct": "1",
