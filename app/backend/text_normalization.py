@@ -115,9 +115,9 @@ def translate_color_to_french(color: Optional[str]) -> Optional[str]:
 
     translation = _COLOR_TRANSLATIONS.get(normalized)
     if translation:
-        return translation
+        return translation.lower()
 
-    return cleaned
+    return cleaned.lower()
 
 
 def normalize_fit_terms(fit_leg: Optional[str]) -> Tuple[str, str, str]:
