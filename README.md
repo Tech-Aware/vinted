@@ -31,9 +31,9 @@ sous Windows que sous Chromebook (via l'environnement Linux).
    ```bash
    pip install -r requirements.txt
    ```
-3. (Optionnel) Définissez un modèle vision spécifique.
+3. (Optionnel) Définissez un modèle vision spécifique (par défaut l'application utilise `gpt-4o`).
    ```bash
-   export OPENAI_VISION_MODEL=gpt-4o
+   export OPENAI_VISION_MODEL=gpt-4.1
    ```
 
 ## Lancement

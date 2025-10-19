@@ -44,7 +44,7 @@ class ListingGenerator:
     """Generate a Vinted listing from encoded images and user comments."""
 
     def __init__(self, *, model: Optional[str] = None, api_key: Optional[str] = None) -> None:
-        self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4.1")
+        self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self._client: Optional[OpenAI] = None
         logger.step("ListingGenerator initialisé avec le modèle %s", self.model)
