@@ -319,8 +319,8 @@ def test_template_render_translates_main_color_to_french(
 
     title, description = template.render(fields)
 
-    assert "Noir" in title
-    assert "Coloris Noir" in description
+    assert "noir" in title
+    assert "Coloris noir" in description
     assert "#jeannoir" in description
 
 
