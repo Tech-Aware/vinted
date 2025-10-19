@@ -258,7 +258,7 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert " W" not in title  # no US size injected when label is hidden
     assert " L30" not in title
     assert "Composition non visible sur les photos (étiquette absente ou illisible)." in description
-    assert "Entrejambe légèrement délavée, voir photos" in description
+    assert "Très bon état : entrejambe légèrement délavée (voir photos)" in description
     assert "Étiquettes taille et composition non visibles sur les photos." in description
 
 
@@ -286,9 +286,12 @@ def test_template_render_combines_related_defects(template_registry: ListingTemp
     )
 
     _title, description = template.render(fields)
-    assert "Effets troués déchirés pour un style plus affirmé" in description
-    assert "Effets troués pour plus style" not in description
-    assert "Effets déchiré pour un style plus affirmé" not in description
+    assert (
+        "Très bon état : effets troués déchirés pour un style plus affirmé (voir photos)"
+        in description
+    )
+    assert "effets troués pour un style plus affirmé" not in description
+    assert "effets déchirés pour un style plus affirmé" not in description
 
 
 def test_template_render_mentions_missing_labels_individually(
@@ -623,8 +626,6 @@ def test_template_render_mentions_catalog_defect_without_duplication(
 
     _title, description = template.render(fields)
     third_paragraph = description.split("\n\n")[2].split("\n")[0]
-    assert third_paragraph.startswith(
-        "Très bon état Entrejambe légèrement délavée, voir photos"
-    )
+    assert third_paragraph == "Très bon état : entrejambe légèrement délavée (voir photos)"
     assert "Très bon état général" not in third_paragraph
 

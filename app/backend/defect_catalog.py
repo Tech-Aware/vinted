@@ -48,7 +48,7 @@ _CATALOG_SPECS: Sequence[DefectSpec] = (
             "crotch fade",
             "décoloration entrejambe",
         ),
-        description="Entrejambe légèrement délavée, voir photos",
+        description="entrejambe légèrement délavée",
     ),
     DefectSpec(
         slug="stylish_holes",
@@ -57,17 +57,17 @@ _CATALOG_SPECS: Sequence[DefectSpec] = (
             "effet troué",
             "distressed hole",
         ),
-        description="Effets troués pour plus style, voir photos",
+        description="effets troués pour un style plus affirmé",
     ),
     DefectSpec(
-            slug="ripped",
-            synonyms=(
-                "Déchiré",
-                "effet déchiré",
-                "Slightly ripped",
-            ),
-            description="Effets déchiré pour un style plus affirmé, voir photos",
+        slug="ripped",
+        synonyms=(
+            "Déchiré",
+            "effet déchiré",
+            "Slightly ripped",
         ),
+        description="effets déchirés pour un style plus affirmé",
+    ),
 )
 
 
@@ -75,7 +75,7 @@ _COMBINATION_SPECS: Sequence[DefectCombinationSpec] = (
     DefectCombinationSpec(
         slug="stylish_holes_plus_ripped",
         required_slugs=("stylish_holes", "ripped"),
-        description="Effets troués déchirés pour un style plus affirmé, voir photos",
+        description="effets troués déchirés pour un style plus affirmé",
     ),
 )
 
