@@ -16,8 +16,9 @@ limitations under the License.
 
 import json
 import os
+import re
 from dataclasses import dataclass
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Sequence
 
 try:
     from openai import OpenAI
@@ -129,27 +130,100 @@ class ListingGenerator:
             logger.exception("Échec de l'appel à l'API OpenAI")
             raise
         logger.success("Réponse reçue depuis l'API OpenAI")
-        content = ""
-        output = getattr(response, "output", None)
-        if output:
-            for block in output:
-                for item in getattr(block, "content", []):
-                    text = getattr(item, "text", None)
-                    if text:
-                        content += text
+        content = self._extract_response_text(response)
         if not content:
-            content = getattr(response, "output_text", "").strip()
+            logger.error("Réponse vide reçue depuis l'API OpenAI")
+            raise ValueError("Réponse du modèle vide, impossible de parser le JSON")
+        fenced_match = re.search(r"```(?:json)?\s*(.*?)```", content, re.DOTALL)
+        if fenced_match:
+            content_to_parse = fenced_match.group(1).strip()
+        else:
+            content_to_parse = content.strip()
         logger.step("Analyse de la réponse JSON")
         try:
-            payload = json.loads(content)
+            payload = json.loads(content_to_parse)
             fields_payload = payload.get("fields")
             if not isinstance(fields_payload, dict):
                 raise ValueError("Structure JSON invalide: clé 'fields' manquante ou incorrecte")
             fields = ListingFields.from_dict(fields_payload)
         except Exception as exc:
             logger.exception("Échec de l'analyse de la réponse JSON")
-            raise ValueError("Réponse du modèle invalide, impossible de parser le JSON") from exc
+            snippet = content_to_parse[:200]
+            raise ValueError(
+                "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
+            ) from exc
 
         title, description = template.render(fields)
         logger.success("Titre et description générés depuis les données structurées")
         return ListingResult(title=title, description=description)
+
+    def _extract_response_text(self, response: object) -> str:
+        """Extract textual content from the OpenAI response payload."""
+
+        parts: List[str] = []
+
+        def _append_if_text(value: object) -> None:
+            text = self._coerce_text(value)
+            if text:
+                parts.append(text)
+
+        # First try the pydantic representation when available
+        if hasattr(response, "model_dump"):
+            try:
+                dumped = response.model_dump()  # type: ignore[attr-defined]
+            except Exception:  # pragma: no cover - defensive programming
+                dumped = None
+            if isinstance(dumped, dict):
+                output_blocks = dumped.get("output")
+                if isinstance(output_blocks, Sequence):
+                    for block in output_blocks:
+                        contents = None
+                        if isinstance(block, dict):
+                            contents = block.get("content")
+                        if isinstance(contents, Sequence):
+                            for item in contents:
+                                if isinstance(item, dict):
+                                    _append_if_text(item.get("text"))
+                if not parts:
+                    _append_if_text(dumped.get("output_text"))
+
+        if not parts:
+            output = getattr(response, "output", None)
+            if isinstance(output, Sequence):
+                for block in output:
+                    content_items = getattr(block, "content", None)
+                    if isinstance(content_items, Sequence):
+                        for item in content_items:
+                            _append_if_text(getattr(item, "text", None))
+            if not parts:
+                _append_if_text(getattr(response, "output_text", None))
+
+        return "".join(part for part in parts if part).strip()
+
+    @staticmethod
+    def _coerce_text(value: object) -> str:
+        """Convert various text container shapes into a string."""
+
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        if hasattr(value, "value"):
+            inner = getattr(value, "value")
+            if isinstance(inner, str):
+                return inner
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            collected: List[str] = []
+            for item in value:
+                text = ListingGenerator._coerce_text(getattr(item, "text", item))
+                if text:
+                    collected.append(text)
+            return "".join(collected)
+        text_attr = getattr(value, "text", None)
+        if isinstance(text_attr, str):
+            return text_attr
+        if hasattr(text_attr, "value"):
+            inner = getattr(text_attr, "value")
+            if isinstance(inner, str):
+                return inner
+        return ""
