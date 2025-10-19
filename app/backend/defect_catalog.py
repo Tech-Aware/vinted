@@ -15,7 +15,7 @@ limitations under the License.
 """Reference catalog for standardized defect mentions."""
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Sequence, Set, Tuple
+from typing import Dict, Iterable, Iterator, List, Sequence, Set, Tuple
 
 
 @dataclass(frozen=True)
@@ -45,6 +45,7 @@ _CATALOG_SPECS: Sequence[DefectSpec] = (
         slug="faded_crotch",
         synonyms=(
             "entrejambe délavé",
+            "entrejambe délavée",
             "crotch fade",
             "décoloration entrejambe",
         ),
@@ -82,6 +83,12 @@ _COMBINATION_SPECS: Sequence[DefectCombinationSpec] = (
 
 DEFECT_CATALOG: Dict[str, DefectSpec] = _build_catalog(_CATALOG_SPECS)
 """Mapping of defect slug to their specification."""
+
+
+def iter_prompt_defects() -> Iterator[DefectSpec]:
+    """Yield the base defect specifications exposed to the model."""
+
+    return iter(_CATALOG_SPECS)
 
 
 def get_defect_descriptions(slugs: Sequence[str]) -> List[str]:
