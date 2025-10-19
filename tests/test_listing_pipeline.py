@@ -229,7 +229,7 @@ def test_listing_fields_normalizes_model_code() -> None:
     [
         ("Bootcut", ("Bootcut/Évasé", "bootcut/évasé", "bootcut")),
         ("bootcut / evase", ("Bootcut/Évasé", "bootcut/évasé", "bootcut")),
-        ("Skinny", ("Skinny/Slim", "skinny/slim", "slim")),
+        ("Skinny", ("Skinny", "skinny", "slim")),
         ("droit", ("Straight/Droit", "straight/droit", "straight")),
     ],
 )
@@ -290,6 +290,38 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert "Composition non visible sur les photos (étiquette absente ou illisible)." in description
     assert "Très bon état : entrejambe légèrement délavée (voir photos)" in description
     assert "Étiquettes taille et composition non visibles sur les photos." in description
+
+
+def test_template_render_translates_main_color_to_french(
+    template_registry: ListingTemplateRegistry,
+) -> None:
+    template = template_registry.get_template(template_registry.default_template)
+    fields = ListingFields.from_dict(
+        {
+            "model": "501",
+            "fr_size": "38",
+            "us_w": "28",
+            "us_l": "30",
+            "fit_leg": "bootcut",
+            "rise_class": "haute",
+            "cotton_pct": "99",
+            "polyester_pct": "0",
+            "elastane_pct": "1",
+            "gender": "Femme",
+            "color_main": "black",
+            "defects": "aucun défaut",
+            "sku": "JLF6",
+            "defect_tags": [],
+            "size_label_visible": True,
+            "fabric_label_visible": True,
+        }
+    )
+
+    title, description = template.render(fields)
+
+    assert "Noir" in title
+    assert "Coloris Noir" in description
+    assert "#jeannoir" in description
 
 
 def test_template_render_combines_related_defects(template_registry: ListingTemplateRegistry) -> None:
@@ -568,8 +600,8 @@ def test_generator_parses_json_and_renders(template_registry: ListingTemplateReg
 
     result = generator.generate_listing([], "", template)
 
-    assert "Skinny/Slim" in result.title
-    assert "skinny/slim" in result.description
+    assert "Skinny" in result.title
+    assert "skinny" in result.description
 
 
 def test_template_render_falls_back_to_free_text(template_registry: ListingTemplateRegistry) -> None:
