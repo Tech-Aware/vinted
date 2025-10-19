@@ -266,7 +266,7 @@ def test_listing_fields_resolved_rise_class_prefers_explicit_value() -> None:
     assert fields.resolved_rise_class == "haute"
 
 
-def test_listing_fields_resolved_rise_class_ignores_measurement_when_label_visible() -> None:
+def test_listing_fields_resolved_rise_class_uses_measurement_even_when_label_visible() -> None:
     payload = {
         "model": "501",
         "fr_size": "38",
@@ -288,7 +288,7 @@ def test_listing_fields_resolved_rise_class_ignores_measurement_when_label_visib
     }
 
     fields = ListingFields.from_dict(payload)
-    assert fields.resolved_rise_class == ""
+    assert fields.resolved_rise_class == "haute"
 
 
 def test_listing_fields_infers_defect_tag_from_text() -> None:

@@ -191,9 +191,6 @@ class ListingFields:
         if explicit_value:
             return explicit_value
 
-        if self.size_label_visible:
-            return ""
-
         measurement = self.rise_measurement_cm
         if measurement is None:
             return ""
