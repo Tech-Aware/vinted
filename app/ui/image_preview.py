@@ -47,6 +47,8 @@ class ImagePreview(ctk.CTkFrame):
         self._resize_after_id: Optional[str] = None
         self._mousewheel_bind_ids: dict[str, str] = {}
         self._mousewheel_target: Optional[ctk.CTkBaseClass] = None
+        self._remove_buttons: List[ctk.CTkButton] = []
+        self._removal_enabled = True
 
         self._scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll_frame.pack_forget()
@@ -76,6 +78,7 @@ class ImagePreview(ctk.CTkFrame):
         self._labels.clear()
         self._preview_images.clear()
         self._pil_images.clear()
+        self._remove_buttons.clear()
         self._image_paths = list(paths)
 
         for widget in self._gallery_container.winfo_children():
@@ -152,6 +155,9 @@ class ImagePreview(ctk.CTkFrame):
                     command=lambda p=path: self._request_remove(p),
                 )
                 remove_button.place(relx=1.0, rely=0.0, anchor="ne", x=-6, y=6)
+                state = "normal" if self._removal_enabled else "disabled"
+                remove_button.configure(state=state)
+                self._remove_buttons.append(remove_button)
 
         self._gallery_container.update_idletasks()
 
@@ -268,7 +274,16 @@ class ImagePreview(ctk.CTkFrame):
         return max(1, min(columns, len(self._pil_images)))
 
     def _request_remove(self, path: Path) -> None:
-        if self._on_remove is None:
+        if self._on_remove is None or not self._removal_enabled:
             return
         logger.info("Suppression demandée pour %s", path)
         self._on_remove(path)
+
+    def set_removal_enabled(self, enabled: bool) -> None:
+        self._removal_enabled = enabled
+        state = "normal" if enabled else "disabled"
+        for button in self._remove_buttons:
+            try:
+                button.configure(state=state)
+            except Exception:
+                continue

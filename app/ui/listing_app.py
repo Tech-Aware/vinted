@@ -83,6 +83,7 @@ class VintedListingApp(ctk.CTk):
             form_frame, values=self.template_registry.available_templates, variable=self.template_var
         )
         self.template_combo.grid(row=1, column=0, sticky="ew", padx=12)
+        self._template_combo_default_state = self.template_combo.cget("state") or "normal"
 
         self.comment_box = ctk.CTkTextbox(form_frame, height=28)
         self.comment_box.insert("1.0", "Décrivez tâches et défauts...")
@@ -101,6 +102,12 @@ class VintedListingApp(ctk.CTk):
         self.clear_button = ctk.CTkButton(button_frame, text="Réinitialiser", command=self.reset)
         self.clear_button.grid(row=0, column=2, padx=4, pady=4, sticky="ew")
 
+        self._buttons_to_disable = [
+            self.select_button,
+            self.generate_button,
+            self.clear_button,
+        ]
+
         title_container = ctk.CTkFrame(form_frame)
         title_container.grid(row=4, column=0, sticky="nsew", padx=12, pady=(12, 4))
         title_container.columnconfigure(0, weight=1)
@@ -110,13 +117,14 @@ class VintedListingApp(ctk.CTk):
         self.title_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
         self._enable_select_all(self.title_box)
 
-        title_copy_button = ctk.CTkButton(
+        self.title_copy_button = ctk.CTkButton(
             title_container,
             text="Copier",
-            width=90,
+            width=72,
             command=lambda: self._copy_to_clipboard(self.title_box),
         )
-        title_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
+        self.title_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
+        self._buttons_to_disable.append(self.title_copy_button)
 
         description_container = ctk.CTkFrame(form_frame)
         description_container.grid(row=5, column=0, sticky="nsew", padx=12, pady=(4, 12))
@@ -127,13 +135,14 @@ class VintedListingApp(ctk.CTk):
         self.description_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
         self._enable_select_all(self.description_box)
 
-        description_copy_button = ctk.CTkButton(
+        self.description_copy_button = ctk.CTkButton(
             description_container,
             text="Copier",
-            width=90,
+            width=72,
             command=lambda: self._copy_to_clipboard(self.description_box),
         )
-        description_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
+        self.description_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
+        self._buttons_to_disable.append(self.description_copy_button)
 
         self._loading_after_id: Optional[str] = None
         self._loading_step = 0
@@ -254,8 +263,10 @@ class VintedListingApp(ctk.CTk):
                     logger.error("Suppression impossible pour %s", file, exc_info=exc)
 
     def _start_loading_state(self) -> None:
-        self._stop_loading_state()
-        self.generate_button.configure(state="disabled")
+        if self._loading_after_id is not None:
+            self.after_cancel(self._loading_after_id)
+            self._loading_after_id = None
+        self._set_controls_enabled(False)
         self._loading_step = 0
         self._animate_loading_button()
 
@@ -269,7 +280,22 @@ class VintedListingApp(ctk.CTk):
         if self._loading_after_id is not None:
             self.after_cancel(self._loading_after_id)
             self._loading_after_id = None
-        self.generate_button.configure(text="Analyser", state="normal")
+        self.generate_button.configure(text="Analyser")
+        self._set_controls_enabled(True)
+
+    def _set_controls_enabled(self, enabled: bool) -> None:
+        state = "normal" if enabled else "disabled"
+        for button in self._buttons_to_disable:
+            try:
+                button.configure(state=state)
+            except Exception:
+                continue
+        combo_state = self._template_combo_default_state if enabled else "disabled"
+        try:
+            self.template_combo.configure(state=combo_state)
+        except Exception:
+            pass
+        self.preview_frame.set_removal_enabled(enabled)
 
     def _handle_error(self, error: Exception) -> None:
         self._stop_loading_state()
