@@ -26,16 +26,15 @@ from app.backend.text_normalization import normalize_fit_terms
 
 def _ensure_percent(value: Optional[str]) -> str:
     if not value:
-        return "0%"
+        return ""
     stripped = value.strip()
     if stripped.endswith("%"):
         return stripped
     return f"{stripped}%"
 
 
-def _clean(value: Optional[str], fallback: str = "NC") -> str:
-    text = (value or "").strip()
-    return text if text else fallback
+def _clean(value: Optional[str]) -> str:
+    return (value or "").strip()
 
 
 @dataclass
@@ -53,34 +52,45 @@ class ListingTemplate:
                 fields.has_elastane,
                 ensure_even_fr=True,
             )
-            fr_display = normalized_sizes.fr_size or (fields.fr_size or "")
+            fr_display = normalized_sizes.fr_size or _clean(fields.fr_size)
             us_display = normalized_sizes.us_size
             size_note = normalized_sizes.note
         else:
-            fr_display = fields.fr_size or ""
+            fr_display = _clean(fields.fr_size)
             us_display = None
             size_note = None
 
         model = (fields.model or "").strip()
-        gender = _clean(fields.gender, "femme")
-        color = _clean(fields.color_main, "bleu")
-        rise = _clean(fields.rise_class, "moyenne")
-        cotton = _ensure_percent(fields.cotton_pct) if fields.fabric_label_visible else None
-        polyester_pct = fields.polyester_pct
-        elastane_pct = fields.elastane_pct
+        gender = _clean(fields.gender)
+        color = _clean(fields.color_main)
+        rise = _clean(fields.rise_class)
+        cotton = _ensure_percent(fields.cotton_pct) if fields.fabric_label_visible else ""
+        polyester_value = (
+            _ensure_percent(fields.polyester_pct) if fields.fabric_label_visible else ""
+        )
+        elastane_value = (
+            _ensure_percent(fields.elastane_pct) if fields.fabric_label_visible else ""
+        )
+
         composition_parts: List[str] = []
-        if fields.fabric_label_visible and cotton:
-            composition_parts.append(f"{cotton} coton")
-            if fields.has_polyester:
-                composition_parts.append(f"{_ensure_percent(polyester_pct)} polyester")
-            if fields.has_elastane:
-                composition_parts.append(f"{_ensure_percent(elastane_pct)} élasthanne")
-            composition = ", ".join(composition_parts)
-            composition_sentence = (
-                f"Composition : {composition} pour une touche de stretch et plus de confort."
-            )
+        if fields.fabric_label_visible:
+            if cotton:
+                composition_parts.append(f"{cotton} coton")
+            if fields.has_polyester and polyester_value:
+                composition_parts.append(f"{polyester_value} polyester")
+            if fields.has_elastane and elastane_value:
+                composition_parts.append(f"{elastane_value} élasthanne")
+            if composition_parts:
+                composition_sentence = f"Composition : {', '.join(composition_parts)}."
+            else:
+                composition_sentence = (
+                    "Composition indiquée sur l'étiquette (voir photos pour les détails)."
+                )
         else:
-            composition_sentence = "Composition non indiquée (étiquette absente)."
+            composition_sentence = (
+                "Composition non visible sur les photos (étiquette absente ou illisible)."
+            )
+
         defect_texts = get_defect_descriptions(fields.defect_tags)
         raw_defects = (fields.defects or "").strip()
 
@@ -96,42 +106,61 @@ class ListingTemplate:
             defects = "; ".join(defect_texts)
         else:
             defects = raw_defects if raw_defects else ""
-        sku = _clean(fields.sku, "SKU")
+        sku = (fields.sku or "").strip()
         fit_title_text = fit_title or _clean(fields.fit_leg)
         fit_description_text = fit_description or _clean(fields.fit_leg)
-        fit_hashtag_text = fit_hashtag or _clean(fields.fit_leg).lower().replace(" ", "")
+        fit_hashtag_source = fit_hashtag or _clean(fields.fit_leg)
+        fit_hashtag_text = (
+            fit_hashtag_source.lower().replace(" ", "") if fit_hashtag_source else ""
+        )
 
         title_intro = "Jean Levi’s"
         if model:
             title_intro = f"{title_intro} {model}"
 
         cotton_title_segment = f"{cotton} coton" if cotton else ""
-        title_parts = [
-            title_intro,
-            f"FR{fr_display}" if fr_display else "",
-            f"W{us_display}" if fields.size_label_visible and us_display else "",
-            f"L{fields.us_l}" if fields.size_label_visible and fields.us_l else "",
-            "coupe",
-            fit_title_text,
-            cotton_title_segment,
-            gender,
-            color,
-            "-",
-            sku,
-        ]
+        title_parts: List[str] = [title_intro]
+        if fr_display:
+            title_parts.append(f"FR{fr_display}")
+        if fields.size_label_visible and us_display:
+            title_parts.append(f"W{us_display}")
+        if fields.size_label_visible and fields.us_l:
+            title_parts.append(f"L{fields.us_l}")
+        if fit_title_text:
+            title_parts.extend(["coupe", fit_title_text])
+        if cotton_title_segment:
+            title_parts.append(cotton_title_segment)
+        if gender:
+            title_parts.append(gender)
+        if color:
+            title_parts.append(color)
+        if sku:
+            title_parts.extend(["-", sku])
         title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
 
-        if us_display:
-            size_sentence = f"Taille {us_display} US (équivalent {fr_display} FR), coupe {fit_description_text} à taille {rise}, pour une silhouette ajustée et confortable."
+        size_fragments: List[str] = []
+        if us_display and fr_display:
+            size_fragments.append(f"Taille {us_display} US (équivalent {fr_display} FR)")
+        elif us_display:
+            size_fragments.append(f"Taille {us_display} US")
         elif fr_display:
-            size_sentence = f"Taille {fr_display} FR, coupe {fit_description_text} à taille {rise}, pour une silhouette ajustée et confortable."
+            size_fragments.append(f"Taille {fr_display} FR")
         else:
-            size_sentence = f"Coupe {fit_description_text} à taille {rise}, pour une silhouette ajustée et confortable."
+            size_fragments.append("Taille non précisée")
+        fit_phrase = fit_description_text or "non précisée"
+        rise_phrase = rise or "non précisée"
+        size_fragments.append(f"coupe {fit_phrase}")
+        size_fragments.append(f"à taille {rise_phrase}")
+        size_sentence = ", ".join(size_fragments) + ", pour une silhouette ajustée et confortable."
 
-        if model:
+        if model and gender:
             first_sentence = f"Jean Levi’s modèle {model} pour {gender}."
-        else:
+        elif model:
+            first_sentence = f"Jean Levi’s modèle {model}."
+        elif gender:
             first_sentence = f"Jean Levi’s pour {gender}."
+        else:
+            first_sentence = "Jean Levi’s."
 
         first_paragraph_lines = [
             first_sentence,
@@ -140,8 +169,15 @@ class ListingTemplate:
         if size_note:
             first_paragraph_lines.append(size_note)
 
+        if color:
+            color_sentence = (
+                f"Coloris {color} légèrement délavé, très polyvalent et facile à assortir."
+            )
+        else:
+            color_sentence = "Coloris non précisé, se référer aux photos pour les nuances."
+
         second_paragraph_lines = [
-            f"Coloris {color} légèrement délavé, très polyvalent et facile à assortir.",
+            color_sentence,
             composition_sentence,
             "Fermeture zippée + bouton gravé Levi’s.",
         ]
@@ -154,16 +190,12 @@ class ListingTemplate:
 
         if not fields.size_label_visible and not fields.fabric_label_visible:
             third_paragraph_lines.append(
-                "Étiquettes composition/taille coupées pour plus de confort."
+                "Étiquettes taille et composition non visibles sur les photos."
             )
         elif not fields.size_label_visible:
-            third_paragraph_lines.append(
-                "Étiquette taille coupée pour plus de confort."
-            )
+            third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
         elif not fields.fabric_label_visible:
-            third_paragraph_lines.append(
-                "Étiquette composition coupée pour plus de confort."
-            )
+            third_paragraph_lines.append("Étiquette composition non visible sur les photos.")
 
         third_paragraph_lines.extend(
             [
@@ -172,16 +204,27 @@ class ListingTemplate:
             ]
         )
 
+        fr_tag = (fr_display or "nc").lower()
         fourth_paragraph_lines = [
-            f"✨ Retrouvez tous mes articles Levi’s à votre taille ici 👉 #durin31fr{fr_display or 'nc'}",
+            f"✨ Retrouvez tous mes articles Levi’s à votre taille ici 👉 #durin31fr{fr_tag}",
             "💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !",
         ]
 
-        hashtags_paragraph_lines = [
-            "#levis #jeanlevis "
-            f"#levis{gender.lower()} #{fit_hashtag_text}jean #jeandenim #{rise} #jean{color.lower().replace(' ', '')} #vintedfr "
-            f"#durin31fr{fr_display or 'nc'}",
-        ]
+        hashtags_tokens: List[str] = []
+        for token in [
+            "#levis",
+            "#jeanlevis",
+            "#jeandenim",
+            f"#levis{gender.lower().replace(' ', '')}" if gender else "",
+            f"#{fit_hashtag_text}jean" if fit_hashtag_text else "",
+            f"#{rise.lower().replace(' ', '')}" if rise else "",
+            f"#jean{color.lower().replace(' ', '')}" if color else "",
+            f"#durin31fr{fr_tag}",
+        ]:
+            token_clean = token.strip()
+            if token_clean and token_clean not in hashtags_tokens:
+                hashtags_tokens.append(token_clean)
+        hashtags_paragraph_lines = [" ".join(hashtags_tokens)]
 
         description = "\n\n".join(
             [

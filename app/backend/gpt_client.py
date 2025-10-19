@@ -44,11 +44,24 @@ class ListingResult:
 class ListingGenerator:
     """Generate a Vinted listing from encoded images and user comments."""
 
-    def __init__(self, *, model: Optional[str] = None, api_key: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        *,
+        model: Optional[str] = None,
+        api_key: Optional[str] = None,
+        temperature: float = 0.1,
+    ) -> None:
         self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        if not 0 <= temperature <= 1:
+            raise ValueError("La température doit être comprise entre 0 et 1")
+        self.temperature = temperature
         self._client: Optional[OpenAI] = None
-        logger.step("ListingGenerator initialisé avec le modèle %s", self.model)
+        logger.step(
+            "ListingGenerator initialisé avec le modèle %s et une température de %.2f",
+            self.model,
+            self.temperature,
+        )
 
     @property
     def client(self) -> OpenAI:
@@ -84,8 +97,10 @@ class ListingGenerator:
                         "type": "input_text",
                         "text": (
                             "Tu es un assistant vendeur Vinted. Analyse les photos fournies, "
-                            "identifie les caractéristiques importantes (taille, couleur, défauts) et "
-                            "produis un titre et une description suivant le template donné."
+                            "identifie uniquement les caractéristiques visibles ou confirmées (taille, couleur, défauts) "
+                            "et produis un titre et une description suivant le template donné. Ne fais aucune supposition "
+                            "ni estimation : laisse un champ vide lorsqu'une information n'est pas prouvée par les photos ou "
+                            "les commentaires."
                         ),
                     }
                 ],
@@ -124,7 +139,7 @@ class ListingGenerator:
                 model=self.model,
                 input=messages,
                 max_output_tokens=700,
-                temperature=0.7,
+                temperature=self.temperature,
             )
         except Exception:
             logger.exception("Échec de l'appel à l'API OpenAI")

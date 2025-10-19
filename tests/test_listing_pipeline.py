@@ -143,6 +143,29 @@ def test_listing_fields_parses_visibility_flags() -> None:
     assert fields.fabric_label_visible is False
 
 
+def test_listing_fields_defaults_visibility_flags_to_false() -> None:
+    payload = {
+        "model": "501",
+        "fr_size": "38",
+        "us_w": "28",
+        "us_l": "30",
+        "fit_leg": "bootcut",
+        "rise_class": "haute",
+        "cotton_pct": "99",
+        "polyester_pct": "0",
+        "elastane_pct": "1",
+        "gender": "Femme",
+        "color_main": "Bleu",
+        "defects": "aucun défaut",
+        "sku": "JLF6",
+        "defect_tags": [],
+    }
+
+    fields = ListingFields.from_dict(payload)
+    assert fields.size_label_visible is False
+    assert fields.fabric_label_visible is False
+
+
 def test_listing_fields_normalizes_model_code() -> None:
     base_payload = {
         "fr_size": "38",
@@ -234,9 +257,9 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert "Mesure FR" not in description
     assert " W" not in title  # no US size injected when label is hidden
     assert " L30" not in title
-    assert "Composition non indiquée (étiquette absente)." in description
+    assert "Composition non visible sur les photos (étiquette absente ou illisible)." in description
     assert "Entrejambe légèrement délavée, voir photos" in description
-    assert "Étiquettes composition/taille coupées pour plus de confort." in description
+    assert "Étiquettes taille et composition non visibles sur les photos." in description
 
 
 def test_template_render_combines_related_defects(template_registry: ListingTemplateRegistry) -> None:
@@ -293,13 +316,13 @@ def test_template_render_mentions_missing_labels_individually(
         {**base_payload, "size_label_visible": False, "fabric_label_visible": True}
     )
     _title, size_description = template.render(size_hidden)
-    assert "Étiquette taille coupée pour plus de confort." in size_description
+    assert "Étiquette taille non visible sur les photos." in size_description
 
     fabric_hidden = ListingFields.from_dict(
         {**base_payload, "size_label_visible": True, "fabric_label_visible": False}
     )
     _title, fabric_description = template.render(fabric_hidden)
-    assert "Étiquette composition coupée pour plus de confort." in fabric_description
+    assert "Étiquette composition non visible sur les photos." in fabric_description
 
 
 def test_template_render_mentions_polyester(template_registry: ListingTemplateRegistry) -> None:
@@ -357,7 +380,7 @@ def test_template_render_skips_composition_when_label_missing(
 
     title, description = template.render(fields)
     assert "coton" not in title.lower()
-    assert "Composition non indiquée (étiquette absente)." in description
+    assert "Composition non visible sur les photos (étiquette absente ou illisible)." in description
     assert "% polyester" not in description
     assert "% élasthanne" not in description
 
@@ -423,6 +446,40 @@ def test_template_render_omits_model_when_missing(
     first_sentence = first_paragraph.split("\n")[0]
     assert first_sentence == "Jean Levi’s pour Femme."
     assert "modèle" not in first_sentence
+
+
+def test_template_render_avoids_defaulting_missing_fields(
+    template_registry: ListingTemplateRegistry,
+) -> None:
+    template = template_registry.get_template(template_registry.default_template)
+    fields = ListingFields.from_dict(
+        {
+            "model": "",
+            "fr_size": "",
+            "us_w": "",
+            "us_l": "",
+            "fit_leg": "",
+            "rise_class": "",
+            "cotton_pct": "",
+            "polyester_pct": "",
+            "elastane_pct": "",
+            "gender": "",
+            "color_main": "",
+            "defects": "",
+            "sku": "",
+            "defect_tags": [],
+            "size_label_visible": False,
+            "fabric_label_visible": False,
+        }
+    )
+
+    title, description = template.render(fields)
+    assert "femme" not in title.lower()
+    assert "bleu" not in title.lower()
+    assert "femme" not in description.lower()
+    assert "bleu" not in description.lower()
+    assert "taille non précisée" in description.lower()
+    assert "coupe non précisée" in description.lower()
 
 
 def test_generator_parses_json_and_renders(template_registry: ListingTemplateRegistry) -> None:
