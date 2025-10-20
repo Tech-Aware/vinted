@@ -38,6 +38,7 @@ class ListingFields:
     fit_leg: FieldValue
     rise_class: FieldValue
     rise_measurement_cm: Optional[float]
+    waist_measurement_cm: Optional[float]
     cotton_pct: FieldValue
     polyester_pct: FieldValue
     elastane_pct: FieldValue
@@ -61,6 +62,7 @@ class ListingFields:
                 "fit_leg",
                 "rise_class",
                 "rise_measurement_cm",
+                "waist_measurement_cm",
                 "cotton_pct",
                 "polyester_pct",
                 "elastane_pct",
@@ -91,6 +93,9 @@ class ListingFields:
         rise_class = normalize(data.get("rise_class"))
         rise_measurement_cm = ListingFields._parse_rise_measurement(
             data.get("rise_measurement_cm")
+        )
+        waist_measurement_cm = ListingFields._parse_waist_measurement(
+            data.get("waist_measurement_cm")
         )
         cotton_pct = normalize(data.get("cotton_pct"))
         polyester_pct = normalize(data.get("polyester_pct"))
@@ -135,6 +140,7 @@ class ListingFields:
             fit_leg=fit_leg,
             rise_class=rise_class,
             rise_measurement_cm=rise_measurement_cm,
+            waist_measurement_cm=waist_measurement_cm,
             cotton_pct=cotton_pct,
             polyester_pct=polyester_pct,
             elastane_pct=elastane_pct,
@@ -148,7 +154,8 @@ class ListingFields:
         )
 
     @staticmethod
-    def _parse_rise_measurement(value: Any) -> Optional[float]:
+    @staticmethod
+    def _parse_measurement(value: Any, *, field_name: str) -> Optional[float]:
         """Convert raw measurement input to a float in centimeters."""
 
         if value is None:
@@ -177,11 +184,19 @@ class ListingFields:
             except ValueError:
                 return None
         else:
-            raise ValueError("'rise_measurement_cm' doit être une chaîne ou un nombre")
+            raise ValueError(f"'{field_name}' doit être une chaîne ou un nombre")
 
         if numeric <= 0:
             return None
         return numeric
+
+    @staticmethod
+    def _parse_rise_measurement(value: Any) -> Optional[float]:
+        return ListingFields._parse_measurement(value, field_name="rise_measurement_cm")
+
+    @staticmethod
+    def _parse_waist_measurement(value: Any) -> Optional[float]:
+        return ListingFields._parse_measurement(value, field_name="waist_measurement_cm")
 
     @property
     def resolved_rise_class(self) -> str:
@@ -256,6 +271,7 @@ class ListingFields:
                 \"fit_leg\": \"coupe détectée (bootcut, straight, slim, skinny, etc.) ; renvoie \"\" si la coupe n'est pas certaine\",
                 \"rise_class\": \"hauteur de taille (basse, moyenne, haute, très haute) ; renvoie \"\" si non confirmée\",
                 \"rise_measurement_cm\": \"mesure en cm entre le haut de la ceinture et l'entrejambe lorsque visible ; sinon renvoie \"\"\",
+                \"waist_measurement_cm\": \"tour de taille mesuré en cm lorsque visible ; sinon renvoie \"\"\",
                 \"cotton_pct\": \"pourcentage de coton indiqué sur l'étiquette ; renvoie \"\" si l'information n'est pas lisible\",
                 \"polyester_pct\": \"pourcentage de polyester indiqué ; renvoie \"\" si absent ou illisible\",
                 \"elastane_pct\": \"pourcentage d'élasthanne indiqué ; renvoie \"\" si absent ou illisible\",
@@ -272,6 +288,7 @@ class ListingFields:
             Indique la coupe en anglais dans 'fit_leg' (ex: bootcut, straight, slim).
             Ne remplis jamais un champ avec une valeur estimée ou supposée ; retourne la chaîne vide quand une information est manquante ou incertaine.
             Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.
+            Lorsque l'étiquette de taille est absente ou illisible mais qu'une mesure nette du tour de taille est visible, renseigne 'waist_measurement_cm' en centimètres et laisse les champs 'fr_size', 'us_w' et 'us_l' vides.
             """
         ).strip()
 

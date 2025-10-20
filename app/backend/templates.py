@@ -20,7 +20,11 @@ from typing import Dict, List, Optional, Tuple
 
 from app.backend.defect_catalog import get_defect_descriptions
 from app.backend.listing_fields import ListingFields
-from app.backend.sizing import NormalizedSizes, normalize_sizes
+from app.backend.sizing import (
+    NormalizedSizes,
+    fr_size_from_waist_measurement,
+    normalize_sizes,
+)
 from app.backend.text_normalization import normalize_fit_terms, translate_color_to_french
 
 
@@ -45,24 +49,45 @@ class ListingTemplate:
 
     def render(self, fields: ListingFields) -> Tuple[str, str]:
         fit_title, fit_description, fit_hashtag = normalize_fit_terms(fields.fit_leg)
+        measurement_fr = fr_size_from_waist_measurement(
+            fields.waist_measurement_cm, ensure_even=True
+        )
+
         if fields.size_label_visible:
             normalized_sizes: NormalizedSizes = normalize_sizes(
                 fields.us_w,
                 fields.fr_size,
                 fields.has_elastane,
                 ensure_even_fr=True,
+                waist_measurement_cm=fields.waist_measurement_cm,
             )
             fr_display = normalized_sizes.fr_size or _clean(fields.fr_size)
             us_display = normalized_sizes.us_size
             size_note = normalized_sizes.note
         else:
-            fr_display = _clean(fields.fr_size)
-            us_display = None
+            fr_candidate = _clean(fields.fr_size)
+            us_candidate = _clean(fields.us_w)
             size_note = None
+            if not fr_candidate and not us_candidate and measurement_fr:
+                fr_display = measurement_fr
+                us_display = None
+                measurement_value = fields.waist_measurement_cm
+                if measurement_value is not None:
+                    size_note = (
+                        "Taille estimée à partir d'un tour de taille mesuré à environ "
+                        f"{int(round(measurement_value))} cm."
+                    )
+                else:
+                    size_note = (
+                        "Taille estimée à partir du tour de taille mesuré visuellement sur les photos."
+                    )
+            else:
+                fr_display = fr_candidate
+                us_display = None
 
         model = (fields.model or "").strip()
         gender = _clean(fields.gender)
-        gender_value = gender or "femme"
+        gender_value = gender
         color = translate_color_to_french(fields.color_main)
         color = _clean(color)
         rise = _clean(fields.resolved_rise_class)
@@ -155,14 +180,14 @@ class ListingTemplate:
         size_fragments.append(f"à taille {rise_phrase}")
         size_sentence = ", ".join(size_fragments) + ", pour une silhouette ajustée et confortable."
 
-        if model and gender:
+        if model and gender_value:
             first_sentence = f"Jean Levi’s modèle {model} pour {gender_value}."
         elif model:
-            first_sentence = f"Jean Levi’s modèle {model} pour {gender_value}."
-        elif gender:
+            first_sentence = f"Jean Levi’s modèle {model}."
+        elif gender_value:
             first_sentence = f"Jean Levi’s pour {gender_value}."
         else:
-            first_sentence = f"Jean Levi’s pour {gender_value}."
+            first_sentence = "Jean Levi’s."
 
         first_paragraph_lines = [
             first_sentence,
