@@ -62,6 +62,7 @@ class ListingTemplate:
 
         model = (fields.model or "").strip()
         gender = _clean(fields.gender)
+        gender_value = gender or "femme"
         color = translate_color_to_french(fields.color_main)
         color = _clean(color)
         rise = _clean(fields.resolved_rise_class)
@@ -131,8 +132,8 @@ class ListingTemplate:
             title_parts.extend(["coupe", fit_title_text])
         if cotton_title_segment:
             title_parts.append(cotton_title_segment)
-        if gender:
-            title_parts.append(gender)
+        if gender_value:
+            title_parts.append(gender_value)
         if color:
             title_parts.append(color)
         if sku:
@@ -155,13 +156,13 @@ class ListingTemplate:
         size_sentence = ", ".join(size_fragments) + ", pour une silhouette ajustée et confortable."
 
         if model and gender:
-            first_sentence = f"Jean Levi’s modèle {model} pour {gender}."
+            first_sentence = f"Jean Levi’s modèle {model} pour {gender_value}."
         elif model:
-            first_sentence = f"Jean Levi’s modèle {model}."
+            first_sentence = f"Jean Levi’s modèle {model} pour {gender_value}."
         elif gender:
-            first_sentence = f"Jean Levi’s pour {gender}."
+            first_sentence = f"Jean Levi’s pour {gender_value}."
         else:
-            first_sentence = "Jean Levi’s."
+            first_sentence = f"Jean Levi’s pour {gender_value}."
 
         first_paragraph_lines = [
             first_sentence,
@@ -216,7 +217,7 @@ class ListingTemplate:
             "#levis",
             "#jeanlevis",
             "#jeandenim",
-            f"#levis{gender.lower().replace(' ', '')}" if gender else "",
+            f"#levis{gender_value.lower().replace(' ', '')}" if gender_value else "",
             f"#{fit_hashtag_text}jean" if fit_hashtag_text else "",
             f"#{rise.lower().replace(' ', '')}" if rise else "",
             f"#jean{color.lower().replace(' ', '')}" if color else "",
