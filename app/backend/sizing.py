@@ -27,6 +27,10 @@ class NormalizedSizes:
 
 
 _ELASTANE_NOTE = "Mesure FR étendue par la présence d'élasthane dans la composition"
+_WAIST_MEASUREMENT_NOTE = (
+    "Taille estimée à partir du tour de taille mesuré visuellement sur les photos"
+)
+_CM_PER_INCH = 2.54
 
 
 def _extract_int(value: Optional[str]) -> Optional[int]:
@@ -41,12 +45,35 @@ def _extract_int(value: Optional[str]) -> Optional[int]:
         return None
 
 
+def fr_size_from_waist_measurement(
+    waist_measurement_cm: Optional[float], *, ensure_even: bool = True
+) -> Optional[str]:
+    """Convert a waist measurement in centimeters to the closest FR size."""
+
+    if waist_measurement_cm is None:
+        return None
+    if waist_measurement_cm <= 0:
+        return None
+
+    us_equivalent = waist_measurement_cm / _CM_PER_INCH
+    # Round to the nearest integer to match standard W measurements.
+    us_size = int(round(us_equivalent))
+    if us_size <= 0:
+        return None
+
+    fr_value = us_size + 10
+    if ensure_even and fr_value % 2:
+        fr_value += 1
+    return str(fr_value)
+
+
 def normalize_sizes(
     us_w: Optional[str],
     fr_size: Optional[str],
     has_elastane: bool,
     *,
     ensure_even_fr: bool = False,
+    waist_measurement_cm: Optional[float] = None,
 ) -> NormalizedSizes:
     """Apply the business rule converting US W to FR sizes.
 
@@ -56,6 +83,8 @@ def normalize_sizes(
     - Otherwise fall back to computing ``FR = US + 10`` when a US size exists.
     - When ``ensure_even_fr`` is ``True``, an FR size derived from the US measurement
       is rounded up to the next even number.
+    - When both FR and US labels are missing, rely on the waist measurement in
+      centimeters to infer a normalized FR size.
     """
 
     us_value = _extract_int(us_w)
@@ -81,6 +110,19 @@ def normalize_sizes(
 
     if fr_value is not None:
         return NormalizedSizes(fr_size=str(fr_value), us_size=None, note=None)
+
+    measurement_fr = fr_size_from_waist_measurement(
+        waist_measurement_cm, ensure_even=ensure_even_fr
+    )
+    if measurement_fr is not None:
+        measurement_note = _WAIST_MEASUREMENT_NOTE
+        if waist_measurement_cm is not None:
+            measurement_note = (
+                f"{measurement_note} (~{int(round(waist_measurement_cm))} cm)."
+            )
+        return NormalizedSizes(
+            fr_size=measurement_fr, us_size=None, note=measurement_note
+        )
 
     return NormalizedSizes(fr_size=None, us_size=None, note=None)
 
