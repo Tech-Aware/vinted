@@ -163,9 +163,6 @@ class ListingTemplate:
             title_intro = f"{title_intro} {model}"
 
         cotton_title_segment = f"{cotton} coton" if cotton else ""
-        viscose_title_segment = (
-            f"{viscose_value} viscose" if fields.has_viscose and viscose_value else ""
-        )
         title_parts: List[str] = [title_intro]
         if fr_display:
             title_parts.append(f"FR{fr_display}")
@@ -177,8 +174,6 @@ class ListingTemplate:
             title_parts.extend(["coupe", fit_title_text])
         if cotton_title_segment:
             title_parts.append(cotton_title_segment)
-        if viscose_title_segment:
-            title_parts.append(viscose_title_segment)
         if gender_value:
             title_parts.append(gender_value)
         if color:

@@ -545,7 +545,8 @@ def test_template_render_handles_viscose_composition(
 
     title, description = template.render(fields)
     assert fields.has_viscose is True
-    assert "30% viscose" in title
+    assert "30% viscose" not in title
+    assert "60% coton" in title
     assert "Composition : 60% coton, 30% viscose et 10% polyester." in description
 
 
