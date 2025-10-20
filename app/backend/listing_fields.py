@@ -41,6 +41,7 @@ class ListingFields:
     waist_measurement_cm: Optional[float]
     cotton_pct: FieldValue
     polyester_pct: FieldValue
+    viscose_pct: FieldValue
     elastane_pct: FieldValue
     gender: FieldValue
     color_main: FieldValue
@@ -65,6 +66,7 @@ class ListingFields:
                 "waist_measurement_cm",
                 "cotton_pct",
                 "polyester_pct",
+                "viscose_pct",
                 "elastane_pct",
                 "gender",
                 "color_main",
@@ -99,6 +101,7 @@ class ListingFields:
         )
         cotton_pct = normalize(data.get("cotton_pct"))
         polyester_pct = normalize(data.get("polyester_pct"))
+        viscose_pct = normalize(data.get("viscose_pct"))
         elastane_pct = normalize(data.get("elastane_pct"))
         gender = normalize(data.get("gender"))
         color_main = normalize(data.get("color_main"))
@@ -143,6 +146,7 @@ class ListingFields:
             waist_measurement_cm=waist_measurement_cm,
             cotton_pct=cotton_pct,
             polyester_pct=polyester_pct,
+            viscose_pct=viscose_pct,
             elastane_pct=elastane_pct,
             gender=gender,
             color_main=color_main,
@@ -244,6 +248,18 @@ class ListingFields:
         except ValueError:
             return False
 
+    @property
+    def has_viscose(self) -> bool:
+        if not self.fabric_label_visible:
+            return False
+        value = (self.viscose_pct or "").strip()
+        if not value:
+            return False
+        try:
+            return float(value.strip("% ")) > 0
+        except ValueError:
+            return False
+
     @staticmethod
     def json_instruction() -> str:
         slugs = ', '.join(known_defect_slugs()) or 'aucun'
@@ -274,6 +290,7 @@ class ListingFields:
                 \"waist_measurement_cm\": \"tour de taille mesuré en cm lorsque visible ; sinon renvoie \"\"\",
                 \"cotton_pct\": \"pourcentage de coton indiqué sur l'étiquette ; renvoie \"\" si l'information n'est pas lisible\",
                 \"polyester_pct\": \"pourcentage de polyester indiqué ; renvoie \"\" si absent ou illisible\",
+                \"viscose_pct\": \"pourcentage de viscose indiqué ; renvoie \"\" si absent ou illisible\",
                 \"elastane_pct\": \"pourcentage d'élasthanne indiqué ; renvoie \"\" si absent ou illisible\",
                 \"gender\": \"genre ciblé (femme, homme, mixte) uniquement s'il est explicitement mentionné ; sinon renvoie \"\"\",
                 \"color_main\": \"couleur principale visible ; renvoie \"\" si la couleur n'est pas évidente\",
