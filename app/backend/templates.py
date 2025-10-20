@@ -41,6 +41,16 @@ def _clean(value: Optional[str]) -> str:
     return (value or "").strip()
 
 
+def _join_fibers(parts: List[str]) -> str:
+    if not parts:
+        return ""
+    if len(parts) == 1:
+        return parts[0]
+    if len(parts) == 2:
+        return f"{parts[0]} et {parts[1]}"
+    return f"{', '.join(parts[:-1])} et {parts[-1]}"
+
+
 @dataclass
 class ListingTemplate:
     name: str
@@ -95,6 +105,9 @@ class ListingTemplate:
         polyester_value = (
             _ensure_percent(fields.polyester_pct) if fields.fabric_label_visible else ""
         )
+        viscose_value = (
+            _ensure_percent(fields.viscose_pct) if fields.fabric_label_visible else ""
+        )
         elastane_value = (
             _ensure_percent(fields.elastane_pct) if fields.fabric_label_visible else ""
         )
@@ -103,12 +116,16 @@ class ListingTemplate:
         if fields.fabric_label_visible:
             if cotton:
                 composition_parts.append(f"{cotton} coton")
+            if fields.has_viscose and viscose_value:
+                composition_parts.append(f"{viscose_value} viscose")
             if fields.has_polyester and polyester_value:
                 composition_parts.append(f"{polyester_value} polyester")
             if fields.has_elastane and elastane_value:
                 composition_parts.append(f"{elastane_value} élasthanne")
             if composition_parts:
-                composition_sentence = f"Composition : {', '.join(composition_parts)}."
+                composition_sentence = (
+                    f"Composition : {_join_fibers(composition_parts)}."
+                )
             else:
                 composition_sentence = (
                     "Composition indiquée sur l'étiquette (voir photos pour les détails)."
@@ -146,6 +163,9 @@ class ListingTemplate:
             title_intro = f"{title_intro} {model}"
 
         cotton_title_segment = f"{cotton} coton" if cotton else ""
+        viscose_title_segment = (
+            f"{viscose_value} viscose" if fields.has_viscose and viscose_value else ""
+        )
         title_parts: List[str] = [title_intro]
         if fr_display:
             title_parts.append(f"FR{fr_display}")
@@ -157,6 +177,8 @@ class ListingTemplate:
             title_parts.extend(["coupe", fit_title_text])
         if cotton_title_segment:
             title_parts.append(cotton_title_segment)
+        if viscose_title_segment:
+            title_parts.append(viscose_title_segment)
         if gender_value:
             title_parts.append(gender_value)
         if color:
