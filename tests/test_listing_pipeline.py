@@ -43,6 +43,7 @@ def test_json_instruction_for_pull_tommy_mentions_new_fields() -> None:
     assert "PTF" in instruction
     assert "Made in Europe" in instruction
     assert "nylon_pct" in instruction
+    assert "dans le titre" in instruction.lower()
 
 
 def test_listing_fields_from_dict_requires_all_keys() -> None:

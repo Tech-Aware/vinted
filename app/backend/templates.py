@@ -677,7 +677,7 @@ class ListingTemplateRegistry:
 
                     Règles :
                     - Pour le coton, si le pourcentage est inférieur à 60 %, écris simplement « coton ».
-                    - Lorsque de la laine ou du cachemire sont présents en faible quantité, mentionne-les sans pourcentage.
+                    - Dans le titre, supprime les pourcentages de laine ou de cachemire lorsqu'ils sont faibles, mais dans la description et les champs ({{wool_pct}}/{{cashmere_pct}}) recopie la valeur numérique exacte indiquée dès que l'étiquette est lisible.
                     - Signale systématiquement lorsque les étiquettes taille/composition sont absentes ou illisibles.
                     - Mentionne « Made in Europe » uniquement si l'étiquette affiche un pays européen confirmé (France, Portugal, Italie, Espagne, etc.).
                     - Rappelle que les mesures sont visibles sur les photos pour plus de précision.
