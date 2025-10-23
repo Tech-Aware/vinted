@@ -33,6 +33,7 @@ def test_json_instruction_mentions_defect_synonyms() -> None:
     assert "tour de taille" in instruction
     assert "viscose_pct" in instruction
     assert "nylon_pct" in instruction
+    assert "acrylic_pct" in instruction
 
 
 def test_json_instruction_for_pull_tommy_mentions_new_fields() -> None:
@@ -43,6 +44,7 @@ def test_json_instruction_for_pull_tommy_mentions_new_fields() -> None:
     assert "PTF" in instruction
     assert "Made in Europe" in instruction
     assert "nylon_pct" in instruction
+    assert "acrylic_pct" in instruction
     assert "dans le titre" in instruction.lower()
 
 
@@ -58,7 +60,8 @@ def test_listing_fields_from_dict_requires_all_keys() -> None:
         "waist_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
-            "viscose_pct": "0",
+        "viscose_pct": "0",
+        "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "femme",
         "color_main": "bleu",
@@ -82,6 +85,7 @@ def test_listing_fields_enforces_sku_prefix_by_gender() -> None:
         "cotton_pct": "99",
         "polyester_pct": "0",
         "viscose_pct": "0",
+        "acrylic_pct": "",
         "elastane_pct": "1",
         "color_main": "bleu",
         "defects": "aucun défaut",
@@ -127,7 +131,8 @@ def test_listing_fields_rejects_unknown_defect_tags() -> None:
         "waist_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
-            "viscose_pct": "0",
+        "viscose_pct": "0",
+        "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "bleu",
@@ -152,7 +157,8 @@ def test_listing_fields_splits_comma_separated_defect_tags() -> None:
         "waist_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
-            "viscose_pct": "0",
+        "viscose_pct": "0",
+        "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "bleu",
@@ -177,7 +183,8 @@ def test_listing_fields_parses_visibility_flags() -> None:
         "waist_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
-            "viscose_pct": "0",
+        "viscose_pct": "0",
+        "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "bleu",
@@ -204,7 +211,8 @@ def test_listing_fields_parses_waist_measurement() -> None:
         "waist_measurement_cm": "74,5",
         "cotton_pct": "",
         "polyester_pct": "",
-            "viscose_pct": "",
+        "viscose_pct": "",
+        "acrylic_pct": "",
         "elastane_pct": "",
         "gender": "",
         "color_main": "",
@@ -229,7 +237,8 @@ def test_listing_fields_defaults_visibility_flags_to_false() -> None:
         "waist_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
-            "viscose_pct": "0",
+        "viscose_pct": "0",
+        "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "Bleu",
@@ -267,6 +276,7 @@ def test_listing_fields_resolves_rise_class_from_measurement(
         "cotton_pct": "99",
         "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "Bleu",
@@ -294,6 +304,7 @@ def test_listing_fields_resolved_rise_class_handles_invalid_measurement() -> Non
         "cotton_pct": "99",
         "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "Bleu",
@@ -321,6 +332,7 @@ def test_listing_fields_resolved_rise_class_prefers_explicit_value() -> None:
         "cotton_pct": "99",
         "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "Bleu",
@@ -348,6 +360,7 @@ def test_listing_fields_resolved_rise_class_uses_measurement_even_when_label_vis
         "cotton_pct": "99",
         "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "Bleu",
@@ -375,6 +388,7 @@ def test_listing_fields_infers_defect_tag_from_text() -> None:
         "cotton_pct": "99",
         "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "Bleu",
@@ -399,6 +413,7 @@ def test_listing_fields_normalizes_model_code() -> None:
         "cotton_pct": "99",
         "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "Bleu",
@@ -479,6 +494,7 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
             "cotton_pct": "99",
             "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -520,6 +536,7 @@ def test_template_render_translates_main_color_to_french(
             "cotton_pct": "99",
             "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "black",
@@ -555,6 +572,7 @@ def test_template_render_handles_viscose_composition(
             "cotton_pct": "60",
             "polyester_pct": "10",
             "viscose_pct": "30",
+            "acrylic_pct": "",
             "elastane_pct": "0",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -593,6 +611,7 @@ def test_template_render_mentions_wool_cashmere_nylon(
             "nylon_pct": "5",
             "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "0",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -625,6 +644,7 @@ def test_template_render_combines_related_defects(template_registry: ListingTemp
             "cotton_pct": "99",
             "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -645,7 +665,7 @@ def test_template_render_combines_related_defects(template_registry: ListingTemp
     assert "effets déchirés pour un style plus affirmé" not in description
 
 
-def test_template_pull_tommy_mentions_nylon(
+def test_template_pull_tommy_mentions_nylon_and_acrylic(
     template_registry: ListingTemplateRegistry,
 ) -> None:
     template = template_registry.get_template("template-pull-tommy-femme")
@@ -665,6 +685,7 @@ def test_template_pull_tommy_mentions_nylon(
             "nylon_pct": "5",
             "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "5",
             "elastane_pct": "0",
             "gender": "Femme",
             "color_main": "Marine",
@@ -680,7 +701,9 @@ def test_template_pull_tommy_mentions_nylon(
     )
 
     _title, description = template.render(fields)
-    assert "Composition : 65% coton, 25% laine, 5% cachemire et 5% nylon." in description
+    assert (
+        "Composition : 65% coton, 25% laine, 5% cachemire, 5% acrylique et 5% nylon." in description
+    )
 
 
 def test_template_render_mentions_missing_labels_individually(
@@ -699,6 +722,7 @@ def test_template_render_mentions_missing_labels_individually(
         "cotton_pct": "99",
         "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "Bleu",
@@ -737,6 +761,7 @@ def test_template_render_uses_waist_measurement_when_label_hidden(
             "cotton_pct": "99",
             "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -771,6 +796,7 @@ def test_template_render_mentions_polyester(template_registry: ListingTemplateRe
             "cotton_pct": "60",
             "polyester_pct": "35",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "5",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -804,6 +830,7 @@ def test_template_render_skips_composition_when_label_missing(
             "cotton_pct": "99",
             "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -836,6 +863,7 @@ def test_listing_fields_resets_fiber_flags_when_label_missing() -> None:
             "cotton_pct": "99",
             "polyester_pct": "12",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "2",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -868,6 +896,7 @@ def test_template_render_omits_model_when_missing(
         "cotton_pct": "99",
         "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
         "elastane_pct": "1",
         "gender": "Femme",
         "color_main": "Bleu",
@@ -909,6 +938,7 @@ def test_template_render_avoids_defaulting_missing_fields(
             "cotton_pct": "",
             "polyester_pct": "",
             "viscose_pct": "",
+            "acrylic_pct": "",
             "elastane_pct": "",
             "gender": "",
             "color_main": "",
@@ -958,6 +988,7 @@ def test_generator_parses_json_and_renders(template_registry: ListingTemplateReg
             "cotton_pct": "99",
             "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -1004,6 +1035,7 @@ def test_template_render_falls_back_to_free_text(template_registry: ListingTempl
             "cotton_pct": "99",
             "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -1036,6 +1068,7 @@ def test_template_render_ignores_positive_defect_phrase(
             "cotton_pct": "99",
             "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "Bleu",
@@ -1069,6 +1102,7 @@ def test_template_render_mentions_catalog_defect_without_duplication(
             "cotton_pct": "99",
             "polyester_pct": "0",
             "viscose_pct": "0",
+            "acrylic_pct": "",
             "elastane_pct": "1",
             "gender": "Femme",
             "color_main": "Bleu",

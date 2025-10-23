@@ -509,6 +509,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         _append_material(fields.wool_pct, fields.has_wool, "laine")
         _append_material(fields.cashmere_pct, fields.has_cashmere, "cachemire")
         _append_material(fields.viscose_pct, fields.has_viscose, "viscose")
+        _append_material(fields.acrylic_pct, fields.has_acrylic, "acrylique")
         _append_material(fields.polyester_pct, fields.has_polyester, "polyester")
         _append_material(fields.nylon_pct, fields.has_nylon, "nylon")
         _append_material(fields.elastane_pct, fields.has_elastane, "élasthanne")
