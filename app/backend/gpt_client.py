@@ -123,7 +123,7 @@ class ListingGenerator:
             logger.info("Commentaire utilisateur ajouté au prompt (%d caractère(s))", len(user_comment))
         else:
             logger.info("Aucun commentaire utilisateur fourni")
-        structured_prompt = f"{template.prompt}\n\n{ListingFields.json_instruction()}"
+        structured_prompt = f"{template.prompt}\n\n{ListingFields.json_instruction(template.name)}"
         user_content.append({"type": "input_text", "text": structured_prompt})
         logger.step("Template de description ajouté au prompt")
         messages.append({"role": "user", "content": user_content})
@@ -160,7 +160,9 @@ class ListingGenerator:
             fields_payload = payload.get("fields")
             if not isinstance(fields_payload, dict):
                 raise ValueError("Structure JSON invalide: clé 'fields' manquante ou incorrecte")
-            fields = ListingFields.from_dict(fields_payload)
+            fields = ListingFields.from_dict(
+                fields_payload, template_name=template.name
+            )
         except Exception as exc:
             logger.exception("Échec de l'analyse de la réponse JSON")
             snippet = content_to_parse[:200]

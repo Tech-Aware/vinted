@@ -19,12 +19,101 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import Any, Mapping, Optional
+import unicodedata
 
 from app.backend.defect_catalog import iter_prompt_defects, known_defect_slugs
 from app.backend.text_normalization import normalize_model_code
 
 
 FieldValue = Optional[str]
+
+
+def _normalize_text(value: str) -> str:
+    """Normalize text for accent-insensitive comparisons."""
+
+    normalized = unicodedata.normalize("NFKD", value)
+    stripped = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return stripped.casefold()
+
+
+_EUROPE_KEYWORDS = (
+    "made in europe",
+    "fabrique en europe",
+    "fabriqué en europe",
+    "fabrication europeenne",
+    "fabrication européenne",
+    "made in eu",
+    "fabrique dans l'union europeenne",
+    "fabriqué dans l'union européenne",
+    "union europeenne",
+    "union européenne",
+)
+
+
+_EUROPE_COUNTRY_KEYWORDS = (
+    "allemagne",
+    "autriche",
+    "belgique",
+    "bulgarie",
+    "croatie",
+    "chypre",
+    "danemark",
+    "espagne",
+    "estonie",
+    "finlande",
+    "france",
+    "grece",
+    "grèce",
+    "hongrie",
+    "irlande",
+    "italie",
+    "lettonie",
+    "lituanie",
+    "luxembourg",
+    "malte",
+    "pays-bas",
+    "pologne",
+    "portugal",
+    "republique tcheque",
+    "république tchèque",
+    "roumanie",
+    "slovaquie",
+    "slovenie",
+    "slovénie",
+    "suede",
+    "suède",
+    "suisse",
+    "royaume-uni",
+    "germany",
+    "austria",
+    "belgium",
+    "bulgaria",
+    "croatia",
+    "cyprus",
+    "czech republic",
+    "denmark",
+    "spain",
+    "estonia",
+    "finland",
+    "france",
+    "greece",
+    "hungary",
+    "ireland",
+    "italy",
+    "latvia",
+    "lithuania",
+    "luxembourg",
+    "malta",
+    "netherlands",
+    "poland",
+    "portugal",
+    "romania",
+    "slovakia",
+    "slovenia",
+    "sweden",
+    "switzerland",
+    "united kingdom",
+)
 
 
 @dataclass
@@ -50,9 +139,15 @@ class ListingFields:
     size_label_visible: bool
     fabric_label_visible: bool
     sku: FieldValue
+    wool_pct: FieldValue = None
+    cashmere_pct: FieldValue = None
+    knit_pattern: FieldValue = None
+    made_in: FieldValue = None
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "ListingFields":
+    def from_dict(
+        cls, data: Mapping[str, Any], *, template_name: Optional[str] = None
+    ) -> "ListingFields":
         missing = [
             key
             for key in (
@@ -106,6 +201,10 @@ class ListingFields:
         gender = normalize(data.get("gender"))
         color_main = normalize(data.get("color_main"))
         defects = normalize(data.get("defects"))
+        wool_pct = normalize(data.get("wool_pct"))
+        cashmere_pct = normalize(data.get("cashmere_pct"))
+        knit_pattern = normalize(data.get("knit_pattern"))
+        made_in = normalize(data.get("made_in"))
         sku_raw = normalize(data.get("sku"))
 
         defect_tags_raw = data.get("defect_tags", [])
@@ -122,17 +221,29 @@ class ListingFields:
 
         if sku:
             gender_normalized = (gender or "").lower()
-            if "homme" in gender_normalized:
-                pattern = r"^JLH\d{1,3}$"
-            elif "femme" in gender_normalized:
-                pattern = r"^JLF\d{1,3}$"
-            else:
-                pattern = r"^JL[HF]\d{1,3}$"
+            template_normalized = (template_name or "").strip().lower()
+            allowed_patterns: list[str] = []
 
-            if not re.fullmatch(pattern, sku):
+            if template_normalized == "template-pull-tommy-femme":
+                allowed_patterns.append(r"^PTF\d{1,3}$")
+            else:
+                if "homme" in gender_normalized:
+                    allowed_patterns.append(r"^JLH\d{1,3}$")
+                elif "femme" in gender_normalized:
+                    allowed_patterns.append(r"^JLF\d{1,3}$")
+                else:
+                    allowed_patterns.extend([r"^JLH\d{1,3}$", r"^JLF\d{1,3}$"])
+
+            if not allowed_patterns:
+                allowed_patterns.extend([r"^JLH\d{1,3}$", r"^JLF\d{1,3}$"])
+
+            if not any(re.fullmatch(pattern, sku) for pattern in allowed_patterns):
+                if template_normalized == "template-pull-tommy-femme":
+                    raise ValueError(
+                        "SKU invalide: utilise le préfixe PTF suivi de 1 à 3 chiffres pour le template Pull Tommy femme."
+                    )
                 raise ValueError(
-                    "SKU invalide: il doit suivre le format JLF/JLH + numéro (1 à 3 chiffres)"
-                    " correspondant au genre détecté."
+                    "SKU invalide: utilise un préfixe Levi's autorisé (JLF ou JLH) correspondant au genre détecté."
                 )
 
         return cls(
@@ -155,6 +266,10 @@ class ListingFields:
             size_label_visible=size_label_visible,
             fabric_label_visible=fabric_label_visible,
             sku=sku,
+            wool_pct=wool_pct,
+            cashmere_pct=cashmere_pct,
+            knit_pattern=knit_pattern,
+            made_in=made_in,
         )
 
     @staticmethod
@@ -201,6 +316,19 @@ class ListingFields:
     @staticmethod
     def _parse_waist_measurement(value: Any) -> Optional[float]:
         return ListingFields._parse_measurement(value, field_name="waist_measurement_cm")
+
+    @staticmethod
+    def _percentage_to_float(value: FieldValue) -> Optional[float]:
+        if not value:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            return None
+        stripped = stripped.replace("%", "").replace(",", ".")
+        try:
+            return float(stripped)
+        except ValueError:
+            return None
 
     @property
     def resolved_rise_class(self) -> str:
@@ -260,8 +388,47 @@ class ListingFields:
         except ValueError:
             return False
 
+    @property
+    def has_wool(self) -> bool:
+        if not self.fabric_label_visible:
+            return False
+        value = self._percentage_to_float(self.wool_pct)
+        return value is not None and value > 0
+
+    @property
+    def has_cashmere(self) -> bool:
+        if not self.fabric_label_visible:
+            return False
+        value = self._percentage_to_float(self.cashmere_pct)
+        return value is not None and value > 0
+
+    @property
+    def cotton_percentage_value(self) -> Optional[float]:
+        return self._percentage_to_float(self.cotton_pct)
+
+    @property
+    def wool_percentage_value(self) -> Optional[float]:
+        return self._percentage_to_float(self.wool_pct)
+
+    @property
+    def cashmere_percentage_value(self) -> Optional[float]:
+        return self._percentage_to_float(self.cashmere_pct)
+
+    @property
+    def made_in_europe(self) -> bool:
+        if not self.made_in:
+            return False
+        normalized = _normalize_text(self.made_in)
+        for keyword in _EUROPE_KEYWORDS:
+            if _normalize_text(keyword) in normalized:
+                return True
+        for country in _EUROPE_COUNTRY_KEYWORDS:
+            if _normalize_text(country) in normalized:
+                return True
+        return False
+
     @staticmethod
-    def json_instruction() -> str:
+    def json_instruction(template_name: Optional[str] = None) -> str:
         slugs = ', '.join(known_defect_slugs()) or 'aucun'
         defect_lines = []
         for spec in iter_prompt_defects():
@@ -275,39 +442,78 @@ class ListingFields:
 
         defect_help = "".join(["Défauts disponibles :\n", *[line + "\n" for line in defect_lines]])
 
-        instruction = dedent(
-            f"""
-            Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :
-            {{
-              \"fields\": {{
-                \"model\": \"code numérique du modèle Levi's (ex: 501) avec le suffixe 'Premium' uniquement si indiqué ; renvoie \"\" si le code n'est pas parfaitement lisible\",
-                \"fr_size\": \"taille française lisible (ex: 38) ; renvoie \"\" si aucune taille fiable n'est visible\",
-                \"us_w\": \"largeur US W lisible (ex: 28) ; renvoie \"\" si non lisible\",
-                \"us_l\": \"longueur US L lisible (ex: 30) ; renvoie \"\" si non lisible\",
-                \"fit_leg\": \"coupe détectée (bootcut, straight, slim, skinny, etc.) ; renvoie \"\" si la coupe n'est pas certaine\",
-                \"rise_class\": \"hauteur de taille (basse, moyenne, haute, très haute) ; renvoie \"\" si non confirmée\",
-                \"rise_measurement_cm\": \"mesure en cm entre le haut de la ceinture et l'entrejambe lorsque visible ; sinon renvoie \"\"\",
-                \"waist_measurement_cm\": \"tour de taille mesuré en cm lorsque visible ; sinon renvoie \"\"\",
-                \"cotton_pct\": \"pourcentage de coton indiqué sur l'étiquette ; renvoie \"\" si l'information n'est pas lisible\",
-                \"polyester_pct\": \"pourcentage de polyester indiqué ; renvoie \"\" si absent ou illisible\",
-                \"viscose_pct\": \"pourcentage de viscose indiqué ; renvoie \"\" si absent ou illisible\",
-                \"elastane_pct\": \"pourcentage d'élasthanne indiqué ; renvoie \"\" si absent ou illisible\",
-                \"gender\": \"genre ciblé (femme, homme, mixte) uniquement s'il est explicitement mentionné ; sinon renvoie \"\"\",
-                \"color_main\": \"couleur principale visible ; renvoie \"\" si la couleur n'est pas évidente\",
-                \"defects\": \"défauts ou taches identifiés ; renvoie \"\" s'il n'y en a pas ou qu'ils ne sont pas visibles\",
-                \"defect_tags\": \"liste de slugs parmi [{slugs}] à renseigner UNIQUEMENT si le défaut est visible sur les photos\",
-                \"size_label_visible\": \"true/false : true uniquement si une étiquette de taille est réellement lisible\",
-                \"fabric_label_visible\": \"true/false : true uniquement si une étiquette de composition est réellement lisible\",
-                \"sku\": \"SKU Levi's : JLF + numéro (1-3 chiffres) pour un jean femme, JLH + numéro (1-3 chiffres) pour un jean homme ; renvoie \"\" si l'étiquette n'est pas lisible\"
-              }}
-            }}
-            N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
-            Indique la coupe en anglais dans 'fit_leg' (ex: bootcut, straight, slim).
-            Ne remplis jamais un champ avec une valeur estimée ou supposée ; retourne la chaîne vide quand une information est manquante ou incertaine.
-            Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.
-            Lorsque l'étiquette de taille est absente ou illisible mais qu'une mesure nette du tour de taille est visible, renseigne 'waist_measurement_cm' en centimètres et laisse les champs 'fr_size', 'us_w' et 'us_l' vides.
-            """
-        ).strip()
+        if template_name == "template-pull-tommy-femme":
+            instruction = dedent(
+                f"""
+                Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :
+                {{
+                  \"fields\": {{
+                    \"model\": \"code produit lisible si présent ; renvoie \"\" si l'information n'est pas certaine\",
+                    \"fr_size\": \"taille affichée (XS, S, M, etc.) ; renvoie \"\" si non lisible\",
+                    \"us_w\": \"laisse ce champ vide pour les pulls (renvoie \"\")\",
+                    \"us_l\": \"laisse ce champ vide pour les pulls (renvoie \"\")\",
+                    \"fit_leg\": \"laisse ce champ vide pour les pulls (renvoie \"\")\",
+                    \"rise_class\": \"laisse ce champ vide pour les pulls (renvoie \"\")\",
+                    \"rise_measurement_cm\": \"laisse ce champ vide pour les pulls (renvoie \"\")\",
+                    \"waist_measurement_cm\": \"laisse ce champ vide sauf si une mesure précise apparaît clairement\",
+                    \"cotton_pct\": \"pourcentage de coton indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"wool_pct\": \"pourcentage de laine indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"cashmere_pct\": \"pourcentage de cachemire indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"polyester_pct\": \"pourcentage de polyester indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"viscose_pct\": \"pourcentage de viscose indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"elastane_pct\": \"pourcentage d'élasthanne indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"gender\": \"genre ciblé (précise 'Femme' seulement si l'information est sûre) ; sinon renvoie \"\"\",
+                    \"color_main\": \"couleurs principales visibles ; renvoie \"\" si la couleur n'est pas évidente\",
+                    \"knit_pattern\": \"motif ou texture visible (marinière, torsadé, col V, etc.) ; renvoie \"\" si aucun détail fiable\",
+                    \"made_in\": \"mention exacte du lieu de fabrication (ex: Made in Portugal) ; renvoie \"\" si non lisible\",
+                    \"defects\": \"défauts ou taches identifiés ; renvoie \"\" s'il n'y en a pas\",
+                    \"defect_tags\": \"liste de slugs parmi [{slugs}] à renseigner UNIQUEMENT si le défaut est visible sur les photos\",
+                    \"size_label_visible\": \"true/false : true uniquement si l'étiquette de taille est parfaitement lisible\",
+                    \"fabric_label_visible\": \"true/false : true uniquement si l'étiquette de composition est parfaitement lisible\",
+                    \"sku\": \"SKU Pull Tommy Femme : PTF + numéro (1-3 chiffres) lorsque l'étiquette est lisible ; renvoie \"\" sinon\"
+                  }}
+                }}
+                N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
+                Ne remplis jamais un champ avec une valeur estimée ou supposée ; retourne la chaîne vide quand une information est manquante ou incertaine.
+                Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.
+                Mentionne « Made in Europe » uniquement si l'étiquette confirme un pays européen et n'invente jamais de provenance.
+                Indique la laine ou le cachemire sans pourcentage lorsque la part est faible et écris simplement « coton » si le pourcentage de coton est inférieur à 60%.
+                """
+            ).strip()
+        else:
+            instruction = dedent(
+                f"""
+                Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :
+                {{
+                  \"fields\": {{
+                    \"model\": \"code numérique du modèle Levi's (ex: 501) avec le suffixe 'Premium' uniquement si indiqué ; renvoie \"\" si le code n'est pas parfaitement lisible\",
+                    \"fr_size\": \"taille française lisible (ex: 38) ; renvoie \"\" si aucune taille fiable n'est visible\",
+                    \"us_w\": \"largeur US W lisible (ex: 28) ; renvoie \"\" si non lisible\",
+                    \"us_l\": \"longueur US L lisible (ex: 30) ; renvoie \"\" si non lisible\",
+                    \"fit_leg\": \"coupe détectée (bootcut, straight, slim, skinny, etc.) ; renvoie \"\" si la coupe n'est pas certaine\",
+                    \"rise_class\": \"hauteur de taille (basse, moyenne, haute, très haute) ; renvoie \"\" si non confirmée\",
+                    \"rise_measurement_cm\": \"mesure en cm entre le haut de la ceinture et l'entrejambe lorsque visible ; sinon renvoie \"\"\",
+                    \"waist_measurement_cm\": \"tour de taille mesuré en cm lorsque visible ; sinon renvoie \"\"\",
+                    \"cotton_pct\": \"pourcentage de coton indiqué sur l'étiquette ; renvoie \"\" si l'information n'est pas lisible\",
+                    \"polyester_pct\": \"pourcentage de polyester indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"viscose_pct\": \"pourcentage de viscose indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"elastane_pct\": \"pourcentage d'élasthanne indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"gender\": \"genre ciblé (femme, homme, mixte) uniquement s'il est explicitement mentionné ; sinon renvoie \"\"\",
+                    \"color_main\": \"couleur principale visible ; renvoie \"\" si la couleur n'est pas évidente\",
+                    \"defects\": \"défauts ou taches identifiés ; renvoie \"\" s'il n'y en a pas ou qu'ils ne sont pas visibles\",
+                    \"defect_tags\": \"liste de slugs parmi [{slugs}] à renseigner UNIQUEMENT si le défaut est visible sur les photos\",
+                    \"size_label_visible\": \"true/false : true uniquement si une étiquette de taille est réellement lisible\",
+                    \"fabric_label_visible\": \"true/false : true uniquement si une étiquette de composition est réellement lisible\",
+                    \"sku\": \"SKU Levi's : JLF + numéro (1-3 chiffres) pour un jean femme, JLH + numéro (1-3 chiffres) pour un jean homme ; renvoie \"\" si l'étiquette n'est pas lisible\"
+                  }}
+                }}
+                N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
+                Indique la coupe en anglais dans 'fit_leg' (ex: bootcut, straight, slim).
+                Ne remplis jamais un champ avec une valeur estimée ou supposée ; retourne la chaîne vide quand une information est manquante ou incertaine.
+                Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.
+                Lorsque l'étiquette de taille est absente ou illisible mais qu'une mesure nette du tour de taille est visible, renseigne 'waist_measurement_cm' en centimètres et laisse les champs 'fr_size', 'us_w' et 'us_l' vides.
+                """
+            ).strip()
 
         if defect_lines:
             instruction = f"{defect_help.strip()}\n\n{instruction}"
