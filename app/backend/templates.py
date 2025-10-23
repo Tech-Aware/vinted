@@ -128,15 +128,36 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     elastane_value = (
         _ensure_percent(fields.elastane_pct) if fields.fabric_label_visible else ""
     )
+    wool_value = (
+        _ensure_percent(fields.wool_pct) if fields.fabric_label_visible else ""
+    )
+    cashmere_value = (
+        _ensure_percent(fields.cashmere_pct) if fields.fabric_label_visible else ""
+    )
+    nylon_value = (
+        _ensure_percent(fields.nylon_pct) if fields.fabric_label_visible else ""
+    )
 
     composition_parts: List[str] = []
     if fields.fabric_label_visible:
         if cotton:
             composition_parts.append(f"{cotton} coton")
+        if fields.has_wool:
+            composition_parts.append(
+                f"{wool_value} laine".strip() if wool_value else "laine"
+            )
+        if fields.has_cashmere:
+            composition_parts.append(
+                f"{cashmere_value} cachemire".strip()
+                if cashmere_value
+                else "cachemire"
+            )
         if fields.has_viscose and viscose_value:
             composition_parts.append(f"{viscose_value} viscose")
         if fields.has_polyester and polyester_value:
             composition_parts.append(f"{polyester_value} polyester")
+        if fields.has_nylon and nylon_value:
+            composition_parts.append(f"{nylon_value} nylon")
         if fields.has_elastane and elastane_value:
             composition_parts.append(f"{elastane_value} élasthanne")
         if composition_parts:
@@ -391,6 +412,8 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
             parts.append(f"{_ensure_percent(fields.viscose_pct)} viscose")
         if fields.has_polyester and fields.polyester_pct:
             parts.append(f"{_ensure_percent(fields.polyester_pct)} polyester")
+        if fields.has_nylon and fields.nylon_pct:
+            parts.append(f"{_ensure_percent(fields.nylon_pct)} nylon")
         if fields.has_elastane and fields.elastane_pct:
             parts.append(f"{_ensure_percent(fields.elastane_pct)} élasthanne")
 

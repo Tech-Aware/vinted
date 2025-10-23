@@ -32,6 +32,7 @@ def test_json_instruction_mentions_defect_synonyms() -> None:
     assert "waist_measurement_cm" in instruction
     assert "tour de taille" in instruction
     assert "viscose_pct" in instruction
+    assert "nylon_pct" in instruction
 
 
 def test_json_instruction_for_pull_tommy_mentions_new_fields() -> None:
@@ -41,6 +42,7 @@ def test_json_instruction_for_pull_tommy_mentions_new_fields() -> None:
     assert "knit_pattern" in instruction
     assert "PTF" in instruction
     assert "Made in Europe" in instruction
+    assert "nylon_pct" in instruction
 
 
 def test_listing_fields_from_dict_requires_all_keys() -> None:
@@ -570,6 +572,43 @@ def test_template_render_handles_viscose_composition(
     assert "Composition : 60% coton, 30% viscose et 10% polyester." in description
 
 
+def test_template_render_mentions_wool_cashmere_nylon(
+    template_registry: ListingTemplateRegistry,
+) -> None:
+    template = template_registry.get_template("template-jean-levis-femme")
+    fields = ListingFields.from_dict(
+        {
+            "model": "721",
+            "fr_size": "38",
+            "us_w": "28",
+            "us_l": "32",
+            "fit_leg": "slim",
+            "rise_class": "moyenne",
+            "rise_measurement_cm": "",
+            "waist_measurement_cm": "",
+            "cotton_pct": "70",
+            "wool_pct": "20",
+            "cashmere_pct": "5",
+            "nylon_pct": "5",
+            "polyester_pct": "0",
+            "viscose_pct": "0",
+            "elastane_pct": "0",
+            "gender": "Femme",
+            "color_main": "Bleu",
+            "defects": "aucun défaut",
+            "sku": "JLF7",
+            "defect_tags": [],
+            "size_label_visible": True,
+            "fabric_label_visible": True,
+        }
+    )
+
+    _title, description = template.render(fields)
+    assert (
+        "Composition : 70% coton, 20% laine, 5% cachemire et 5% nylon." in description
+    )
+
+
 def test_template_render_combines_related_defects(template_registry: ListingTemplateRegistry) -> None:
     template = template_registry.get_template(template_registry.default_template)
     fields = ListingFields.from_dict(
@@ -603,6 +642,46 @@ def test_template_render_combines_related_defects(template_registry: ListingTemp
     )
     assert "effets troués pour un style plus affirmé" not in description
     assert "effets déchirés pour un style plus affirmé" not in description
+
+
+def test_template_pull_tommy_mentions_nylon(
+    template_registry: ListingTemplateRegistry,
+) -> None:
+    template = template_registry.get_template("template-pull-tommy-femme")
+    fields = ListingFields.from_dict(
+        {
+            "model": "",
+            "fr_size": "M",
+            "us_w": "",
+            "us_l": "",
+            "fit_leg": "",
+            "rise_class": "",
+            "rise_measurement_cm": "",
+            "waist_measurement_cm": "",
+            "cotton_pct": "65",
+            "wool_pct": "25",
+            "cashmere_pct": "5",
+            "nylon_pct": "5",
+            "polyester_pct": "0",
+            "viscose_pct": "0",
+            "elastane_pct": "0",
+            "gender": "Femme",
+            "color_main": "Marine",
+            "defects": "",
+            "sku": "PTF2",
+            "defect_tags": [],
+            "size_label_visible": True,
+            "fabric_label_visible": True,
+            "knit_pattern": "torsadé",
+            "made_in": "Made in Italy",
+        },
+        template_name="template-pull-tommy-femme",
+    )
+
+    _title, description = template.render(fields)
+    assert (
+        "Composition : 65% coton, laine torsadée, cachemire et 5% nylon." in description
+    )
 
 
 def test_template_render_mentions_missing_labels_individually(
