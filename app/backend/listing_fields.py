@@ -142,6 +142,7 @@ class ListingFields:
     wool_pct: FieldValue = None
     cashmere_pct: FieldValue = None
     nylon_pct: FieldValue = None
+    acrylic_pct: FieldValue = None
     knit_pattern: FieldValue = None
     made_in: FieldValue = None
 
@@ -164,6 +165,7 @@ class ListingFields:
                 "polyester_pct",
                 "viscose_pct",
                 "elastane_pct",
+                "acrylic_pct",
                 "gender",
                 "color_main",
                 "defects",
@@ -200,6 +202,7 @@ class ListingFields:
         viscose_pct = normalize(data.get("viscose_pct"))
         elastane_pct = normalize(data.get("elastane_pct"))
         nylon_pct = normalize(data.get("nylon_pct"))
+        acrylic_pct = normalize(data.get("acrylic_pct"))
         gender = normalize(data.get("gender"))
         color_main = normalize(data.get("color_main"))
         defects = normalize(data.get("defects"))
@@ -262,6 +265,7 @@ class ListingFields:
             viscose_pct=viscose_pct,
             elastane_pct=elastane_pct,
             nylon_pct=nylon_pct,
+            acrylic_pct=acrylic_pct,
             gender=gender,
             color_main=color_main,
             defects=defects,
@@ -412,6 +416,13 @@ class ListingFields:
         return value is not None and value > 0
 
     @property
+    def has_acrylic(self) -> bool:
+        if not self.fabric_label_visible:
+            return False
+        value = self._percentage_to_float(self.acrylic_pct)
+        return value is not None and value > 0
+
+    @property
     def cotton_percentage_value(self) -> Optional[float]:
         return self._percentage_to_float(self.cotton_pct)
 
@@ -472,6 +483,7 @@ class ListingFields:
                     \"viscose_pct\": \"pourcentage de viscose indiqué ; renvoie \"\" si absent ou illisible\",
                     \"elastane_pct\": \"pourcentage d'élasthanne indiqué ; renvoie \"\" si absent ou illisible\",
                     \"nylon_pct\": \"pourcentage de nylon indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"acrylic_pct\": \"pourcentage d'acrylique indiqué ; renvoie \"\" si absent ou illisible\",
                     \"gender\": \"genre ciblé (précise 'Femme' seulement si l'information est sûre) ; sinon renvoie \"\"\",
                     \"color_main\": \"couleurs principales visibles ; renvoie \"\" si la couleur n'est pas évidente\",
                     \"knit_pattern\": \"motif ou texture visible (marinière, torsadé, col V, etc.) ; renvoie \"\" si aucun détail fiable\",
@@ -509,6 +521,7 @@ class ListingFields:
                     \"viscose_pct\": \"pourcentage de viscose indiqué ; renvoie \"\" si absent ou illisible\",
                     \"elastane_pct\": \"pourcentage d'élasthanne indiqué ; renvoie \"\" si absent ou illisible\",
                     \"nylon_pct\": \"pourcentage de nylon indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"acrylic_pct\": \"pourcentage d'acrylique indiqué ; renvoie \"\" si absent ou illisible\",
                     \"gender\": \"genre ciblé (femme, homme, mixte) uniquement s'il est explicitement mentionné ; sinon renvoie \"\"\",
                     \"color_main\": \"couleur principale visible ; renvoie \"\" si la couleur n'est pas évidente\",
                     \"defects\": \"défauts ou taches identifiés ; renvoie \"\" s'il n'y en a pas ou qu'ils ne sont pas visibles\",
