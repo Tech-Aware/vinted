@@ -298,6 +298,74 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     return title, description
 
 
+def build_tommy_marketing_highlight(
+    fields: ListingFields, pattern_lower: str
+) -> str:
+    """Return a marketing highlight sentence tailored to the knit composition."""
+
+    cotton_value = fields.cotton_percentage_value
+    cotton_percent = _ensure_percent(fields.cotton_pct) if fields.cotton_pct else ""
+    base_sentence: str
+
+    if fields.has_cashmere and fields.has_wool:
+        base_sentence = (
+            "Maille premium associant laine cosy et cachemire luxueux pour une douceur"
+            " enveloppante"
+        )
+    elif fields.has_cashmere:
+        if cotton_value is not None and cotton_value >= 40:
+            base_sentence = (
+                f"Maille luxueuse mêlant {cotton_percent} coton respirant et une touche"
+                " de cachemire pour une douceur irrésistible"
+            )
+        else:
+            base_sentence = (
+                "Maille luxueuse sublimée par du cachemire pour une douceur irrésistible"
+            )
+    elif fields.has_wool:
+        if cotton_value is not None and cotton_value >= 40:
+            base_sentence = (
+                f"Laine chaude associée à {cotton_percent} coton pour rester cosy sans"
+                " étouffer"
+            )
+        elif "torsad" in pattern_lower:
+            base_sentence = "Maille torsadée en laine qui enveloppe chaleureusement"
+        else:
+            base_sentence = "Laine douce et chaude idéale pour affronter les journées fraîches"
+    elif cotton_value:
+        if cotton_value >= 80:
+            base_sentence = (
+                f"{cotton_percent} coton respirant pour un confort naturel toute la journée"
+            )
+        elif cotton_value >= 50:
+            base_sentence = (
+                f"Maille composée de {cotton_percent} coton pour une sensation douce et respirante"
+            )
+        else:
+            base_sentence = (
+                "Présence de coton pour apporter douceur et respirabilité au quotidien"
+            )
+    else:
+        base_sentence = "Maille Tommy Hilfiger confortable au quotidien"
+
+    pattern_phrase = ""
+    if pattern_lower:
+        if "torsad" in pattern_lower:
+            pattern_phrase = " Les torsades apportent du relief cosy."
+        elif "marini" in pattern_lower:
+            pattern_phrase = " L'esprit marinière signe une allure marine iconique."
+        elif "ray" in pattern_lower:
+            pattern_phrase = " Les rayures dynamisent la silhouette."
+        else:
+            pattern_phrase = f" Motif {pattern_lower} pour une touche originale."
+
+    base_sentence = base_sentence.rstrip(". ")
+    if base_sentence:
+        base_sentence = f"{base_sentence}."
+    highlight = f"{base_sentence}{pattern_phrase}" if base_sentence else pattern_phrase
+    return highlight.strip()
+
+
 def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     size_value = _clean(fields.fr_size)
     size_for_title = size_value.upper() if size_value else ""
@@ -424,10 +492,9 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
 
     first_paragraph_lines = [first_sentence, style_sentence]
 
-    second_paragraph_lines = [
-        "Maille de qualité signée Tommy Hilfiger.",
-        composition_sentence,
-    ]
+    marketing_highlight = build_tommy_marketing_highlight(fields, pattern_lower)
+
+    second_paragraph_lines = [marketing_highlight, composition_sentence]
     if made_in_sentence:
         second_paragraph_lines.append(made_in_sentence)
 
