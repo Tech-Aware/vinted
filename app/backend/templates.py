@@ -14,6 +14,7 @@ limitations under the License.
 
 """Listing templates and prompts for the Vinted assistant."""
 
+import re
 import unicodedata
 
 from dataclasses import dataclass
@@ -41,6 +42,41 @@ def _ensure_percent(value: Optional[str]) -> str:
 
 def _clean(value: Optional[str]) -> str:
     return (value or "").strip()
+
+
+_SIZE_TOKEN_SPLIT = re.compile(r"[^A-Z0-9]+")
+
+
+def _normalize_size_hashtag(value: Optional[str], *, default: str = "M") -> str:
+    """Return an uppercase token suitable for Durin size hashtags."""
+
+    if not value:
+        return default
+
+    normalized = value.strip().upper()
+    if not normalized:
+        return default
+
+    normalized = normalized.replace("TAILLE", " ")
+    tokens = [token for token in _SIZE_TOKEN_SPLIT.split(normalized) if token]
+
+    prioritized_patterns = (
+        re.compile(r"^(?:\d+)?X{0,4}[SML]$"),
+        re.compile(r"^TU$"),
+        re.compile(r"^T[0-9]+$"),
+        re.compile(r"^\d{2,3}$"),
+    )
+
+    for pattern in prioritized_patterns:
+        for token in tokens:
+            if pattern.match(token):
+                return token
+
+    if tokens:
+        return tokens[0]
+
+    fallback = "".join(ch for ch in normalized if ch.isalnum())
+    return fallback or default
 
 
 def _normalize_text_for_comparison(value: str) -> str:
@@ -571,8 +607,10 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         ]
     )
 
+    size_hashtag = _normalize_size_hashtag(size_for_title or size_value)
+
     fourth_paragraph_lines = [
-        "✨ Retrouvez tous mes pulls Tommy femme ici 👉 #durin31tfM",
+        f"✨ Retrouvez tous mes pulls Tommy femme ici 👉 #durin31tf{size_hashtag}",
         "💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !",
     ]
 
@@ -589,7 +627,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     add_hashtag("#pullfemme")
     add_hashtag("#modefemme")
     add_hashtag("#preloved")
-    add_hashtag("#durin31tfM")
+    add_hashtag(f"#durin31tf{size_hashtag}")
     add_hashtag("#ptf")
 
     if cotton_value is not None and cotton_value > 0:

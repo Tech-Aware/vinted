@@ -89,6 +89,41 @@ def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
     assert len(hashtags) >= 10
 
 
+def test_render_pull_tommy_femme_updates_hashtag_with_size() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+
+    fields = ListingFields(
+        model="",
+        fr_size="XL",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="",
+        polyester_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="",
+        defects="",
+        defect_tags=(),
+        size_label_visible=False,
+        fabric_label_visible=False,
+        sku="PTF42",
+    )
+
+    _, description = template.render(fields)
+
+    paragraphs = description.split("\n\n")
+    assert any("#durin31tfXL" in line for line in paragraphs[3].splitlines())
+
+    hashtags_line = paragraphs[-1]
+    hashtags = [token for token in hashtags_line.split() if token.startswith("#")]
+    assert "#durin31tfXL" in hashtags
+
+
 def test_render_pull_tommy_femme_marketing_highlight_varies_with_materials() -> None:
     template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
 
