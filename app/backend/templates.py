@@ -14,6 +14,8 @@ limitations under the License.
 
 """Listing templates and prompts for the Vinted assistant."""
 
+import unicodedata
+
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import Callable, Dict, List, Optional, Tuple
@@ -39,6 +41,19 @@ def _ensure_percent(value: Optional[str]) -> str:
 
 def _clean(value: Optional[str]) -> str:
     return (value or "").strip()
+
+
+def _normalize_text_for_comparison(value: str) -> str:
+    """Normalize text for accent-insensitive substring checks."""
+
+    normalized = unicodedata.normalize("NFKD", value)
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch)).casefold()
+
+
+def _contains_normalized_phrase(haystack: str, needle: str) -> bool:
+    if not haystack or not needle:
+        return False
+    return _normalize_text_for_comparison(needle) in _normalize_text_for_comparison(haystack)
 
 
 def _join_fibers(parts: List[str]) -> str:
@@ -418,9 +433,8 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     color_tokens: List[str] = []
     if color:
         color_tokens.append(color)
-    if pattern:
-        normalized_color = color.lower() if color else ""
-        if not normalized_color or pattern.lower() not in normalized_color:
+    if pattern and not _contains_normalized_phrase(material_segment, pattern):
+        if not _contains_normalized_phrase(color, pattern):
             color_tokens.append(pattern)
     color_phrase = " ".join(token for token in color_tokens if token)
 
