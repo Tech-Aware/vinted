@@ -273,7 +273,6 @@ class ListingFields:
         )
 
     @staticmethod
-    @staticmethod
     def _parse_measurement(value: Any, *, field_name: str) -> Optional[float]:
         """Convert raw measurement input to a float in centimeters."""
 
