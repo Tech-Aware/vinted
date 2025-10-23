@@ -87,3 +87,64 @@ def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
     assert "#durin31tfM" in hashtags
     assert len(hashtags) == len(set(hashtags))
     assert len(hashtags) >= 10
+
+
+def test_render_pull_tommy_femme_marketing_highlight_varies_with_materials() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+
+    cotton_fields = ListingFields(
+        model="",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="95",
+        polyester_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="bleu",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="",
+    )
+
+    cashmere_fields = ListingFields(
+        model="",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="60",
+        wool_pct="",
+        cashmere_pct="15",
+        polyester_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="beige",
+        knit_pattern="torsadé",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="",
+    )
+
+    _, cotton_description = template.render(cotton_fields)
+    _, cashmere_description = template.render(cashmere_fields)
+
+    cotton_highlight = cotton_description.split("\n\n")[1].splitlines()[0]
+    cashmere_highlight = cashmere_description.split("\n\n")[1].splitlines()[0]
+
+    assert cotton_highlight != cashmere_highlight
+    assert "respir" in cotton_highlight.lower()
+    assert "cachemire" in cashmere_highlight.lower()
