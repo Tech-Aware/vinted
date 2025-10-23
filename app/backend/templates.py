@@ -388,6 +388,8 @@ def build_tommy_marketing_highlight(
     if pattern_lower:
         if "torsad" in pattern_lower:
             pattern_phrase = " Les torsades apportent du relief cosy."
+            if "cosy" in base_sentence.lower():
+                pattern_phrase = " Les torsades apportent du relief texturé."
         elif "marini" in pattern_lower:
             pattern_phrase = " L'esprit marinière signe une allure marine iconique."
         elif "ray" in pattern_lower:
