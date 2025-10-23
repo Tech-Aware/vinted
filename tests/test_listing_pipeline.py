@@ -34,6 +34,15 @@ def test_json_instruction_mentions_defect_synonyms() -> None:
     assert "viscose_pct" in instruction
 
 
+def test_json_instruction_for_pull_tommy_mentions_new_fields() -> None:
+    instruction = ListingFields.json_instruction("template-pull-tommy-femme")
+    assert "wool_pct" in instruction
+    assert "cashmere_pct" in instruction
+    assert "knit_pattern" in instruction
+    assert "PTF" in instruction
+    assert "Made in Europe" in instruction
+
+
 def test_listing_fields_from_dict_requires_all_keys() -> None:
     payload = {
         "model": "501",
@@ -69,7 +78,7 @@ def test_listing_fields_enforces_sku_prefix_by_gender() -> None:
         "waist_measurement_cm": "",
         "cotton_pct": "99",
         "polyester_pct": "0",
-            "viscose_pct": "0",
+        "viscose_pct": "0",
         "elastane_pct": "1",
         "color_main": "bleu",
         "defects": "aucun défaut",
@@ -80,16 +89,27 @@ def test_listing_fields_enforces_sku_prefix_by_gender() -> None:
     femme_payload = {**base_payload, "gender": "Femme", "sku": "JLF6"}
     homme_payload = {**base_payload, "gender": "Homme", "sku": "JLH12"}
     mix_payload = {**base_payload, "gender": "Mixte", "sku": "JLF3"}
+    tommy_payload = {**base_payload, "gender": "Femme", "sku": "PTF7"}
 
     assert ListingFields.from_dict(femme_payload).sku == "JLF6"
     assert ListingFields.from_dict(homme_payload).sku == "JLH12"
     assert ListingFields.from_dict(mix_payload).sku == "JLF3"
+    tommy_fields = ListingFields.from_dict(
+        tommy_payload, template_name="template-pull-tommy-femme"
+    )
+    assert tommy_fields.sku == "PTF7"
+
+    with pytest.raises(ValueError):
+        ListingFields.from_dict(tommy_payload)
 
     with pytest.raises(ValueError):
         ListingFields.from_dict({**base_payload, "gender": "Femme", "sku": "JLH7"})
 
     with pytest.raises(ValueError):
         ListingFields.from_dict({**base_payload, "gender": "Homme", "sku": "JLF9"})
+
+    with pytest.raises(ValueError):
+        ListingFields.from_dict({**base_payload, "gender": "Homme", "sku": "PTF4"})
 
 
 def test_listing_fields_rejects_unknown_defect_tags() -> None:

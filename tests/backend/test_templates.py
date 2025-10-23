@@ -22,8 +22,10 @@ def test_render_defaults_to_femme_when_gender_missing_levis() -> None:
         fit_leg="slim",
         rise_class="haute",
         rise_measurement_cm=None,
+        waist_measurement_cm=None,
         cotton_pct="99",
         polyester_pct="",
+        viscose_pct="",
         elastane_pct="1",
         gender="",
         color_main="bleu",
@@ -39,3 +41,49 @@ def test_render_defaults_to_femme_when_gender_missing_levis() -> None:
     assert "femme" in title.lower()
     assert "femme" in description.lower()
     assert "#levisfemme" in description.lower()
+
+
+def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+    fields = ListingFields(
+        model="",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="100",
+        polyester_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="blanc et noir",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="PTF01",
+        knit_pattern="marinière",
+        made_in="Made in Portugal",
+    )
+
+    title, description = template.render(fields)
+
+    assert "Pull Tommy femme" in title
+    assert "100% coton" in title
+    assert "blanc et noir marinière" in title
+    assert "Made in Europe" in title
+    assert title.endswith("PTF01")
+
+    assert "Tommy Hilfiger" in description
+    assert "Fabriqué en Europe" in description
+    assert "Made in Portugal" in description
+    assert "Mesures détaillées visibles en photo" in description
+
+    hashtags_line = description.splitlines()[-1]
+    hashtags = [token for token in hashtags_line.split() if token.startswith("#")]
+    assert "#durin31tfM" in hashtags
+    assert len(hashtags) == len(set(hashtags))
+    assert len(hashtags) >= 10
