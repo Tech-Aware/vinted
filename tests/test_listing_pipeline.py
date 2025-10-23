@@ -679,9 +679,7 @@ def test_template_pull_tommy_mentions_nylon(
     )
 
     _title, description = template.render(fields)
-    assert (
-        "Composition : 65% coton, laine torsadée, cachemire et 5% nylon." in description
-    )
+    assert "Composition : 65% coton, 25% laine, 5% cachemire et 5% nylon." in description
 
 
 def test_template_render_mentions_missing_labels_individually(

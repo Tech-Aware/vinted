@@ -457,33 +457,45 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
                 "Composition non visible sur les photos (étiquette absente ou illisible)."
             )
 
+        def _normalized_percent(value: Optional[str]) -> Tuple[str, Optional[float]]:
+            if not value:
+                return "", None
+            stripped = value.strip()
+            if not stripped:
+                return "", None
+            percent_text = _ensure_percent(stripped)
+            numeric_value: Optional[float]
+            try:
+                numeric_source = (
+                    stripped.replace("%", "").replace(",", ".").replace(" ", "")
+                )
+                numeric_value = float(numeric_source)
+            except ValueError:
+                numeric_value = None
+            return percent_text, numeric_value
+
+        def _append_material(
+            percent_value: Optional[str], presence_hint: bool, label: str
+        ) -> None:
+            percent_text, numeric_value = _normalized_percent(percent_value)
+            if numeric_value is not None:
+                if numeric_value > 0:
+                    parts.append(f"{percent_text} {label}")
+                return
+            if percent_text:
+                parts.append(f"{percent_text} {label}")
+            elif presence_hint:
+                parts.append(label)
+
         parts: List[str] = []
-        if cotton_percent:
-            if cotton_value is not None and cotton_value >= 60:
-                parts.append(f"{cotton_percent} coton")
-            elif cotton_value is not None and cotton_value > 0:
-                parts.append("coton")
-            else:
-                parts.append("coton")
-        elif fields.cotton_pct:
-            parts.append("coton")
-
-        if fields.has_wool:
-            wool_descriptor = (
-                "laine torsadée" if "torsad" in pattern_lower else "laine"
-            )
-            parts.append(wool_descriptor)
-        if fields.has_cashmere:
-            parts.append("cachemire")
-
-        if fields.has_viscose and fields.viscose_pct:
-            parts.append(f"{_ensure_percent(fields.viscose_pct)} viscose")
-        if fields.has_polyester and fields.polyester_pct:
-            parts.append(f"{_ensure_percent(fields.polyester_pct)} polyester")
-        if fields.has_nylon and fields.nylon_pct:
-            parts.append(f"{_ensure_percent(fields.nylon_pct)} nylon")
-        if fields.has_elastane and fields.elastane_pct:
-            parts.append(f"{_ensure_percent(fields.elastane_pct)} élasthanne")
+        cotton_present = bool((fields.cotton_pct or "").strip())
+        _append_material(fields.cotton_pct, cotton_present, "coton")
+        _append_material(fields.wool_pct, fields.has_wool, "laine")
+        _append_material(fields.cashmere_pct, fields.has_cashmere, "cachemire")
+        _append_material(fields.viscose_pct, fields.has_viscose, "viscose")
+        _append_material(fields.polyester_pct, fields.has_polyester, "polyester")
+        _append_material(fields.nylon_pct, fields.has_nylon, "nylon")
+        _append_material(fields.elastane_pct, fields.has_elastane, "élasthanne")
 
         if parts:
             return f"Composition : {_join_fibers(parts)}."
