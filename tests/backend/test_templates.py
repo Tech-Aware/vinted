@@ -148,3 +148,37 @@ def test_render_pull_tommy_femme_marketing_highlight_varies_with_materials() -> 
     assert cotton_highlight != cashmere_highlight
     assert "respir" in cotton_highlight.lower()
     assert "cachemire" in cashmere_highlight.lower()
+
+
+def test_render_pull_tommy_femme_title_avoids_pattern_duplicates() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+
+    fields = ListingFields(
+        model="",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="40",
+        polyester_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="marron",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="PTF1",
+        wool_pct="60",
+        knit_pattern="torsadé",
+        made_in="Made in Portugal",
+    )
+
+    title, _ = template.render(fields)
+
+    assert title == "Pull Tommy femme taille M en laine torsadée marron Made in Europe - PTF1"
+    assert title.lower().count("torsad") == 1
