@@ -44,6 +44,26 @@ def _clean(value: Optional[str]) -> str:
     return (value or "").strip()
 
 
+def _normalize_apparel_fr_size(value: Optional[str]) -> str:
+    """Normalize apparel size labels to a consistent FR-friendly format."""
+
+    cleaned = _clean(value)
+    if not cleaned:
+        return ""
+
+    collapsed = re.sub(r"\s+", "", cleaned).upper()
+    match = re.fullmatch(r"(\d+)X", collapsed)
+    if not match:
+        return cleaned
+
+    count = int(match.group(1))
+    if count <= 0:
+        return collapsed
+    if count <= 3:
+        return "X" * count + "L"
+    return f"{count}XL"
+
+
 _SIZE_TOKEN_SPLIT = re.compile(r"[^A-Z0-9]+")
 
 
@@ -441,7 +461,7 @@ def build_tommy_marketing_highlight(
 
 
 def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
-    size_value = _clean(fields.fr_size)
+    size_value = _normalize_apparel_fr_size(fields.fr_size)
     size_for_title = size_value.upper() if size_value else ""
     gender_value = _clean(fields.gender) or "femme"
     color = translate_color_to_french(fields.color_main)
