@@ -199,6 +199,9 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     elastane_value = (
         _ensure_percent(fields.elastane_pct) if fields.fabric_label_visible else ""
     )
+    polyamide_value = (
+        _ensure_percent(fields.polyamide_pct) if fields.fabric_label_visible else ""
+    )
     wool_value = (
         _ensure_percent(fields.wool_pct) if fields.fabric_label_visible else ""
     )
@@ -227,6 +230,8 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
             composition_parts.append(f"{viscose_value} viscose")
         if fields.has_polyester and polyester_value:
             composition_parts.append(f"{polyester_value} polyester")
+        if fields.has_polyamide and polyamide_value:
+            composition_parts.append(f"{polyamide_value} polyamide")
         if fields.has_nylon and nylon_value:
             composition_parts.append(f"{nylon_value} nylon")
         if fields.has_elastane and elastane_value:
@@ -235,7 +240,7 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
             composition_sentence = f"Composition : {_join_fibers(composition_parts)}."
         else:
             composition_sentence = (
-                "Composition indiquée sur l'étiquette (voir photos pour les détails)."
+                "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
             )
     else:
         composition_sentence = (
@@ -496,7 +501,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
             color_tokens.append(pattern)
     color_phrase = " ".join(token for token in color_tokens if token)
 
-    title_parts = ["Pull Tommy femme"]
+    title_parts = ["Pull Tommy Hilfiger femme"]
     if size_for_title:
         title_parts.append(f"taille {size_for_title}")
     elif size_value:
@@ -567,12 +572,13 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         _append_material(fields.viscose_pct, fields.has_viscose, "viscose")
         _append_material(fields.acrylic_pct, fields.has_acrylic, "acrylique")
         _append_material(fields.polyester_pct, fields.has_polyester, "polyester")
+        _append_material(fields.polyamide_pct, fields.has_polyamide, "polyamide")
         _append_material(fields.nylon_pct, fields.has_nylon, "nylon")
         _append_material(fields.elastane_pct, fields.has_elastane, "élasthanne")
 
         if parts:
             return f"Composition : {_join_fibers(parts)}."
-        return "Composition indiquée sur l'étiquette (voir photos pour les détails)."
+        return "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
 
     composition_sentence = build_composition_sentence()
 
@@ -703,7 +709,7 @@ class ListingTemplateRegistry:
                     - Modèle = code numérique du jean (ex: 501). Ajoute uniquement le mot "Premium" si et seulement si indiqué sur l'étiquette.
                     - Wn Ln = valeurs d’étiquette, {{w}} et {{l}}
                     - Coupe = {{fit_leg}} (insère la hauteur de taille {{rise_class}} dans la description uniquement, jamais dans le titre)
-                    - Matière = {{cotton_pct}}% coton (+ {{polyester_pct}}% polyester si présent, + {{elastane_pct}}% élasthanne si présent)
+                    - Matière = {{cotton_pct}}% coton (+ {{polyester_pct}}% polyester si présent, + {{polyamide_pct}}% polyamide si présent, + {{elastane_pct}}% élasthanne si présent)
                     - Genre = {{gender}}  (valeurs attendues : femme, homme, mix)
                     - Tâches et défauts = Ce qui doit impérativement apparaître dans l'annonce si identifié sur photos ou fournit en commentaire {{defects}}
                     - SKU = {{sku}} (utilise JLF + numéro (1 à 3 chiffres) si jean femme, JLH + numéro si jean homme ;
@@ -717,7 +723,7 @@ class ListingTemplateRegistry:
                     Jean Levi’s modèle {{model}} pour {{gender}}.
                     Taille {{w}} US (équivalent {{fr_size}} FR), coupe {{fit_leg}} à taille {{rise_class}}, pour une silhouette ajustée et confortable.
                     Coloris {{color_main}} légèrement délavé, très polyvalent et facile à assortir.
-                    Composition : {{cotton_pct}}% coton{{#if polyester_pct}}, {{polyester_pct}}% polyester{{/if}}{{#if elastane_pct}}, {{elastane_pct}}% élasthanne{{/if}} pour une touche de stretch et plus de confort.
+                    Composition : {{cotton_pct}}% coton{{#if polyester_pct}}, {{polyester_pct}}% polyester{{/if}}{{#if polyamide_pct}}, {{polyamide_pct}}% polyamide{{/if}}{{#if elastane_pct}}, {{elastane_pct}}% élasthanne{{/if}} pour une touche de stretch et plus de confort.
                     Fermeture zippée + bouton gravé Levi’s.
                     
                     Très bon état général {{defects}} (voir photos). S'il n'y a aucun défaut à signaler, écris simplement « Très bon état ».
@@ -743,7 +749,7 @@ class ListingTemplateRegistry:
                     - Taille = {{fr_size}} (taille visible sur l'étiquette, format XS/S/M/L/XL)
                     - Couleur = {{color_main}} (décris les couleurs principales visibles)
                     - Motif / maille = {{knit_pattern}} (marinière, torsadé, col V, etc.)
-                    - Composition = {{cotton_pct}}, {{wool_pct}}, {{cashmere_pct}}, {{polyester_pct}}, {{viscose_pct}}, {{elastane_pct}} telles qu'indiquées sur l'étiquette
+                    - Composition = {{cotton_pct}}, {{wool_pct}}, {{cashmere_pct}}, {{polyester_pct}}, {{polyamide_pct}}, {{viscose_pct}}, {{elastane_pct}} telles qu'indiquées sur l'étiquette
                     - Made in = {{made_in}} (copie exactement la mention écrite)
                     - Défauts = {{defects}} (détaille chaque imperfection visible)
                     - SKU = {{sku}} (utilise PTF + numéro (1 à 3 chiffres) lorsque l'étiquette blanche est lisible)
@@ -759,12 +765,12 @@ class ListingTemplateRegistry:
 
                     Utilise ce format :
                     TITRE
-                    Pull Tommy femme taille {{fr_size}} {{matiere_principale}} {{color_main}} {{knit_pattern}} {{made_in_europe}} - {{sku}}
+                    Pull Tommy Hilfiger femme taille {{fr_size}} {{matiere_principale}} {{color_main}} {{knit_pattern}} {{made_in_europe}} - {{sku}}
 
                     DESCRIPTION + HASHTAG
                     Pull Tommy Hilfiger pour femme taille {{fr_size}}.
                     Coloris {{color_main}} {{knit_pattern}}, parfait pour un look intemporel.
-                    Composition : {{cotton_pct}}% coton{{#if wool_pct}}, laine{{/if}}{{#if cashmere_pct}}, cachemire{{/if}}{{#if polyester_pct}}, {{polyester_pct}}% polyester{{/if}}{{#if viscose_pct}}, {{viscose_pct}}% viscose{{/if}}{{#if elastane_pct}}, {{elastane_pct}}% élasthanne{{/if}} (adapte selon l'étiquette visible).
+                    Composition : {{cotton_pct}}% coton{{#if wool_pct}}, laine{{/if}}{{#if cashmere_pct}}, cachemire{{/if}}{{#if polyester_pct}}, {{polyester_pct}}% polyester{{/if}}{{#if polyamide_pct}}, {{polyamide_pct}}% polyamide{{/if}}{{#if viscose_pct}}, {{viscose_pct}}% viscose{{/if}}{{#if elastane_pct}}, {{elastane_pct}}% élasthanne{{/if}} (adapte selon l'étiquette visible).
                     {{#if made_in}}Fabriqué en Europe {{made_in}} (uniquement si l'étiquette le confirme).{{/if}}
                     Très bon état {{defects}} (voir photos).
                     📏 Mesures détaillées visibles en photo.
