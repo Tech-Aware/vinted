@@ -25,6 +25,7 @@ def test_render_defaults_to_femme_when_gender_missing_levis() -> None:
         waist_measurement_cm=None,
         cotton_pct="99",
         polyester_pct="",
+        polyamide_pct="",
         viscose_pct="",
         elastane_pct="1",
         gender="",
@@ -56,6 +57,7 @@ def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
         waist_measurement_cm=None,
         cotton_pct="100",
         polyester_pct="",
+        polyamide_pct="",
         viscose_pct="",
         elastane_pct="",
         gender="",
@@ -71,7 +73,7 @@ def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
 
     title, description = template.render(fields)
 
-    assert "Pull Tommy femme" in title
+    assert "Pull Tommy Hilfiger femme" in title
     assert "100% coton" in title
     assert "blanc et noir marinière" in title
     assert "Made in Europe" in title
@@ -89,6 +91,36 @@ def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
     assert len(hashtags) >= 10
 
 
+def test_render_jean_levis_includes_polyamide_when_present() -> None:
+    template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
+    fields = ListingFields(
+        model="721",
+        fr_size="38",
+        us_w="28",
+        us_l="30",
+        fit_leg="slim",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="70",
+        polyester_pct="",
+        polyamide_pct="12",
+        viscose_pct="",
+        elastane_pct="2",
+        gender="Femme",
+        color_main="bleu",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="JLF9",
+    )
+
+    _, description = template.render(fields)
+
+    assert "12% polyamide" in description
+
+
 def test_render_pull_tommy_femme_updates_hashtag_with_size() -> None:
     template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
 
@@ -103,6 +135,7 @@ def test_render_pull_tommy_femme_updates_hashtag_with_size() -> None:
         waist_measurement_cm=None,
         cotton_pct="",
         polyester_pct="",
+        polyamide_pct="",
         viscose_pct="",
         elastane_pct="",
         gender="",
@@ -138,6 +171,7 @@ def test_render_pull_tommy_femme_normalizes_extended_sizes() -> None:
         waist_measurement_cm=None,
         cotton_pct="",
         polyester_pct="",
+        polyamide_pct="",
         viscose_pct="",
         elastane_pct="",
         gender="",
@@ -177,6 +211,7 @@ def test_render_pull_tommy_femme_marketing_highlight_varies_with_materials() -> 
         waist_measurement_cm=None,
         cotton_pct="95",
         polyester_pct="",
+        polyamide_pct="",
         viscose_pct="",
         elastane_pct="",
         gender="",
@@ -201,6 +236,7 @@ def test_render_pull_tommy_femme_marketing_highlight_varies_with_materials() -> 
         wool_pct="",
         cashmere_pct="15",
         polyester_pct="",
+        polyamide_pct="",
         viscose_pct="",
         elastane_pct="",
         gender="",
@@ -224,6 +260,69 @@ def test_render_pull_tommy_femme_marketing_highlight_varies_with_materials() -> 
     assert "cachemire" in cashmere_highlight.lower()
 
 
+def test_render_pull_tommy_femme_mentions_polyamide_in_composition() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+
+    fields = ListingFields(
+        model="",
+        fr_size="L",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="55",
+        polyester_pct="",
+        polyamide_pct="20",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="gris",
+        knit_pattern="col V",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="PTF10",
+    )
+
+    _, description = template.render(fields)
+
+    assert "20% polyamide" in description
+
+
+def test_render_pull_tommy_femme_handles_unreadable_composition() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+
+    fields = ListingFields(
+        model="",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="PTF88",
+    )
+
+    _, description = template.render(fields)
+
+    assert "Composition non lisible sur l'étiquette" in description
+
+
 def test_render_pull_tommy_femme_title_avoids_pattern_duplicates() -> None:
     template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
 
@@ -238,6 +337,7 @@ def test_render_pull_tommy_femme_title_avoids_pattern_duplicates() -> None:
         waist_measurement_cm=None,
         cotton_pct="40",
         polyester_pct="",
+        polyamide_pct="",
         viscose_pct="",
         elastane_pct="",
         gender="",
@@ -254,5 +354,8 @@ def test_render_pull_tommy_femme_title_avoids_pattern_duplicates() -> None:
 
     title, _ = template.render(fields)
 
-    assert title == "Pull Tommy femme taille M en laine torsadée marron Made in Europe - PTF1"
+    assert (
+        title
+        == "Pull Tommy Hilfiger femme taille M en laine torsadée marron Made in Europe - PTF1"
+    )
     assert title.lower().count("torsad") == 1

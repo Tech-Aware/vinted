@@ -130,6 +130,7 @@ class ListingFields:
     waist_measurement_cm: Optional[float]
     cotton_pct: FieldValue
     polyester_pct: FieldValue
+    polyamide_pct: FieldValue
     viscose_pct: FieldValue
     elastane_pct: FieldValue
     gender: FieldValue
@@ -163,6 +164,7 @@ class ListingFields:
                 "waist_measurement_cm",
                 "cotton_pct",
                 "polyester_pct",
+                "polyamide_pct",
                 "viscose_pct",
                 "elastane_pct",
                 "acrylic_pct",
@@ -201,6 +203,7 @@ class ListingFields:
         polyester_pct = normalize(data.get("polyester_pct"))
         viscose_pct = normalize(data.get("viscose_pct"))
         elastane_pct = normalize(data.get("elastane_pct"))
+        polyamide_pct = normalize(data.get("polyamide_pct"))
         nylon_pct = normalize(data.get("nylon_pct"))
         acrylic_pct = normalize(data.get("acrylic_pct"))
         gender = normalize(data.get("gender"))
@@ -262,6 +265,7 @@ class ListingFields:
             waist_measurement_cm=waist_measurement_cm,
             cotton_pct=cotton_pct,
             polyester_pct=polyester_pct,
+            polyamide_pct=polyamide_pct,
             viscose_pct=viscose_pct,
             elastane_pct=elastane_pct,
             nylon_pct=nylon_pct,
@@ -395,6 +399,13 @@ class ListingFields:
             return False
 
     @property
+    def has_polyamide(self) -> bool:
+        if not self.fabric_label_visible:
+            return False
+        value = self._percentage_to_float(self.polyamide_pct)
+        return value is not None and value > 0
+
+    @property
     def has_wool(self) -> bool:
         if not self.fabric_label_visible:
             return False
@@ -480,6 +491,7 @@ class ListingFields:
                     \"wool_pct\": \"pourcentage de laine indiqué ; renvoie \"\" si absent ou illisible\",
                     \"cashmere_pct\": \"pourcentage de cachemire indiqué ; renvoie \"\" si absent ou illisible\",
                     \"polyester_pct\": \"pourcentage de polyester indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"polyamide_pct\": \"pourcentage de polyamide indiqué ; renvoie \"\" si absent ou illisible\",
                     \"viscose_pct\": \"pourcentage de viscose indiqué ; renvoie \"\" si absent ou illisible\",
                     \"elastane_pct\": \"pourcentage d'élasthanne indiqué ; renvoie \"\" si absent ou illisible\",
                     \"nylon_pct\": \"pourcentage de nylon indiqué ; renvoie \"\" si absent ou illisible\",
@@ -497,6 +509,7 @@ class ListingFields:
                 }}
                 N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
                 Ne remplis jamais un champ avec une valeur estimée ou supposée ; retourne la chaîne vide quand une information est manquante ou incertaine.
+                N'invente jamais de matière : si une fibre n'est pas clairement indiquée ou que la ligne est illisible, renvoie la chaîne vide pour ce champ.
                 Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.
                 Mentionne « Made in Europe » uniquement si l'étiquette confirme un pays européen et n'invente jamais de provenance.
                 Dans le titre, supprime les pourcentages de laine ou de cachemire lorsqu'ils sont faibles, mais conserve la valeur numérique exacte dans la description et recopie-la dans les champs 'wool_pct' et 'cashmere_pct' dès que l'étiquette est lisible ; écris simplement « coton » si le pourcentage de coton est inférieur à 60%.
@@ -518,6 +531,7 @@ class ListingFields:
                     \"waist_measurement_cm\": \"tour de taille mesuré en cm lorsque visible ; sinon renvoie \"\"\",
                     \"cotton_pct\": \"pourcentage de coton indiqué sur l'étiquette ; renvoie \"\" si l'information n'est pas lisible\",
                     \"polyester_pct\": \"pourcentage de polyester indiqué ; renvoie \"\" si absent ou illisible\",
+                    \"polyamide_pct\": \"pourcentage de polyamide indiqué ; renvoie \"\" si absent ou illisible\",
                     \"viscose_pct\": \"pourcentage de viscose indiqué ; renvoie \"\" si absent ou illisible\",
                     \"elastane_pct\": \"pourcentage d'élasthanne indiqué ; renvoie \"\" si absent ou illisible\",
                     \"nylon_pct\": \"pourcentage de nylon indiqué ; renvoie \"\" si absent ou illisible\",
@@ -534,6 +548,7 @@ class ListingFields:
                 N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
                 Indique la coupe en anglais dans 'fit_leg' (ex: bootcut, straight, slim).
                 Ne remplis jamais un champ avec une valeur estimée ou supposée ; retourne la chaîne vide quand une information est manquante ou incertaine.
+                N'invente jamais de matière : si une fibre n'est pas clairement indiquée ou que la ligne est illisible, renvoie la chaîne vide pour ce champ.
                 Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.
                 Lorsque l'étiquette de taille est absente ou illisible mais qu'une mesure nette du tour de taille est visible, renseigne 'waist_measurement_cm' en centimètres et laisse les champs 'fr_size', 'us_w' et 'us_l' vides.
                 """
