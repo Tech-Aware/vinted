@@ -213,7 +213,9 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     )
 
     composition_parts: List[str] = []
-    if fields.fabric_label_visible:
+    if fields.fabric_label_cut:
+        composition_sentence = "Étiquette matière coupée pour plus de confort."
+    elif fields.fabric_label_visible:
         if cotton:
             composition_parts.append(f"{cotton} coton")
         if fields.has_wool:
@@ -263,6 +265,7 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     else:
         defects = raw_defects if raw_defects else ""
     sku = (fields.sku or "").strip()
+    sku_display = sku if sku else "SKU/nc"
     fit_title_text = fit_title or _clean(fields.fit_leg)
     fit_description_text = fit_description or _clean(fields.fit_leg)
     fit_hashtag_source = fit_hashtag or _clean(fields.fit_leg)
@@ -290,8 +293,7 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
         title_parts.append(gender_value)
     if color:
         title_parts.append(color)
-    if sku:
-        title_parts.extend(["-", sku])
+    title_parts.extend(["-", sku_display])
     title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
 
     size_fragments: List[str] = []
@@ -344,14 +346,26 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     else:
         third_paragraph_lines.append("Très bon état")
 
-    if not fields.size_label_visible and not fields.fabric_label_visible:
+    size_label_missing = not fields.size_label_visible
+    fabric_label_missing = not fields.fabric_label_visible
+    if size_label_missing and fabric_label_missing and not fields.fabric_label_cut:
         third_paragraph_lines.append(
             "Étiquettes taille et composition non visibles sur les photos."
         )
-    elif not fields.size_label_visible:
-        third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
-    elif not fields.fabric_label_visible:
-        third_paragraph_lines.append("Étiquette composition non visible sur les photos.")
+    else:
+        if size_label_missing:
+            third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
+        if fabric_label_missing:
+            if fields.fabric_label_cut:
+                third_paragraph_lines.append(
+                    "Étiquette matière coupée pour plus de confort."
+                )
+            else:
+                third_paragraph_lines.append(
+                    "Étiquette composition non visible sur les photos."
+                )
+
+    third_paragraph_lines.append(f"Référence SKU : {sku_display}")
 
     third_paragraph_lines.extend(
         [
@@ -404,7 +418,9 @@ def build_tommy_marketing_highlight(
     cotton_percent = _ensure_percent(fields.cotton_pct) if fields.cotton_pct else ""
     base_sentence: str
 
-    if fields.has_cashmere and fields.has_wool:
+    if fields.is_pure_cotton:
+        base_sentence = "Maille 100% coton pour un toucher doux et léger"
+    elif fields.has_cashmere and fields.has_wool:
         base_sentence = (
             "Maille premium associant laine cosy et cachemire luxueux pour une douceur"
             " enveloppante"
@@ -469,10 +485,14 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     size_value = _normalize_apparel_fr_size(fields.fr_size)
     size_for_title = size_value.upper() if size_value else ""
     gender_value = _clean(fields.gender) or "femme"
+    item_label = "Gilet" if fields.is_cardigan else "Pull"
+    item_label_lower = item_label.lower()
+    item_label_plural = "gilets" if fields.is_cardigan else "pulls"
     color = translate_color_to_french(fields.color_main)
     color = _clean(color)
     pattern = _clean(fields.knit_pattern)
     sku = (fields.sku or "").strip()
+    sku_display = sku if sku else "SKU/nc"
 
     cotton_percent = _ensure_percent(fields.cotton_pct) if fields.cotton_pct else ""
     cotton_value = fields.cotton_percentage_value
@@ -496,12 +516,17 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     color_tokens: List[str] = []
     if color:
         color_tokens.append(color)
-    if pattern and not _contains_normalized_phrase(material_segment, pattern):
-        if not _contains_normalized_phrase(color, pattern):
+    if pattern:
+        pattern_already_in_material = _contains_normalized_phrase(
+            material_segment, pattern
+        )
+        if not pattern_already_in_material:
+            color_tokens.append(pattern)
+        elif not color_tokens:
             color_tokens.append(pattern)
     color_phrase = " ".join(token for token in color_tokens if token)
 
-    title_parts = ["Pull Tommy Hilfiger femme"]
+    title_parts = [f"{item_label} Tommy Hilfiger femme"]
     if size_for_title:
         title_parts.append(f"taille {size_for_title}")
     elif size_value:
@@ -512,23 +537,33 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         title_parts.append(color_phrase)
     if fields.made_in_europe:
         title_parts.append("Made in Europe")
-    if sku:
-        title_parts.extend(["-", sku])
+    title_parts.extend(["-", sku_display])
     title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
 
     size_sentence = size_for_title or size_value or "non précisée"
     first_sentence = (
-        f"Pull Tommy Hilfiger pour {gender_value} taille {size_sentence}."
+        f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
     )
 
-    if color_phrase:
+    pattern_sentence_value = pattern.lower() if pattern else ""
+    if pattern and color:
         style_sentence = (
-            f"Coloris {color_phrase} facile à associer pour un look intemporel."
+            f"Motif {pattern_sentence_value} sur un coloris {color} facile à associer."
+        )
+    elif pattern:
+        style_sentence = (
+            f"Motif {pattern_sentence_value} mis en valeur, se référer aux photos pour les nuances."
+        )
+    elif color:
+        style_sentence = (
+            f"Coloris {color} facile à associer pour un look intemporel."
         )
     else:
         style_sentence = "Coloris non précisé, se référer aux photos pour les nuances."
 
     def build_composition_sentence() -> str:
+        if fields.fabric_label_cut:
+            return "Étiquette matière coupée pour plus de confort."
         if not fields.fabric_label_visible:
             return (
                 "Composition non visible sur les photos (étiquette absente ou illisible)."
@@ -618,14 +653,26 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     else:
         third_paragraph_lines.append("Très bon état")
 
-    if not fields.size_label_visible and not fields.fabric_label_visible:
+    size_label_missing = not fields.size_label_visible
+    fabric_label_missing = not fields.fabric_label_visible
+    if size_label_missing and fabric_label_missing and not fields.fabric_label_cut:
         third_paragraph_lines.append(
             "Étiquettes taille et composition non visibles sur les photos."
         )
-    elif not fields.size_label_visible:
-        third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
-    elif not fields.fabric_label_visible:
-        third_paragraph_lines.append("Étiquette composition non visible sur les photos.")
+    else:
+        if size_label_missing:
+            third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
+        if fabric_label_missing:
+            if fields.fabric_label_cut:
+                third_paragraph_lines.append(
+                    "Étiquette matière coupée pour plus de confort."
+                )
+            else:
+                third_paragraph_lines.append(
+                    "Étiquette composition non visible sur les photos."
+                )
+
+    third_paragraph_lines.append(f"Référence SKU : {sku_display}")
 
     third_paragraph_lines.extend(
         [
@@ -637,7 +684,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     size_hashtag = _normalize_size_hashtag(size_for_title or size_value)
 
     fourth_paragraph_lines = [
-        f"✨ Retrouvez tous mes pulls Tommy femme ici 👉 #durin31tf{size_hashtag}",
+        f"✨ Retrouvez tous mes {item_label_plural} Tommy femme ici 👉 #durin31tf{size_hashtag}",
         "💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !",
     ]
 
@@ -649,28 +696,28 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
             hashtags.append(tag_clean)
 
     add_hashtag("#tommyhilfiger")
-    add_hashtag("#pulltommy")
+    add_hashtag(f"#{item_label_lower}tommy")
     add_hashtag("#tommy")
-    add_hashtag("#pullfemme")
+    add_hashtag(f"#{item_label_lower}femme")
     add_hashtag("#modefemme")
     add_hashtag("#preloved")
     add_hashtag(f"#durin31tf{size_hashtag}")
     add_hashtag("#ptf")
 
     if cotton_value is not None and cotton_value > 0:
-        add_hashtag("#pullcoton")
+        add_hashtag(f"#{item_label_lower}coton")
     if fields.has_wool:
-        add_hashtag("#pulllaine")
+        add_hashtag(f"#{item_label_lower}laine")
     if fields.has_cashmere:
-        add_hashtag("#pullcachemire")
+        add_hashtag(f"#{item_label_lower}cachemire")
     if pattern_lower:
         if "marini" in pattern_lower:
             add_hashtag("#mariniere")
         if "torsad" in pattern_lower:
-            add_hashtag("#pulltorsade")
+            add_hashtag(f"#{item_label_lower}torsade")
     if color:
         primary_color = color.split()[0].lower()
-        add_hashtag(f"#pull{primary_color}")
+        add_hashtag(f"#{item_label_lower}{primary_color}")
 
     fallback_tags = ["#vetementsfemme", "#modepreloved", "#lookintemporel"]
     for tag in fallback_tags:
