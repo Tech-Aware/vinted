@@ -245,9 +245,7 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
                 "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
             )
     else:
-        composition_sentence = (
-            "Composition non visible sur les photos (étiquette absente ou illisible)."
-        )
+        composition_sentence = "Étiquettes coupées pour plus de confort."
 
     defect_texts = get_defect_descriptions(fields.defect_tags)
     raw_defects = (fields.defects or "").strip()
@@ -565,9 +563,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         if fields.fabric_label_cut:
             return "Étiquette matière coupée pour plus de confort."
         if not fields.fabric_label_visible:
-            return (
-                "Composition non visible sur les photos (étiquette absente ou illisible)."
-            )
+            return "Étiquettes coupées pour plus de confort."
 
         def _normalized_percent(value: Optional[str]) -> Tuple[str, Optional[float]]:
             if not value:
