@@ -346,14 +346,21 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
 
     size_label_missing = not fields.size_label_visible
     fabric_label_missing = not fields.fabric_label_visible
+    composition_mentions_fabric_label_issue = _contains_normalized_phrase(
+        composition_sentence, "étiquette"
+    )
+
     if size_label_missing and fabric_label_missing and not fields.fabric_label_cut:
-        third_paragraph_lines.append(
-            "Étiquettes taille et composition non visibles sur les photos."
-        )
+        if composition_mentions_fabric_label_issue:
+            third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
+        else:
+            third_paragraph_lines.append(
+                "Étiquettes taille et composition non visibles sur les photos."
+            )
     else:
         if size_label_missing:
             third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
-        if fabric_label_missing:
+        if fabric_label_missing and not composition_mentions_fabric_label_issue:
             if fields.fabric_label_cut:
                 third_paragraph_lines.append(
                     "Étiquette matière coupée pour plus de confort."
@@ -362,8 +369,6 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
                 third_paragraph_lines.append(
                     "Étiquette composition non visible sur les photos."
                 )
-
-    third_paragraph_lines.append(f"Référence SKU : {sku_display}")
 
     third_paragraph_lines.extend(
         [
@@ -651,24 +656,27 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
 
     size_label_missing = not fields.size_label_visible
     fabric_label_missing = not fields.fabric_label_visible
+    composition_mentions_fabric_label = "étiquette" in composition_sentence.casefold()
     if size_label_missing and fabric_label_missing and not fields.fabric_label_cut:
-        third_paragraph_lines.append(
-            "Étiquettes taille et composition non visibles sur les photos."
-        )
+        if composition_mentions_fabric_label:
+            third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
+        else:
+            third_paragraph_lines.append(
+                "Étiquettes taille et composition non visibles sur les photos."
+            )
     else:
         if size_label_missing:
             third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
         if fabric_label_missing:
-            if fields.fabric_label_cut:
-                third_paragraph_lines.append(
-                    "Étiquette matière coupée pour plus de confort."
-                )
-            else:
-                third_paragraph_lines.append(
-                    "Étiquette composition non visible sur les photos."
-                )
-
-    third_paragraph_lines.append(f"Référence SKU : {sku_display}")
+            if not composition_mentions_fabric_label:
+                if fields.fabric_label_cut:
+                    third_paragraph_lines.append(
+                        "Étiquette matière coupée pour plus de confort."
+                    )
+                else:
+                    third_paragraph_lines.append(
+                        "Étiquette composition non visible sur les photos."
+                    )
 
     third_paragraph_lines.extend(
         [

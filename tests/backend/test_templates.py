@@ -72,7 +72,7 @@ def test_render_jean_levis_femme_uses_sku_placeholder_when_missing() -> None:
     title, description = template.render(fields)
 
     assert title.endswith("SKU/nc")
-    assert "Référence SKU : SKU/nc" in description
+    assert "sku" not in description.lower()
 
 
 def test_render_jean_levis_handles_fabric_label_cut() -> None:
@@ -103,7 +103,39 @@ def test_render_jean_levis_handles_fabric_label_cut() -> None:
 
     _, description = template.render(fields)
 
-    assert description.count("Étiquette matière coupée pour plus de confort.") == 2
+    assert description.count("Étiquette matière coupée pour plus de confort.") == 1
+
+
+def test_render_jean_levis_avoids_duplicate_missing_fabric_label_sentence() -> None:
+    template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
+    fields = ListingFields(
+        model="",
+        fr_size="",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="",
+        defects="",
+        defect_tags=(),
+        size_label_visible=False,
+        fabric_label_visible=False,
+        fabric_label_cut=False,
+        sku="JLF21",
+    )
+
+    _, description = template.render(fields)
+
+    assert description.count("Étiquettes coupées pour plus de confort.") == 1
+    assert description.count("Étiquette taille non visible sur les photos.") == 1
 
 
 def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
@@ -145,7 +177,7 @@ def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
     assert "Fabriqué en Europe" in description
     assert "Made in Portugal" in description
     assert "Mesures détaillées visibles en photo" in description
-    assert "Référence SKU : PTF01" in description
+    assert "Référence SKU" not in description
 
     hashtags_line = description.splitlines()[-1]
     hashtags = [token for token in hashtags_line.split() if token.startswith("#")]
@@ -182,7 +214,42 @@ def test_render_pull_tommy_femme_handles_fabric_label_cut() -> None:
 
     _, description = template.render(fields)
 
-    assert description.count("Étiquette matière coupée pour plus de confort.") == 2
+    assert description.count("Étiquette matière coupée pour plus de confort.") == 1
+    assert "Référence SKU" not in description
+
+
+def test_render_pull_tommy_femme_handles_hidden_fabric_label() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+
+    fields = ListingFields(
+        model="",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="bleu",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=False,
+        fabric_label_cut=False,
+        sku="PTF98",
+    )
+
+    _, description = template.render(fields)
+
+    assert description.count("Étiquettes coupées pour plus de confort.") == 1
+    assert "Étiquette composition non visible sur les photos." not in description
+    assert "Référence SKU" not in description
 
 
 def test_render_jean_levis_includes_polyamide_when_present() -> None:
@@ -448,7 +515,7 @@ def test_render_pull_tommy_femme_uses_sku_placeholder_when_missing() -> None:
     title, description = template.render(fields)
 
     assert title.endswith("SKU/nc")
-    assert "Référence SKU : SKU/nc" in description
+    assert "Référence SKU" not in description
 
 
 def test_render_pull_tommy_femme_mentions_polyamide_in_composition() -> None:
