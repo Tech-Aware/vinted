@@ -531,7 +531,7 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert "Mesure FR" not in description
     assert " W" not in title  # no US size injected when label is hidden
     assert " L30" not in title
-    assert "Composition non visible sur les photos (étiquette absente ou illisible)." in description
+    assert "Étiquettes coupées pour plus de confort." in description
     assert "Très bon état : entrejambe légèrement délavée (voir photos)" in description
     assert "Étiquettes taille et composition non visibles sur les photos." in description
 
@@ -870,7 +870,7 @@ def test_template_render_skips_composition_when_label_missing(
 
     title, description = template.render(fields)
     assert "coton" not in title.lower()
-    assert "Composition non visible sur les photos (étiquette absente ou illisible)." in description
+    assert "Étiquettes coupées pour plus de confort." in description
     assert "% polyester" not in description
     assert "% élasthanne" not in description
 
