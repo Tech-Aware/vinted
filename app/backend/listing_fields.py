@@ -140,6 +140,8 @@ class ListingFields:
     size_label_visible: bool
     fabric_label_visible: bool
     sku: FieldValue
+    fabric_label_cut: bool = False
+    is_cardigan: bool = False
     wool_pct: FieldValue = None
     cashmere_pct: FieldValue = None
     nylon_pct: FieldValue = None
@@ -225,7 +227,13 @@ class ListingFields:
         fabric_label_visible = ListingFields._normalize_visibility_flag(
             data.get("fabric_label_visible"), default=False
         )
+        fabric_label_cut = ListingFields._normalize_visibility_flag(
+            data.get("fabric_label_cut"), default=False
+        )
         sku = sku_raw.upper() if sku_raw else sku_raw
+        is_cardigan = ListingFields._normalize_visibility_flag(
+            data.get("is_cardigan"), default=False
+        )
 
         if sku:
             gender_normalized = (gender or "").lower()
@@ -276,11 +284,13 @@ class ListingFields:
             defect_tags=defect_tags,
             size_label_visible=size_label_visible,
             fabric_label_visible=fabric_label_visible,
+            fabric_label_cut=fabric_label_cut,
             sku=sku,
             wool_pct=wool_pct,
             cashmere_pct=cashmere_pct,
             knit_pattern=knit_pattern,
             made_in=made_in,
+            is_cardigan=is_cardigan,
         )
 
     @staticmethod
@@ -438,6 +448,33 @@ class ListingFields:
         return self._percentage_to_float(self.cotton_pct)
 
     @property
+    def is_pure_cotton(self) -> bool:
+        """Return True when the visible fabric label states 100% cotton only."""
+
+        if not self.fabric_label_visible:
+            return False
+
+        cotton_value = self.cotton_percentage_value
+        if cotton_value is None:
+            return False
+
+        if cotton_value < 99.5:
+            return False
+
+        return not any(
+            (
+                self.has_wool,
+                self.has_cashmere,
+                self.has_viscose,
+                self.has_polyester,
+                self.has_polyamide,
+                self.has_nylon,
+                self.has_elastane,
+                self.has_acrylic,
+            )
+        )
+
+    @property
     def wool_percentage_value(self) -> Optional[float]:
         return self._percentage_to_float(self.wool_pct)
 
@@ -504,7 +541,9 @@ class ListingFields:
                     \"defect_tags\": \"liste de slugs parmi [{slugs}] à renseigner UNIQUEMENT si le défaut est visible sur les photos\",
                     \"size_label_visible\": \"true/false : true uniquement si l'étiquette de taille est parfaitement lisible\",
                     \"fabric_label_visible\": \"true/false : true uniquement si l'étiquette de composition est parfaitement lisible\",
-                    \"sku\": \"SKU Pull Tommy Femme : PTF + numéro (1-3 chiffres) lorsque l'étiquette est lisible ; renvoie \"\" sinon\"
+                    \"fabric_label_cut\": \"true/false : true si l'étiquette matière a été coupée volontairement pour plus de confort ; false sinon\",
+                    \"sku\": \"SKU Pull Tommy Femme : PTF + numéro (1-3 chiffres) lorsque l'étiquette est lisible ; renvoie \"\" sinon (ne jamais inventer, le rendu affichera 'SKU/nc')\",
+                    \"is_cardigan\": \"true/false : true si l'article est un gilet (avec ouverture complète) ; false sinon\"
                   }}
                 }}
                 N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
@@ -542,7 +581,7 @@ class ListingFields:
                     \"defect_tags\": \"liste de slugs parmi [{slugs}] à renseigner UNIQUEMENT si le défaut est visible sur les photos\",
                     \"size_label_visible\": \"true/false : true uniquement si une étiquette de taille est réellement lisible\",
                     \"fabric_label_visible\": \"true/false : true uniquement si une étiquette de composition est réellement lisible\",
-                    \"sku\": \"SKU Levi's : JLF + numéro (1-3 chiffres) pour un jean femme, JLH + numéro (1-3 chiffres) pour un jean homme ; renvoie \"\" si l'étiquette n'est pas lisible\"
+                    \"sku\": \"SKU Levi's : JLF + numéro (1-3 chiffres) pour un jean femme, JLH + numéro (1-3 chiffres) pour un jean homme ; renvoie \"\" si l'étiquette n'est pas lisible (ne jamais inventer, le rendu affichera 'SKU/nc')\"
                   }}
                 }}
                 N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
