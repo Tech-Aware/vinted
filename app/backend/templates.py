@@ -412,6 +412,115 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     return title, description
 
 
+@dataclass(frozen=True)
+class PatternRule:
+    tokens: Tuple[str, ...]
+    marketing: str
+    style: str
+    hashtags: Tuple[str, ...]
+    material_override: Optional[str] = None
+
+
+PATTERN_RULES: Tuple[PatternRule, ...] = (
+    PatternRule(
+        tokens=("losang", "argyle", "ecoss"),
+        marketing="{base_sentence} Les losanges écossais apportent une touche preppy iconique.",
+        style="Motif argyle chic qui dynamise la silhouette.",
+        hashtags=("#{item_label_lower}losange", "#argyle"),
+    ),
+    PatternRule(
+        tokens=("ray", "stripe"),
+        marketing="{base_sentence} Les rayures dynamisent la silhouette.",
+        style="Les rayures insufflent une allure graphique intemporelle.",
+        hashtags=("#{item_label_lower}rayure", "#rayures"),
+    ),
+    PatternRule(
+        tokens=("chevron", "herringbone"),
+        marketing="{base_sentence} Le motif chevron structure le look avec élégance.",
+        style="Motif chevron travaillé pour une allure sophistiquée.",
+        hashtags=("#{item_label_lower}chevron",),
+    ),
+    PatternRule(
+        tokens=("damier", "checker", "echiquier"),
+        marketing="{base_sentence} Le motif damier apporte une touche graphique affirmée.",
+        style="Damier contrasté pour un twist visuel fort.",
+        hashtags=("#{item_label_lower}damier",),
+    ),
+    PatternRule(
+        tokens=("jacquard", "fairisle"),
+        marketing="{base_sentence} La maille jacquard dévoile un motif travaillé très cosy.",
+        style="Jacquard riche en détails pour une allure chaleureuse.",
+        hashtags=("#{item_label_lower}jacquard", "#fairisle"),
+    ),
+    PatternRule(
+        tokens=("torsad", "aran", "cable"),
+        marketing="{base_sentence} Les torsades apportent du relief cosy.",
+        style="Maille torsadée iconique au charme artisanal.",
+        hashtags=("#{item_label_lower}torsade",),
+        material_override="en laine torsadée",
+    ),
+    PatternRule(
+        tokens=("pointderiz", "niddabeille", "seedstitch", "waffle"),
+        marketing="{base_sentence} La texture en relief apporte du volume et de la douceur.",
+        style="Maille texturée qui joue sur les reliefs délicats.",
+        hashtags=("#{item_label_lower}texturé",),
+    ),
+    PatternRule(
+        tokens=("pieddepoule", "pieddecoq", "houndstooth"),
+        marketing="{base_sentence} Le motif pied-de-poule signe une allure rétro-chic.",
+        style="Pied-de-poule graphique pour une silhouette élégante.",
+        hashtags=("#{item_label_lower}pieddepoule",),
+    ),
+    PatternRule(
+        tokens=("nordique", "scandinave", "flocon", "renne"),
+        marketing="{base_sentence} L’esprit nordique réchauffe vos looks d’hiver.",
+        style="Motif nordique douillet esprit chalet.",
+        hashtags=("#{item_label_lower}nordique",),
+    ),
+    PatternRule(
+        tokens=("boheme", "ethnique", "azt", "tribal"),
+        marketing="{base_sentence} Le motif bohème diffuse une vibe folk et décontractée.",
+        style="Motif bohème pour une allure folk décontractée.",
+        hashtags=("#{item_label_lower}boheme",),
+    ),
+    PatternRule(
+        tokens=("colorblock",),
+        marketing="{base_sentence} Le color block joue sur les contrastes audacieux.",
+        style="Color block énergique qui capte l’œil.",
+        hashtags=("#{item_label_lower}colorblock",),
+    ),
+    PatternRule(
+        tokens=("degrade", "ombre", "gradient", "dipdye"),
+        marketing="{base_sentence} Le dégradé nuance la maille avec subtilité.",
+        style="Dégradé vaporeux pour un rendu tout en douceur.",
+        hashtags=("#{item_label_lower}degrade",),
+    ),
+    PatternRule(
+        tokens=("logo", "brand", "monogram"),
+        marketing="{base_sentence} Le logo mis en avant affirme le style Tommy.",
+        style="Logo signature mis en valeur pour un look assumé.",
+        hashtags=("#{item_label_lower}logo",),
+    ),
+    PatternRule(
+        tokens=("graphique", "abstrait", "abstract", "graphic"),
+        marketing="{base_sentence} Le motif graphique apporte une touche arty.",
+        style="Graphismes audacieux pour une silhouette arty.",
+        hashtags=("#{item_label_lower}graphique",),
+    ),
+)
+
+
+def _find_pattern_rule(pattern_normalized: str) -> Optional[PatternRule]:
+    if not pattern_normalized:
+        return None
+    compact = re.sub(r"[^a-z0-9]", "", pattern_normalized)
+    for rule in PATTERN_RULES:
+        for token in rule.tokens:
+            if token in pattern_normalized or (compact and token in compact):
+                return rule
+    return None
+
+
 def build_tommy_marketing_highlight(
     fields: ListingFields, pattern_lower: str
 ) -> str:
@@ -464,23 +573,26 @@ def build_tommy_marketing_highlight(
     else:
         base_sentence = "Maille Tommy Hilfiger confortable au quotidien"
 
+    base_sentence_clean = base_sentence.rstrip(". ")
+    base_sentence_text = f"{base_sentence_clean}." if base_sentence_clean else ""
+
+    pattern_normalized = (
+        _normalize_text_for_comparison(pattern_lower) if pattern_lower else ""
+    )
+    rule = _find_pattern_rule(pattern_normalized)
+
+    if rule:
+        formatted = rule.marketing.format(base_sentence=base_sentence_text).strip()
+        return formatted or base_sentence_text
+
     pattern_phrase = ""
     if pattern_lower:
-        if "torsad" in pattern_lower:
-            pattern_phrase = " Les torsades apportent du relief cosy."
-            if "cosy" in base_sentence.lower():
-                pattern_phrase = " Les torsades apportent du relief texturé."
-        elif "marini" in pattern_lower:
+        if "marini" in pattern_normalized:
             pattern_phrase = " L'esprit marinière signe une allure marine iconique."
-        elif "ray" in pattern_lower:
-            pattern_phrase = " Les rayures dynamisent la silhouette."
         else:
             pattern_phrase = f" Motif {pattern_lower} pour une touche originale."
 
-    base_sentence = base_sentence.rstrip(". ")
-    if base_sentence:
-        base_sentence = f"{base_sentence}."
-    highlight = f"{base_sentence}{pattern_phrase}" if base_sentence else pattern_phrase
+    highlight = f"{base_sentence_text}{pattern_phrase}" if base_sentence_text else pattern_phrase
     return highlight.strip()
 
 
@@ -502,12 +614,14 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
 
     material_segment = ""
     pattern_lower = pattern.lower() if pattern else ""
+    pattern_normalized = (
+        _normalize_text_for_comparison(pattern_lower) if pattern_lower else ""
+    )
+    rule = _find_pattern_rule(pattern_normalized)
     if fields.has_cashmere:
         material_segment = "en cachemire"
     elif fields.has_wool:
-        material_segment = (
-            "en laine torsadée" if "torsad" in pattern_lower else "en laine"
-        )
+        material_segment = "en laine"
     elif cotton_percent:
         if cotton_value is not None and cotton_value >= 60:
             material_segment = f"{cotton_percent} coton"
@@ -515,6 +629,13 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
             material_segment = "coton"
     elif fields.fabric_label_visible and fields.cotton_pct:
         material_segment = "coton"
+
+    if rule and rule.material_override:
+        if rule.material_override == "en laine torsadée":
+            if fields.has_wool:
+                material_segment = rule.material_override
+        else:
+            material_segment = rule.material_override
 
     color_tokens: List[str] = []
     if color:
@@ -549,7 +670,14 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     )
 
     pattern_sentence_value = pattern.lower() if pattern else ""
-    if pattern and color:
+    if rule:
+        style_sentence = rule.style.format(
+            pattern=pattern_sentence_value,
+            color=color,
+            item_label=item_label,
+            item_label_lower=item_label_lower,
+        ).strip()
+    elif pattern and color:
         style_sentence = (
             f"Motif {pattern_sentence_value} sur un coloris {color} facile à associer."
         )
@@ -707,6 +835,10 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     add_hashtag("#preloved")
     add_hashtag(f"#durin31tf{size_hashtag}")
     add_hashtag("#ptf")
+
+    if rule:
+        for tag_template in rule.hashtags:
+            add_hashtag(tag_template.format(item_label_lower=item_label_lower))
 
     if cotton_value is not None and cotton_value > 0:
         add_hashtag(f"#{item_label_lower}coton")

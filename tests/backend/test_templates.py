@@ -4,6 +4,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -617,4 +619,187 @@ def test_render_pull_tommy_femme_title_avoids_pattern_duplicates() -> None:
         == "Pull Tommy Hilfiger femme taille M en laine torsadée marron Made in Europe - PTF1"
     )
     assert title.lower().count("torsad") == 1
-    assert "motif torsadé" in description.splitlines()[1].lower()
+    assert "maille torsadée" in description.splitlines()[1].lower()
+
+
+@pytest.mark.parametrize(
+    (
+        "pattern",
+        "expected_marketing_fragment",
+        "expected_style_sentence",
+        "expected_hashtags",
+        "extra_fields",
+        "expected_material_segment",
+    ),
+    [
+        (
+            "Losanges écossais",
+            "Les losanges écossais apportent une touche preppy iconique.",
+            "Motif argyle chic qui dynamise la silhouette.",
+            ["#pulllosange", "#argyle"],
+            {},
+            None,
+        ),
+        (
+            "Rayé",
+            "Les rayures dynamisent la silhouette.",
+            "Les rayures insufflent une allure graphique intemporelle.",
+            ["#pullrayure", "#rayures"],
+            {},
+            None,
+        ),
+        (
+            "Motif chevron",
+            "Le motif chevron structure le look avec élégance.",
+            "Motif chevron travaillé pour une allure sophistiquée.",
+            ["#pullchevron"],
+            {},
+            None,
+        ),
+        (
+            "Motif damier",
+            "Le motif damier apporte une touche graphique affirmée.",
+            "Damier contrasté pour un twist visuel fort.",
+            ["#pulldamier"],
+            {},
+            None,
+        ),
+        (
+            "Motif jacquard",
+            "La maille jacquard dévoile un motif travaillé très cosy.",
+            "Jacquard riche en détails pour une allure chaleureuse.",
+            ["#pulljacquard", "#fairisle"],
+            {},
+            None,
+        ),
+        (
+            "Torsadé",
+            "Les torsades apportent du relief cosy.",
+            "Maille torsadée iconique au charme artisanal.",
+            ["#pulltorsade"],
+            {"cotton_pct": "", "wool_pct": "60"},
+            "en laine torsadée",
+        ),
+        (
+            "Point de riz",
+            "La texture en relief apporte du volume et de la douceur.",
+            "Maille texturée qui joue sur les reliefs délicats.",
+            ["#pulltexturé"],
+            {},
+            None,
+        ),
+        (
+            "Pied-de-poule",
+            "Le motif pied-de-poule signe une allure rétro-chic.",
+            "Pied-de-poule graphique pour une silhouette élégante.",
+            ["#pullpieddepoule"],
+            {},
+            None,
+        ),
+        (
+            "Motif nordique",
+            "L’esprit nordique réchauffe vos looks d’hiver.",
+            "Motif nordique douillet esprit chalet.",
+            ["#pullnordique"],
+            {},
+            None,
+        ),
+        (
+            "Motif bohème",
+            "Le motif bohème diffuse une vibe folk et décontractée.",
+            "Motif bohème pour une allure folk décontractée.",
+            ["#pullboheme"],
+            {},
+            None,
+        ),
+        (
+            "Color block",
+            "Le color block joue sur les contrastes audacieux.",
+            "Color block énergique qui capte l’œil.",
+            ["#pullcolorblock"],
+            {},
+            None,
+        ),
+        (
+            "Dégradé",
+            "Le dégradé nuance la maille avec subtilité.",
+            "Dégradé vaporeux pour un rendu tout en douceur.",
+            ["#pulldegrade"],
+            {},
+            None,
+        ),
+        (
+            "Logo TH",
+            "Le logo mis en avant affirme le style Tommy.",
+            "Logo signature mis en valeur pour un look assumé.",
+            ["#pulllogo"],
+            {},
+            None,
+        ),
+        (
+            "Motif graphique",
+            "Le motif graphique apporte une touche arty.",
+            "Graphismes audacieux pour une silhouette arty.",
+            ["#pullgraphique"],
+            {},
+            None,
+        ),
+        (
+            "Motif inattendu",
+            "Motif motif inattendu pour une touche originale.",
+            "Motif motif inattendu sur un coloris bleu facile à associer.",
+            [],
+            {},
+            None,
+        ),
+    ],
+)
+def test_render_pull_tommy_femme_pattern_specific_rules(
+    pattern: str,
+    expected_marketing_fragment: str,
+    expected_style_sentence: str,
+    expected_hashtags: list[str],
+    extra_fields: dict[str, object],
+    expected_material_segment: str | None,
+) -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+
+    base_fields = {
+        "model": "",
+        "fr_size": "M",
+        "us_w": "",
+        "us_l": "",
+        "fit_leg": "",
+        "rise_class": "",
+        "rise_measurement_cm": None,
+        "waist_measurement_cm": None,
+        "cotton_pct": "70",
+        "polyester_pct": "",
+        "polyamide_pct": "",
+        "viscose_pct": "",
+        "elastane_pct": "",
+        "gender": "",
+        "color_main": "bleu",
+        "defects": "",
+        "defect_tags": (),
+        "size_label_visible": True,
+        "fabric_label_visible": True,
+        "sku": "PTFRULE",
+        "knit_pattern": pattern,
+    }
+    base_fields.update(extra_fields)
+    fields = ListingFields(**base_fields)
+
+    title, description = template.render(fields)
+    paragraphs = description.split("\n\n")
+    marketing_line = paragraphs[1].splitlines()[0]
+    style_line = paragraphs[0].splitlines()[1]
+    hashtags_line = paragraphs[-1]
+
+    assert expected_marketing_fragment in marketing_line
+    assert style_line == expected_style_sentence
+    for tag in expected_hashtags:
+        assert tag in hashtags_line
+
+    if expected_material_segment:
+        assert expected_material_segment in title
