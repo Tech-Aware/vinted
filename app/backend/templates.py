@@ -112,6 +112,76 @@ def _contains_normalized_phrase(haystack: str, needle: str) -> bool:
     return _normalize_text_for_comparison(needle) in _normalize_text_for_comparison(haystack)
 
 
+_NECKLINE_CANDIDATES = (
+    "col v",
+    "col en v",
+    "encolure v",
+    "encolure en v",
+    "col rond",
+    "encolure ronde",
+    "col bateau",
+    "encolure bateau",
+    "col montant",
+    "col roulé",
+    "col roulee",
+    "encolure roulée",
+    "encolure roulee",
+    "col cheminée",
+    "col cheminee",
+    "col tunisien",
+    "col zippé",
+    "col zippe",
+    "col henley",
+    "col polo",
+    "col camionneur",
+)
+
+
+def split_neckline_from_pattern(pattern: Optional[str]) -> Tuple[str, str]:
+    """Return remaining pattern text and detected neckline substring."""
+
+    text = (pattern or "").strip()
+    if not text:
+        return "", ""
+
+    normalized_chars: List[str] = []
+    index_map: List[int] = []
+    for index, char in enumerate(text):
+        decomposed = unicodedata.normalize("NFKD", char)
+        for piece in decomposed:
+            if unicodedata.combining(piece):
+                continue
+            normalized_chars.append(piece.casefold())
+            index_map.append(index)
+
+    normalized_text = "".join(normalized_chars)
+    if not normalized_text:
+        return text, ""
+
+    for candidate in _NECKLINE_CANDIDATES:
+        candidate_norm = _normalize_text_for_comparison(candidate)
+        if not candidate_norm:
+            continue
+        pattern_re = re.compile(rf"(?<!\w){re.escape(candidate_norm)}(?!\w)")
+        match = pattern_re.search(normalized_text)
+        if not match:
+            continue
+
+        start_norm = match.start()
+        end_norm = match.end() - 1
+        start_index = index_map[start_norm]
+        end_index = index_map[end_norm] + 1
+        neckline_original = text[start_index:end_index].strip()
+
+        before = text[:start_index].rstrip()
+        after = text[end_index:].lstrip()
+        residual_parts = [segment for segment in (before, after) if segment]
+        residual_pattern = " ".join(residual_parts)
+        return residual_pattern, neckline_original
+
+    return text, ""
+
+
 def _join_fibers(parts: List[str]) -> str:
     if not parts:
         return ""
@@ -522,9 +592,13 @@ def _find_pattern_rule(pattern_normalized: str) -> Optional[PatternRule]:
 
 
 def build_tommy_marketing_highlight(
-    fields: ListingFields, pattern_lower: str
+    fields: ListingFields, pattern_value: Optional[str]
 ) -> str:
     """Return a marketing highlight sentence tailored to the knit composition."""
+
+    pattern_clean = _clean(pattern_value)
+    pattern_remaining, neckline_value = split_neckline_from_pattern(pattern_clean)
+    pattern_lower = pattern_remaining.lower()
 
     cotton_value = fields.cotton_percentage_value
     cotton_percent = _ensure_percent(fields.cotton_pct) if fields.cotton_pct else ""
@@ -583,16 +657,28 @@ def build_tommy_marketing_highlight(
 
     if rule:
         formatted = rule.marketing.format(base_sentence=base_sentence_text).strip()
-        return formatted or base_sentence_text
+        if not neckline_value:
+            return formatted or base_sentence_text
+        neckline_sentence = (
+            f"{neckline_value[0].upper() + neckline_value[1:]} pour une jolie finition."
+        )
+        return " ".join(segment for segment in (formatted, neckline_sentence) if segment).strip()
 
-    pattern_phrase = ""
+    pattern_sentence = ""
     if pattern_lower:
         if "marini" in pattern_normalized:
-            pattern_phrase = " L'esprit marinière signe une allure marine iconique."
+            pattern_sentence = "L'esprit marinière signe une allure marine iconique."
         else:
-            pattern_phrase = f" Motif {pattern_lower} pour une touche originale."
+            pattern_sentence = f"Motif {pattern_lower} pour une touche originale."
 
-    highlight = f"{base_sentence_text}{pattern_phrase}" if base_sentence_text else pattern_phrase
+    neckline_sentence = ""
+    if neckline_value:
+        neckline_sentence = (
+            f"{neckline_value[0].upper() + neckline_value[1:]} pour une jolie finition."
+        )
+
+    segments = [segment for segment in (base_sentence_text, pattern_sentence, neckline_sentence) if segment]
+    highlight = " ".join(segments)
     return highlight.strip()
 
 
@@ -605,7 +691,8 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     item_label_plural = "gilets" if fields.is_cardigan else "pulls"
     color = translate_color_to_french(fields.color_main)
     color = _clean(color)
-    pattern = _clean(fields.knit_pattern)
+    pattern_raw = _clean(fields.knit_pattern)
+    pattern, neckline_value = split_neckline_from_pattern(pattern_raw)
     sku = (fields.sku or "").strip()
     sku_display = sku if sku else "SKU/nc"
 
@@ -659,6 +746,8 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         title_parts.append(material_segment)
     if color_phrase:
         title_parts.append(color_phrase)
+    if neckline_value:
+        title_parts.append(neckline_value)
     if fields.made_in_europe:
         title_parts.append("Made in Europe")
     title_parts.extend(["-", sku_display])
@@ -670,27 +759,43 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     )
 
     pattern_sentence_value = pattern.lower() if pattern else ""
+    style_segments: List[str] = []
+    pattern_segment = ""
     if rule:
-        style_sentence = rule.style.format(
+        pattern_segment = rule.style.format(
             pattern=pattern_sentence_value,
             color=color,
             item_label=item_label,
             item_label_lower=item_label_lower,
         ).strip()
     elif pattern and color:
-        style_sentence = (
+        pattern_segment = (
             f"Motif {pattern_sentence_value} sur un coloris {color} facile à associer."
         )
     elif pattern:
-        style_sentence = (
+        pattern_segment = (
             f"Motif {pattern_sentence_value} mis en valeur, se référer aux photos pour les nuances."
         )
-    elif color:
-        style_sentence = (
-            f"Coloris {color} facile à associer pour un look intemporel."
-        )
+
+    if pattern_segment:
+        style_segments.append(pattern_segment)
     else:
-        style_sentence = "Coloris non précisé, se référer aux photos pour les nuances."
+        if color:
+            style_segments.append(
+                f"Coloris {color} facile à associer pour un look intemporel."
+            )
+        else:
+            style_segments.append(
+                "Coloris non précisé, se référer aux photos pour les nuances."
+            )
+
+    if neckline_value:
+        neckline_sentence = (
+            f"{neckline_value[0].upper() + neckline_value[1:]} qui structure joliment l'encolure."
+        )
+        style_segments.append(neckline_sentence)
+
+    style_sentence = " ".join(style_segments).strip()
 
     def build_composition_sentence() -> str:
         if fields.fabric_label_cut:
@@ -770,7 +875,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
 
     first_paragraph_lines = [first_sentence, style_sentence]
 
-    marketing_highlight = build_tommy_marketing_highlight(fields, pattern_lower)
+    marketing_highlight = build_tommy_marketing_highlight(fields, pattern_raw)
 
     second_paragraph_lines = [marketing_highlight, composition_sentence]
     if made_in_sentence:
