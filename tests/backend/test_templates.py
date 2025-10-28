@@ -188,6 +188,50 @@ def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
     assert len(hashtags) >= 10
 
 
+def test_render_pull_tommy_femme_splits_neckline_from_pattern() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+    fields = ListingFields(
+        model="",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="60",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="bleu marine",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="PTF02",
+        knit_pattern="Marinière col V",
+    )
+
+    title, description = template.render(fields)
+
+    assert title.startswith("Pull Tommy Hilfiger femme taille M")
+    assert title.split(" - ")[0].endswith("col V")
+
+    first_paragraph_lines = description.split("\n\n")[0].split("\n")
+    assert first_paragraph_lines[1] == (
+        "Motif marinière sur un coloris bleu marine facile à associer. "
+        "Col V qui structure joliment l'encolure."
+    )
+
+    highlight_line = description.split("\n\n")[1].split("\n")[0]
+    assert highlight_line == (
+        "Maille composée de 60% coton pour une sensation douce et respirante. "
+        "L'esprit marinière signe une allure marine iconique. Col V pour une jolie finition."
+    )
+
+
 def test_render_pull_tommy_femme_handles_fabric_label_cut() -> None:
     template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
     fields = ListingFields(
