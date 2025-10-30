@@ -25,6 +25,7 @@ from app.backend.defect_catalog import get_defect_descriptions
 from app.backend.listing_fields import ListingFields
 from app.backend.sizing import (
     NormalizedSizes,
+    estimate_fr_top_size,
     fr_size_from_waist_measurement,
     normalize_sizes,
 )
@@ -97,6 +98,14 @@ def _normalize_size_hashtag(value: Optional[str], *, default: str = "M") -> str:
 
     fallback = "".join(ch for ch in normalized if ch.isalnum())
     return fallback or default
+
+
+def _format_measurement(value: Optional[float]) -> Optional[str]:
+    if value is None:
+        return None
+    if value <= 0:
+        return None
+    return f"~{int(round(value))} cm"
 
 
 def _normalize_text_for_comparison(value: str) -> str:
@@ -690,6 +699,21 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     color = _clean(color)
     pattern_raw = _clean(fields.knit_pattern)
     pattern, neckline_value = split_neckline_from_pattern(pattern_raw)
+    top_size_estimate = estimate_fr_top_size(
+        fields.bust_flat_measurement_cm,
+        length_measurement_cm=fields.length_measurement_cm,
+    )
+    estimated_size_label = (
+        top_size_estimate.estimated_size if not fields.size_label_visible else None
+    )
+    estimated_size_note = top_size_estimate.note if not fields.size_label_visible else None
+    length_descriptor = top_size_estimate.length_descriptor
+    bust_flat_display = _format_measurement(fields.bust_flat_measurement_cm)
+    length_display = _format_measurement(fields.length_measurement_cm)
+    sleeve_display = _format_measurement(fields.sleeve_measurement_cm)
+    shoulder_display = _format_measurement(fields.shoulder_measurement_cm)
+    waist_flat_display = _format_measurement(fields.waist_flat_measurement_cm)
+    hem_flat_display = _format_measurement(fields.hem_flat_measurement_cm)
     sku = (fields.sku or "").strip()
     sku_display = sku if sku else "SKU/nc"
 
@@ -735,8 +759,10 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     color_phrase = " ".join(token for token in color_tokens if token)
 
     title_parts = [f"{item_label} Tommy Hilfiger femme"]
-    if size_for_title:
-        title_parts.append(f"taille {size_for_title}")
+    if fields.size_label_visible and (size_for_title or size_value):
+        title_parts.append(f"taille {size_for_title or size_value}")
+    elif estimated_size_label:
+        title_parts.append(f"taille estimée {estimated_size_label}")
     elif size_value:
         title_parts.append(f"taille {size_value}")
     if material_segment:
@@ -750,10 +776,26 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     title_parts.extend(["-", sku_display])
     title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
 
-    size_sentence = size_for_title or size_value or "non précisée"
-    first_sentence = (
-        f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
-    )
+    if fields.size_label_visible and (size_for_title or size_value):
+        size_sentence = size_for_title or size_value
+        first_sentence = (
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
+        )
+    elif estimated_size_label:
+        first_sentence = (
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille estimée {estimated_size_label}."
+        )
+        size_sentence = f"estimée {estimated_size_label}"
+    elif size_value:
+        size_sentence = size_value
+        first_sentence = (
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_value}."
+        )
+    else:
+        size_sentence = "non précisée"
+        first_sentence = (
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille non précisée."
+        )
 
     pattern_sentence_value = pattern.lower() if pattern else ""
     style_segments: List[str] = []
@@ -791,6 +833,14 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
             f"{neckline_value[0].upper() + neckline_value[1:]} qui structure joliment l'encolure."
         )
         style_segments.append(neckline_sentence)
+
+    if length_descriptor:
+        style_segments.append(length_descriptor)
+
+    if sleeve_display:
+        style_segments.append(
+            f"Manches mesurées à {sleeve_display} pour vérifier la longueur."
+        )
 
     style_sentence = " ".join(style_segments).strip()
 
@@ -870,7 +920,11 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     else:
         defects = raw_defects if raw_defects else ""
 
-    first_paragraph_lines = [first_sentence, style_sentence]
+    first_paragraph_lines: List[str] = [first_sentence]
+    if estimated_size_note:
+        first_paragraph_lines.append(estimated_size_note)
+    if style_sentence:
+        first_paragraph_lines.append(style_sentence)
 
     marketing_highlight = build_tommy_marketing_highlight(fields, pattern_raw)
 
@@ -905,6 +959,26 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
                         "Étiquette composition non visible sur les photos."
                     )
 
+    measurement_summary_parts: List[str] = []
+    if bust_flat_display:
+        measurement_summary_parts.append(f"Poitrine à plat {bust_flat_display}")
+    if waist_flat_display:
+        measurement_summary_parts.append(f"Taille à plat {waist_flat_display}")
+    if hem_flat_display:
+        measurement_summary_parts.append(f"Bas à plat {hem_flat_display}")
+    if shoulder_display:
+        measurement_summary_parts.append(f"Épaules {shoulder_display}")
+    if sleeve_display:
+        measurement_summary_parts.append(f"Manches {sleeve_display}")
+    if length_display:
+        measurement_summary_parts.append(f"Longueur épaule-ourlet {length_display}")
+    if measurement_summary_parts:
+        third_paragraph_lines.append(
+            "Mesures à plat disponibles : "
+            + ", ".join(measurement_summary_parts)
+            + "."
+        )
+
     third_paragraph_lines.extend(
         [
             "📏 Mesures détaillées visibles en photo pour plus de précisions.",
@@ -912,7 +986,15 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         ]
     )
 
-    size_hashtag = _normalize_size_hashtag(size_for_title or size_value)
+    estimated_size_for_hashtag = None
+    if estimated_size_label:
+        estimated_size_for_hashtag = (
+            estimated_size_label.replace("(", "").replace(")", "").replace(" ", "")
+        )
+    size_reference_for_hashtag = (
+        size_for_title or size_value or estimated_size_for_hashtag or estimated_size_label
+    )
+    size_hashtag = _normalize_size_hashtag(size_reference_for_hashtag)
 
     fourth_paragraph_lines = [
         f"✨ Retrouvez tous mes {item_label_plural} Tommy femme ici 👉 #durin31tf{size_hashtag}",

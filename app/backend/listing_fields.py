@@ -149,6 +149,12 @@ class ListingFields:
     acrylic_pct: FieldValue = None
     knit_pattern: FieldValue = None
     made_in: FieldValue = None
+    bust_flat_measurement_cm: Optional[float] = None
+    length_measurement_cm: Optional[float] = None
+    sleeve_measurement_cm: Optional[float] = None
+    shoulder_measurement_cm: Optional[float] = None
+    waist_flat_measurement_cm: Optional[float] = None
+    hem_flat_measurement_cm: Optional[float] = None
 
     @classmethod
     def from_dict(
@@ -171,6 +177,12 @@ class ListingFields:
                 "viscose_pct",
                 "elastane_pct",
                 "acrylic_pct",
+                "bust_flat_measurement_cm",
+                "length_measurement_cm",
+                "sleeve_measurement_cm",
+                "shoulder_measurement_cm",
+                "waist_flat_measurement_cm",
+                "hem_flat_measurement_cm",
                 "gender",
                 "color_main",
                 "defects",
@@ -239,6 +251,25 @@ class ListingFields:
             data.get("is_dress"), default=False
         )
 
+        bust_flat_measurement_cm = ListingFields._parse_measurement(
+            data.get("bust_flat_measurement_cm"), field_name="bust_flat_measurement_cm"
+        )
+        length_measurement_cm = ListingFields._parse_measurement(
+            data.get("length_measurement_cm"), field_name="length_measurement_cm"
+        )
+        sleeve_measurement_cm = ListingFields._parse_measurement(
+            data.get("sleeve_measurement_cm"), field_name="sleeve_measurement_cm"
+        )
+        shoulder_measurement_cm = ListingFields._parse_measurement(
+            data.get("shoulder_measurement_cm"), field_name="shoulder_measurement_cm"
+        )
+        waist_flat_measurement_cm = ListingFields._parse_measurement(
+            data.get("waist_flat_measurement_cm"), field_name="waist_flat_measurement_cm"
+        )
+        hem_flat_measurement_cm = ListingFields._parse_measurement(
+            data.get("hem_flat_measurement_cm"), field_name="hem_flat_measurement_cm"
+        )
+
         if sku:
             gender_normalized = (gender or "").lower()
             template_normalized = (template_name or "").strip().lower()
@@ -296,6 +327,12 @@ class ListingFields:
             made_in=made_in,
             is_cardigan=is_cardigan,
             is_dress=is_dress,
+            bust_flat_measurement_cm=bust_flat_measurement_cm,
+            length_measurement_cm=length_measurement_cm,
+            sleeve_measurement_cm=sleeve_measurement_cm,
+            shoulder_measurement_cm=shoulder_measurement_cm,
+            waist_flat_measurement_cm=waist_flat_measurement_cm,
+            hem_flat_measurement_cm=hem_flat_measurement_cm,
         )
 
     @staticmethod
@@ -529,6 +566,12 @@ class ListingFields:
                     \"rise_class\": \"laisse ce champ vide pour les pulls (renvoie \"\")\",
                     \"rise_measurement_cm\": \"laisse ce champ vide pour les pulls (renvoie \"\")\",
                     \"waist_measurement_cm\": \"laisse ce champ vide sauf si une mesure précise apparaît clairement\",
+                    \"bust_flat_measurement_cm\": \"largeur de poitrine à plat en cm ; multiplie par 2 pour connaître le tour complet (garde la valeur vide si absente)\",
+                    \"length_measurement_cm\": \"longueur épaule-ourlet en cm si une mesure nette est visible ; sinon renvoie \"\"\",
+                    \"sleeve_measurement_cm\": \"longueur de manche mesurée en cm quand la prise de vue est nette ; sinon renvoie \"\"\",
+                    \"shoulder_measurement_cm\": \"largeur d'épaule à plat en cm ; renvoie \"\" si incertaine\",
+                    \"waist_flat_measurement_cm\": \"largeur taille à plat en cm ; renvoie \"\" si non mesurée\",
+                    \"hem_flat_measurement_cm\": \"largeur bas de vêtement à plat en cm ; renvoie \"\" si non mesurée\",
                     \"cotton_pct\": \"pourcentage de coton indiqué ; renvoie \"\" si absent ou illisible\",
                     \"wool_pct\": \"pourcentage de laine indiqué ; renvoie \"\" si absent ou illisible\",
                     \"cashmere_pct\": \"pourcentage de cachemire indiqué ; renvoie \"\" si absent ou illisible\",
