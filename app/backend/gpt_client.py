@@ -173,18 +173,18 @@ class ListingGenerator:
 
         if template.name == "template-pull-tommy-femme" and not (fields.sku and fields.sku.strip()):
             logger.step("Récupération ciblée du SKU Tommy Hilfiger")
-            recovered_sku = self._recover_tommy_sku(encoded_images_list, user_comment)
-            recovered_sku = (recovered_sku or "").strip().upper()
-            if not recovered_sku:
+            recovered_sku_raw = self._recover_tommy_sku(encoded_images_list, user_comment)
+            recovered_sku_raw = (recovered_sku_raw or "").strip()
+            fenced = re.fullmatch(r"```[a-zA-Z0-9_-]*\s*(.*?)\s*```", recovered_sku_raw, re.DOTALL)
+            if fenced:
+                recovered_sku_raw = fenced.group(1)
+            match = re.search(r"PTF\d{1,3}", recovered_sku_raw, re.IGNORECASE)
+            if not match:
                 raise ValueError(
                     "Impossible de récupérer un SKU Tommy Hilfiger lisible. "
                     "Merci de fournir la référence dans le commentaire ou des photos plus nettes."
                 )
-            if not re.fullmatch(r"PTF\d{1,3}", recovered_sku):
-                raise ValueError(
-                    "Référence SKU Tommy Hilfiger invalide récupérée (%s). "
-                    "Merci de recopier exactement le code PTF visible." % recovered_sku
-                )
+            recovered_sku = match.group(0).strip().upper()
             fields = replace(fields, sku=recovered_sku)
 
         title, description = template.render(fields)

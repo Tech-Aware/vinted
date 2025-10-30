@@ -60,6 +60,12 @@ def _base_fields_payload(**overrides: Any) -> Dict[str, Any]:
         "elastane_pct": "",
         "nylon_pct": "",
         "acrylic_pct": "",
+        "bust_flat_measurement_cm": "",
+        "length_measurement_cm": "",
+        "sleeve_measurement_cm": "",
+        "shoulder_measurement_cm": "",
+        "waist_flat_measurement_cm": "",
+        "hem_flat_measurement_cm": "",
         "gender": "Femme",
         "color_main": "Bleu",
         _DEFECTS_KEY: "",
@@ -96,8 +102,17 @@ def _build_template(captured: Dict[str, Any]) -> ListingTemplate:
     )
 
 
-@pytest.mark.parametrize("sku_reply", ["PTF52", "ptf7 "])
-def test_generate_listing_recovers_tommy_sku(monkeypatch: pytest.MonkeyPatch, sku_reply: str) -> None:
+@pytest.mark.parametrize(
+    "sku_reply,expected",
+    [
+        ("PTF52", "PTF52"),
+        ("ptf7 ", "PTF7"),
+        ("```plaintext\nptf91\n```", "PTF91"),
+    ],
+)
+def test_generate_listing_recovers_tommy_sku(
+    monkeypatch: pytest.MonkeyPatch, sku_reply: str, expected: str
+) -> None:
     monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
     main_response = _listing_response(_base_fields_payload())
     recovery_response = FakeResponse(sku_reply)
@@ -114,7 +129,7 @@ def test_generate_listing_recovers_tommy_sku(monkeypatch: pytest.MonkeyPatch, sk
     assert result.title == "TITLE"
     fields = captured.get("fields")
     assert fields is not None
-    assert fields.sku == sku_reply.strip().upper()
+    assert fields.sku == expected
     assert len(fake_client.responses.calls) == 2
     second_call = fake_client.responses.calls[1]
     targeted_prompt = second_call["input"][1]["content"][-1]["text"]
