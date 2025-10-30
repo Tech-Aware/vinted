@@ -242,6 +242,53 @@ def test_render_pull_tommy_femme_estimates_size_from_bust_measurement() -> None:
     assert "#durin31tfL" in description
 
 
+def test_render_pull_tommy_femme_estimates_size_from_full_circumference() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+    fields = ListingFields(
+        model="",
+        fr_size="",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="100",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="bleu marine",
+        defects="",
+        defect_tags=(),
+        size_label_visible=False,
+        fabric_label_visible=False,
+        sku="",
+        knit_pattern="",
+        made_in="",
+        bust_flat_measurement_cm=96.0,
+        length_measurement_cm=None,
+        sleeve_measurement_cm=None,
+        shoulder_measurement_cm=None,
+        waist_flat_measurement_cm=None,
+        hem_flat_measurement_cm=None,
+    )
+
+    title, description = template.render(fields)
+
+    assert "taille L" in title
+
+    first_sentence = description.split("\n\n")[0].split("\n")[0]
+    assert first_sentence == (
+        "Pull Tommy Hilfiger pour femme taille L (Taille estimée depuis un tour de poitrine ~96 cm.)."
+    )
+
+    hashtags_line = description.splitlines()[-1]
+    hashtags = [token for token in hashtags_line.split() if token.startswith("#")]
+    assert "#durin31tfL" in hashtags
+
+
 def test_render_pull_tommy_femme_splits_neckline_from_pattern() -> None:
     template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
     fields = ListingFields(
