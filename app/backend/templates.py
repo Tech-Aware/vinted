@@ -778,25 +778,56 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     title_parts.extend(["-", sku_display])
     title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
 
+    bust_measurement_used = (
+        not fields.size_label_visible
+        and fields.bust_flat_measurement_cm is not None
+        and fields.bust_flat_measurement_cm > 0
+    )
+    length_measurement_used = (
+        not fields.size_label_visible
+        and length_descriptor is not None
+        and fields.length_measurement_cm is not None
+        and fields.length_measurement_cm > 0
+    )
+
+    size_measurement_details: List[str] = []
+    if bust_measurement_used:
+        bust_circumference_display = _format_measurement(
+            fields.bust_flat_measurement_cm * 2 if fields.bust_flat_measurement_cm else None
+        )
+        if bust_circumference_display:
+            size_measurement_details.append(f"{bust_circumference_display} de poitrine")
+    if length_measurement_used and length_display:
+        size_measurement_details.append(f"longueur épaule-ourlet {length_display}")
+
+    size_measurement_suffix = (
+        f" ({', '.join(size_measurement_details)})" if size_measurement_details else ""
+    )
+
     if fields.size_label_visible and (size_for_title or size_value):
         size_sentence = size_for_title or size_value
-        first_sentence = (
-            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
-        )
+        if size_measurement_suffix:
+            first_sentence = (
+                f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}{size_measurement_suffix}."
+            )
+        else:
+            first_sentence = (
+                f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
+            )
     elif estimated_size_label:
-        first_sentence = (
-            f"{item_label} Tommy Hilfiger pour {gender_value} taille estimée {estimated_size_label}."
-        )
         size_sentence = f"estimée {estimated_size_label}"
+        first_sentence = (
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}{size_measurement_suffix}."
+        )
     elif size_value:
         size_sentence = size_value
         first_sentence = (
-            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_value}."
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_value}{size_measurement_suffix}."
         )
     else:
         size_sentence = "non précisée"
         first_sentence = (
-            f"{item_label} Tommy Hilfiger pour {gender_value} taille non précisée."
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille non précisée{size_measurement_suffix}."
         )
 
     pattern_sentence_value = pattern.lower() if pattern else ""
@@ -966,8 +997,6 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
                     )
 
     measurement_summary_parts: List[str] = []
-    if bust_flat_display:
-        measurement_summary_parts.append(f"Poitrine à plat {bust_flat_display}")
     if waist_flat_display:
         measurement_summary_parts.append(f"Taille à plat {waist_flat_display}")
     if hem_flat_display:
@@ -976,7 +1005,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         measurement_summary_parts.append(f"Épaules {shoulder_display}")
     if sleeve_display:
         measurement_summary_parts.append(f"Manches {sleeve_display}")
-    if length_display:
+    if length_display and not length_measurement_used:
         measurement_summary_parts.append(f"Longueur épaule-ourlet {length_display}")
     if measurement_summary_parts:
         third_paragraph_lines.append(
