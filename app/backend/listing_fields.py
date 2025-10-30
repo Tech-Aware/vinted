@@ -142,6 +142,7 @@ class ListingFields:
     sku: FieldValue
     fabric_label_cut: bool = False
     is_cardigan: bool = False
+    is_dress: bool = False
     wool_pct: FieldValue = None
     cashmere_pct: FieldValue = None
     nylon_pct: FieldValue = None
@@ -234,6 +235,9 @@ class ListingFields:
         is_cardigan = ListingFields._normalize_visibility_flag(
             data.get("is_cardigan"), default=False
         )
+        is_dress = ListingFields._normalize_visibility_flag(
+            data.get("is_dress"), default=False
+        )
 
         if sku:
             gender_normalized = (gender or "").lower()
@@ -291,6 +295,7 @@ class ListingFields:
             knit_pattern=knit_pattern,
             made_in=made_in,
             is_cardigan=is_cardigan,
+            is_dress=is_dress,
         )
 
     @staticmethod
@@ -543,7 +548,8 @@ class ListingFields:
                     \"fabric_label_visible\": \"true/false : true uniquement si l'étiquette de composition est parfaitement lisible\",
                     \"fabric_label_cut\": \"true/false : true si l'étiquette matière a été coupée volontairement pour plus de confort ; false sinon\",
                     \"sku\": \"SKU Pull Tommy Femme : PTF + numéro (1-3 chiffres) lorsque l'étiquette est lisible ; renvoie \"\" sinon (ne jamais inventer, le rendu affichera 'SKU/nc')\",
-                    \"is_cardigan\": \"true/false : true si l'article est un gilet (avec ouverture complète) ; false sinon\"
+                    \"is_cardigan\": \"true/false : true si l'article est un gilet (avec ouverture complète) ; false sinon\",
+                    \"is_dress\": \"true/false : true uniquement si l'article est une robe (pas un pull/gilet) ; false sinon\"
                   }}
                 }}
                 N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.

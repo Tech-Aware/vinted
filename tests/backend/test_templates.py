@@ -365,6 +365,50 @@ def test_render_pull_tommy_femme_switches_to_cardigan() -> None:
     assert "#pulltommy" not in hashtags_line
 
 
+def test_render_pull_tommy_femme_handles_dress() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+
+    fields = ListingFields(
+        model="",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="70",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="rouge",
+        knit_pattern="",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="PTF77",
+        is_dress=True,
+    )
+
+    title, description = template.render(fields)
+
+    assert title.startswith("Robe Tommy Hilfiger femme")
+    first_paragraph_lines = description.split("\n\n")[0].split("\n")
+    assert first_paragraph_lines[0] == "Robe Tommy Hilfiger pour femme taille M."
+
+    fourth_paragraph = description.split("\n\n")[3]
+    assert "mes robes Tommy femme" in fourth_paragraph
+
+    hashtags_line = description.splitlines()[-1]
+    assert "#robetommy" in hashtags_line
+    assert "#robefemme" in hashtags_line
+    assert "#pulltommy" not in hashtags_line
+    assert "#gilettommy" not in hashtags_line
+
+
 def test_render_pull_tommy_femme_updates_hashtag_with_size() -> None:
     template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
 

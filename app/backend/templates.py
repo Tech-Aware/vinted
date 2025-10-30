@@ -686,9 +686,16 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     size_value = _normalize_apparel_fr_size(fields.fr_size)
     size_for_title = size_value.upper() if size_value else ""
     gender_value = _clean(fields.gender) or "femme"
-    item_label = "Gilet" if fields.is_cardigan else "Pull"
+    if fields.is_dress:
+        item_label = "Robe"
+        item_label_plural = "robes"
+    elif fields.is_cardigan:
+        item_label = "Gilet"
+        item_label_plural = "gilets"
+    else:
+        item_label = "Pull"
+        item_label_plural = "pulls"
     item_label_lower = item_label.lower()
-    item_label_plural = "gilets" if fields.is_cardigan else "pulls"
     color = translate_color_to_french(fields.color_main)
     color = _clean(color)
     pattern_raw = _clean(fields.knit_pattern)
