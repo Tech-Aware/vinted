@@ -304,9 +304,10 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
         _ensure_percent(fields.nylon_pct) if fields.fabric_label_visible else ""
     )
 
+    label_cut_message = "Étiquette coupée pour plus de confort."
     composition_parts: List[str] = []
     if fields.fabric_label_cut:
-        composition_sentence = "Étiquette matière coupée pour plus de confort."
+        composition_sentence = label_cut_message
     elif fields.fabric_label_visible:
         if cotton:
             composition_parts.append(f"{cotton} coton")
@@ -337,7 +338,7 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
                 "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
             )
     else:
-        composition_sentence = "Étiquettes coupées pour plus de confort."
+        composition_sentence = label_cut_message
 
     defect_texts = get_defect_descriptions(fields.defect_tags)
     raw_defects = (fields.defects or "").strip()
@@ -436,21 +437,13 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     else:
         third_paragraph_lines.append("Très bon état")
 
-    size_label_missing = not fields.size_label_visible
-    fabric_label_missing = not fields.fabric_label_visible
-    if size_label_missing and fabric_label_missing and not fields.fabric_label_cut:
-        third_paragraph_lines.append(
-            "Étiquettes taille et composition non visibles sur les photos."
-        )
-        third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
-    else:
-        if size_label_missing:
-            third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
-        if fabric_label_missing:
-            if not fields.fabric_label_cut:
-                third_paragraph_lines.append(
-                    "Étiquette composition non visible sur les photos."
-                )
+    label_issue_detected = (
+        not fields.size_label_visible
+        or not fields.fabric_label_visible
+        or fields.fabric_label_cut
+    )
+    if label_issue_detected and composition_sentence.strip() != label_cut_message:
+        third_paragraph_lines.append(label_cut_message)
 
     third_paragraph_lines.extend(
         [
@@ -726,17 +719,12 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     length_descriptor = top_size_estimate.length_descriptor
     bust_flat_display = _format_measurement(fields.bust_flat_measurement_cm)
     length_display = _format_measurement(fields.length_measurement_cm)
-    sleeve_display = _format_measurement(fields.sleeve_measurement_cm)
-    shoulder_display = _format_measurement(fields.shoulder_measurement_cm)
-    waist_flat_display = _format_measurement(fields.waist_flat_measurement_cm)
-    hem_flat_display = _format_measurement(fields.hem_flat_measurement_cm)
     sku = (fields.sku or "").strip()
     sku_display = sku if sku else "SKU/nc"
 
     cotton_percent = _ensure_percent(fields.cotton_pct) if fields.cotton_pct else ""
     cotton_value = fields.cotton_percentage_value
-    non_size_labels_visible = fields.non_size_labels_visible
-    should_mention_fabric_label_cut = fields.fabric_label_cut and not non_size_labels_visible
+    label_cut_message = "Étiquette coupée pour plus de confort."
 
     material_segment = ""
     pattern_lower = pattern.lower() if pattern else ""
@@ -896,23 +884,13 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         )
         style_segments.append(neckline_sentence)
 
-    if length_descriptor:
-        style_segments.append(length_descriptor)
-
-    if sleeve_display:
-        style_segments.append(
-            f"Manches mesurées à {sleeve_display} pour vérifier la longueur."
-        )
+    # Longueur et manches ne sont plus rappelées ici pour éviter les répétitions.
 
     style_sentence = " ".join(style_segments).strip()
 
     def build_composition_sentence() -> str:
-        if should_mention_fabric_label_cut:
-            return "Étiquette matière coupée pour plus de confort."
-        if fields.fabric_label_cut:
-            return "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
-        if not fields.fabric_label_visible:
-            return "Étiquettes coupées pour plus de confort."
+        if fields.fabric_label_cut or not fields.fabric_label_visible:
+            return label_cut_message
 
         def _normalized_percent(value: Optional[str]) -> Tuple[str, Optional[float]]:
             if not value:
@@ -1002,46 +980,13 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     else:
         third_paragraph_lines.append("Très bon état")
 
-    size_label_missing = not fields.size_label_visible
-    fabric_label_missing = not fields.fabric_label_visible
-    composition_mentions_fabric_label = "étiquette" in composition_sentence.casefold()
-    if fields.fabric_label_cut and not should_mention_fabric_label_cut:
-        composition_mentions_fabric_label = False
-    if size_label_missing and fabric_label_missing and not fields.fabric_label_cut:
-        third_paragraph_lines.append(
-            "Étiquettes taille et composition non visibles sur les photos."
-        )
-    else:
-        if size_label_missing:
-            third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
-        if fabric_label_missing:
-            if not composition_mentions_fabric_label:
-                if should_mention_fabric_label_cut:
-                    third_paragraph_lines.append(
-                        "Étiquette matière coupée pour plus de confort."
-                    )
-                else:
-                    third_paragraph_lines.append(
-                        "Étiquette composition non visible sur les photos."
-                    )
-
-    measurement_summary_parts: List[str] = []
-    if waist_flat_display:
-        measurement_summary_parts.append(f"Taille à plat {waist_flat_display}")
-    if hem_flat_display:
-        measurement_summary_parts.append(f"Bas à plat {hem_flat_display}")
-    if shoulder_display:
-        measurement_summary_parts.append(f"Épaules {shoulder_display}")
-    if sleeve_display:
-        measurement_summary_parts.append(f"Manches {sleeve_display}")
-    if length_display and not length_measurement_used:
-        measurement_summary_parts.append(f"Longueur épaule-ourlet {length_display}")
-    if measurement_summary_parts:
-        third_paragraph_lines.append(
-            "Mesures à plat disponibles : "
-            + ", ".join(measurement_summary_parts)
-            + "."
-        )
+    label_issue_detected = (
+        not fields.size_label_visible
+        or not fields.fabric_label_visible
+        or fields.fabric_label_cut
+    )
+    if label_issue_detected and composition_sentence.strip() != label_cut_message:
+        third_paragraph_lines.append(label_cut_message)
 
     third_paragraph_lines.extend(
         [

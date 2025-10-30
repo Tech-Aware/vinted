@@ -60,17 +60,7 @@ def _describe_top_length(length_measurement_cm: Optional[float]) -> Optional[str
     if length_measurement_cm is None or length_measurement_cm <= 0:
         return None
 
-    if length_measurement_cm < 52:
-        return (
-            f"Coupe courte ({_format_measurement(length_measurement_cm)} de l'épaule à l'ourlet)."
-        )
-    if length_measurement_cm <= 62:
-        return (
-            f"Longueur standard ({_format_measurement(length_measurement_cm)} de l'épaule à l'ourlet)."
-        )
-    return (
-        f"Coupe longue ({_format_measurement(length_measurement_cm)} de l'épaule à l'ourlet)."
-    )
+    return f"Longueur épaule-ourlet {_format_measurement(length_measurement_cm)}."
 
 
 def estimate_fr_top_size(
