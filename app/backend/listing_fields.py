@@ -155,6 +155,7 @@ class ListingFields:
     shoulder_measurement_cm: Optional[float] = None
     waist_flat_measurement_cm: Optional[float] = None
     hem_flat_measurement_cm: Optional[float] = None
+    non_size_labels_visible: bool = False
 
     @classmethod
     def from_dict(
@@ -242,6 +243,9 @@ class ListingFields:
         )
         fabric_label_cut = ListingFields._normalize_visibility_flag(
             data.get("fabric_label_cut"), default=False
+        )
+        non_size_labels_visible = ListingFields._normalize_visibility_flag(
+            data.get("non_size_labels_visible"), default=False
         )
         sku = sku_raw.upper() if sku_raw else sku_raw
         is_cardigan = ListingFields._normalize_visibility_flag(
@@ -333,6 +337,7 @@ class ListingFields:
             shoulder_measurement_cm=shoulder_measurement_cm,
             waist_flat_measurement_cm=waist_flat_measurement_cm,
             hem_flat_measurement_cm=hem_flat_measurement_cm,
+            non_size_labels_visible=non_size_labels_visible,
         )
 
     @staticmethod
@@ -590,6 +595,7 @@ class ListingFields:
                     \"size_label_visible\": \"true/false : true uniquement si l'étiquette de taille est parfaitement lisible\",
                     \"fabric_label_visible\": \"true/false : true uniquement si l'étiquette de composition est parfaitement lisible\",
                     \"fabric_label_cut\": \"true/false : true si l'étiquette matière a été coupée volontairement pour plus de confort ; false sinon\",
+                    \"non_size_labels_visible\": \"true/false : true si une autre étiquette (composition, marque, SKU, consignes d'entretien) est clairement visible sur les photos ; false sinon\",
                     \"sku\": \"SKU Pull Tommy Femme : PTF + numéro (1-3 chiffres) lorsque l'étiquette est lisible ; renvoie \"\" sinon (ne jamais inventer, sinon la génération échouera et le rendu affichera 'SKU/nc')\",
                     \"is_cardigan\": \"true/false : true si l'article est un gilet (avec ouverture complète) ; false sinon\",
                     \"is_dress\": \"true/false : true uniquement si l'article est une robe (pas un pull/gilet) ; false sinon\"
@@ -631,6 +637,7 @@ class ListingFields:
                     \"defect_tags\": \"liste de slugs parmi [{slugs}] à renseigner UNIQUEMENT si le défaut est visible sur les photos\",
                     \"size_label_visible\": \"true/false : true uniquement si une étiquette de taille est réellement lisible\",
                     \"fabric_label_visible\": \"true/false : true uniquement si une étiquette de composition est réellement lisible\",
+                    \"non_size_labels_visible\": \"true/false : true si une autre étiquette (composition, marque, SKU, consignes d'entretien) est clairement visible sur les photos ; false sinon\",
                     \"sku\": \"SKU Levi's : JLF + numéro (1-3 chiffres) pour un jean femme, JLH + numéro (1-3 chiffres) pour un jean homme ; renvoie \"\" si l'étiquette n'est pas lisible (ne jamais inventer, le rendu affichera 'SKU/nc')\"
                   }}
                 }}
