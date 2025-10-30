@@ -307,6 +307,45 @@ def test_render_pull_tommy_femme_handles_fabric_label_cut() -> None:
     assert "Référence SKU" not in description
 
 
+def test_render_pull_tommy_femme_skips_cut_sentence_when_other_labels_visible() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+    fields = ListingFields(
+        model="",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="bleu",
+        defects="",
+        defect_tags=(),
+        size_label_visible=False,
+        fabric_label_visible=False,
+        fabric_label_cut=True,
+        non_size_labels_visible=True,
+        sku="PTF97",
+    )
+
+    _, description = template.render(fields)
+
+    assert "Étiquette matière coupée pour plus de confort." not in description
+    assert "Étiquette composition non visible sur les photos." in description
+    assert (
+        description.count(
+            "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
+        )
+        == 1
+    )
+
+
 def test_render_pull_tommy_femme_handles_hidden_fabric_label() -> None:
     template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
 

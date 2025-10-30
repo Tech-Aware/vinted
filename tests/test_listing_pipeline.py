@@ -756,7 +756,7 @@ def test_template_render_combines_related_defects(template_registry: ListingTemp
 
     _title, description = template.render(fields)
     assert (
-        "Très bon état : effets troués déchirés pour un style plus affirmé (voir photos)"
+        "Très bon état : Quelques trous discrets et effets déchirés (voir photos)"
         in description
     )
     assert "effets troués pour un style plus affirmé" not in description

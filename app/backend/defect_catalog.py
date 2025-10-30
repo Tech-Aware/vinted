@@ -58,7 +58,7 @@ _CATALOG_SPECS: Sequence[DefectSpec] = (
             "effet troué",
             "distressed hole",
         ),
-        description="effets troués pour un style plus affirmé",
+        description="Quelques trous discrets (voir photos)",
     ),
     DefectSpec(
         slug="ripped",
@@ -76,7 +76,7 @@ _COMBINATION_SPECS: Sequence[DefectCombinationSpec] = (
     DefectCombinationSpec(
         slug="stylish_holes_plus_ripped",
         required_slugs=("stylish_holes", "ripped"),
-        description="effets troués déchirés pour un style plus affirmé",
+        description="Quelques trous discrets et effets déchirés (voir photos)",
     ),
 )
 

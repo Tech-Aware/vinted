@@ -719,6 +719,8 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
 
     cotton_percent = _ensure_percent(fields.cotton_pct) if fields.cotton_pct else ""
     cotton_value = fields.cotton_percentage_value
+    non_size_labels_visible = fields.non_size_labels_visible
+    should_mention_fabric_label_cut = fields.fabric_label_cut and not non_size_labels_visible
 
     material_segment = ""
     pattern_lower = pattern.lower() if pattern else ""
@@ -845,8 +847,10 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     style_sentence = " ".join(style_segments).strip()
 
     def build_composition_sentence() -> str:
-        if fields.fabric_label_cut:
+        if should_mention_fabric_label_cut:
             return "Étiquette matière coupée pour plus de confort."
+        if fields.fabric_label_cut:
+            return "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
         if not fields.fabric_label_visible:
             return "Étiquettes coupées pour plus de confort."
 
@@ -941,6 +945,8 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     size_label_missing = not fields.size_label_visible
     fabric_label_missing = not fields.fabric_label_visible
     composition_mentions_fabric_label = "étiquette" in composition_sentence.casefold()
+    if fields.fabric_label_cut and not should_mention_fabric_label_cut:
+        composition_mentions_fabric_label = False
     if size_label_missing and fabric_label_missing and not fields.fabric_label_cut:
         third_paragraph_lines.append(
             "Étiquettes taille et composition non visibles sur les photos."
@@ -950,7 +956,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
             third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
         if fabric_label_missing:
             if not composition_mentions_fabric_label:
-                if fields.fabric_label_cut:
+                if should_mention_fabric_label_cut:
                     third_paragraph_lines.append(
                         "Étiquette matière coupée pour plus de confort."
                     )
