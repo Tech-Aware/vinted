@@ -79,11 +79,13 @@ def estimate_fr_top_size(
     """Estimate a FR top size from a flat bust measurement.
 
     The function doubles the flat bust measurement to approximate the chest circumference
-    and maps it to a FR size bracket ranging from XS to XXL. A descriptive note explicitly
-    reminds that the computation relies on the flat width multiplied by two. When the
-    measurement falls outside of reasonable human ranges, no size is returned and the note
-    highlights the incoherence. A shoulder-to-hem length, when available, is converted to a
-    qualitative descriptor (court/standard/long).
+    unless the input already looks like a full tour (within the realistic min/max range).
+    The inferred circumference is mapped to a FR size bracket ranging from XS to XXL. A
+    descriptive note explicitly reminds whether the computation relies on the flat width
+    multiplied by two or on a provided full measurement. When the measurement falls outside
+    of reasonable human ranges, no size is returned and the note highlights the incoherence.
+    A shoulder-to-hem length, when available, is converted to a qualitative descriptor
+    (court/standard/long).
     """
 
     length_descriptor = _describe_top_length(length_measurement_cm)
@@ -91,7 +93,16 @@ def estimate_fr_top_size(
     if bust_flat_measurement_cm is None or bust_flat_measurement_cm <= 0:
         return TopSizeEstimate(estimated_size=None, note=None, length_descriptor=length_descriptor)
 
-    chest_circumference_cm = bust_flat_measurement_cm * 2
+    measurement_is_circumference = (
+        _MIN_REASONABLE_BUST_CM
+        <= bust_flat_measurement_cm
+        <= _MAX_REASONABLE_BUST_CM
+    )
+
+    if measurement_is_circumference:
+        chest_circumference_cm = bust_flat_measurement_cm
+    else:
+        chest_circumference_cm = bust_flat_measurement_cm * 2
     rounded_circumference = int(round(chest_circumference_cm))
 
     if chest_circumference_cm < _MIN_REASONABLE_BUST_CM:
@@ -116,10 +127,13 @@ def estimate_fr_top_size(
         note = f"Mesure de poitrine hors grille (~{rounded_circumference} cm)."
         return TopSizeEstimate(estimated_size=None, note=note, length_descriptor=length_descriptor)
 
-    note = (
-        f"Taille estimée depuis un tour de poitrine ~{rounded_circumference} cm "
-        "(largeur à plat x2)."
-    )
+    if measurement_is_circumference:
+        note = f"Taille estimée depuis un tour de poitrine ~{rounded_circumference} cm."
+    else:
+        note = (
+            f"Taille estimée depuis un tour de poitrine ~{rounded_circumference} cm "
+            "(largeur à plat x2)."
+        )
     return TopSizeEstimate(
         estimated_size=estimated_size, note=note, length_descriptor=length_descriptor
     )
