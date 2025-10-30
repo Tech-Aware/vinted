@@ -542,7 +542,7 @@ class ListingFields:
                     \"size_label_visible\": \"true/false : true uniquement si l'étiquette de taille est parfaitement lisible\",
                     \"fabric_label_visible\": \"true/false : true uniquement si l'étiquette de composition est parfaitement lisible\",
                     \"fabric_label_cut\": \"true/false : true si l'étiquette matière a été coupée volontairement pour plus de confort ; false sinon\",
-                    \"sku\": \"SKU Pull Tommy Femme : PTF + numéro (1-3 chiffres) lorsque l'étiquette est lisible ; renvoie \"\" sinon (ne jamais inventer, le rendu affichera 'SKU/nc')\",
+                    \"sku\": \"SKU Pull Tommy Femme : PTF + numéro (1-3 chiffres) lorsque l'étiquette est lisible ; renvoie \"\" sinon (ne jamais inventer, le rendu affichera 'SKU/nc'). Ce champ est obligatoire dès que l'étiquette est lisible : son omission fera échouer la génération\",
                     \"is_cardigan\": \"true/false : true si l'article est un gilet (avec ouverture complète) ; false sinon\"
                   }}
                 }}

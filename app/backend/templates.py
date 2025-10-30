@@ -421,24 +421,21 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     )
 
     if size_label_missing and fabric_label_missing and not fields.fabric_label_cut:
-        if composition_mentions_fabric_label_issue:
-            third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
-        else:
-            third_paragraph_lines.append(
-                "Étiquettes taille et composition non visibles sur les photos."
-            )
-    else:
-        if size_label_missing:
-            third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
-        if fabric_label_missing and not composition_mentions_fabric_label_issue:
-            if fields.fabric_label_cut:
+        third_paragraph_lines.append(
+            "Étiquettes taille et composition non visibles sur les photos."
+        )
+        third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
+    elif size_label_missing:
+        third_paragraph_lines.append("Étiquette taille non visible sur les photos.")
+
+    if fabric_label_missing:
+        if fields.fabric_label_cut:
+            if not composition_mentions_fabric_label_issue:
                 third_paragraph_lines.append(
                     "Étiquette matière coupée pour plus de confort."
                 )
-            else:
-                third_paragraph_lines.append(
-                    "Étiquette composition non visible sur les photos."
-                )
+        else:
+            third_paragraph_lines.append("Étiquette composition non visible sur les photos.")
 
     third_paragraph_lines.extend(
         [

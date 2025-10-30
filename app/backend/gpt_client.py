@@ -17,7 +17,7 @@ limitations under the License.
 import json
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterable, List, Optional, Sequence
 
 try:
@@ -133,8 +133,9 @@ class ListingGenerator:
         self, encoded_images: Iterable[str], user_comment: str, template: ListingTemplate
     ) -> ListingResult:
         logger.step("Début de la génération d'annonce")
+        encoded_images_list = list(encoded_images)
         try:
-            messages = self._build_messages(encoded_images, user_comment, template)
+            messages = self._build_messages(encoded_images_list, user_comment, template)
             response = self.client.responses.create(
                 model=self.model,
                 input=messages,
@@ -170,9 +171,96 @@ class ListingGenerator:
                 "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
             ) from exc
 
+        if template.name == "template-pull-tommy-femme" and not fields.sku:
+            recovered_sku = self._recover_tommy_sku(
+                encoded_images_list, user_comment
+            )
+            if recovered_sku and re.fullmatch(r"^PTF\d{1,3}$", recovered_sku):
+                fields = replace(fields, sku=recovered_sku)
+            else:
+                raise ValueError(
+                    "Un SKU lisible est obligatoire pour le template Pull Tommy femme. "
+                    "Ajoute le code SKU dans les commentaires si la photo est insuffisante."
+                )
+
         title, description = template.render(fields)
         logger.success("Titre et description générés depuis les données structurées")
         return ListingResult(title=title, description=description)
+
+    def _recover_tommy_sku(
+        self, encoded_images: Sequence[str], user_comment: str
+    ) -> Optional[str]:
+        """Re-run the model with a focused prompt to recover the Tommy SKU."""
+
+        try:
+            messages: List[dict] = [
+                {
+                    "role": "system",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": (
+                                "Tu es un assistant spécialisé dans la lecture d'étiquettes. "
+                                "Analyse les photos et renvoie uniquement un SKU Pull Tommy Femme "
+                                "au format PTF + 1-3 chiffres ou une chaîne vide si rien n'est lisible."
+                            ),
+                        }
+                    ],
+                }
+            ]
+            user_content: List[dict] = []
+            for image in encoded_images:
+                user_content.append({"type": "input_image", "image_url": image})
+            if user_comment:
+                user_content.append(
+                    {
+                        "type": "input_text",
+                        "text": (
+                            "Commentaire utilisateur pour contexte : "
+                            f"{user_comment.strip()}"
+                        ),
+                    }
+                )
+            user_content.append(
+                {
+                    "type": "input_text",
+                    "text": (
+                        "Analyse ces photos et renvoie uniquement un SKU au format PTF + "
+                        "1-3 chiffres ou vide si rien n'est lisible."
+                    ),
+                }
+            )
+            messages.append({"role": "user", "content": user_content})
+            response = self.client.responses.create(
+                model=self.model,
+                input=messages,
+                max_output_tokens=10,
+                temperature=0,
+            )
+        except Exception:
+            logger.exception("Échec de la récupération ciblée du SKU Tommy")
+            return None
+
+        content = self._extract_response_text(response).strip()
+        if not content:
+            return None
+
+        normalized = content.strip().upper()
+        try:
+            parsed = json.loads(normalized)
+        except json.JSONDecodeError:
+            pass
+        else:
+            if isinstance(parsed, dict):
+                candidate = parsed.get("sku")
+                if isinstance(candidate, str):
+                    normalized = candidate.strip().upper()
+
+        if normalized == "\"\"":
+            return ""
+
+        match = re.fullmatch(r"^PTF\d{1,3}$", normalized)
+        return match.group(0) if match else None
 
     def _extract_response_text(self, response: object) -> str:
         """Extract textual content from the OpenAI response payload."""
