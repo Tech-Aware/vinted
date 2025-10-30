@@ -165,11 +165,26 @@ class ListingGenerator:
                 fields_payload, template_name=template.name
             )
         except Exception as exc:
-            logger.exception("Échec de l'analyse de la réponse JSON")
-            snippet = content_to_parse[:200]
-            raise ValueError(
-                "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
-            ) from exc
+            template_name = template.name or ""
+            if (
+                isinstance(exc, ValueError)
+                and "SKU invalide" in str(exc)
+                and template_name.startswith("template-jean-levis")
+            ):
+                logger.warning(
+                    "SKU Levi's invalide renvoyé par le modèle, application du fallback",
+                )
+                sanitized_payload = dict(fields_payload)
+                sanitized_payload["sku"] = ""
+                fields = ListingFields.from_dict(
+                    sanitized_payload, template_name=template.name
+                )
+            else:
+                logger.exception("Échec de l'analyse de la réponse JSON")
+                snippet = content_to_parse[:200]
+                raise ValueError(
+                    "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
+                ) from exc
 
         if template.name == "template-pull-tommy-femme" and not (fields.sku and fields.sku.strip()):
             logger.step("Récupération ciblée du SKU Tommy Hilfiger")

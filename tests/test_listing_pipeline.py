@@ -1136,6 +1136,67 @@ def test_generator_parses_json_and_renders(template_registry: ListingTemplateReg
     assert "skinny" in result.description
 
 
+def test_generator_tolerates_invalid_levis_sku(template_registry: ListingTemplateRegistry) -> None:
+    template = template_registry.get_template("template-jean-levis-femme")
+    generator = ListingGenerator(model="test-model", api_key="dummy")
+
+    class _FakeContent:
+        def __init__(self, text: str) -> None:
+            self.text = text
+
+    class _FakeBlock:
+        def __init__(self, text: str) -> None:
+            self.content = [_FakeContent(text)]
+
+    class _FakeResponse:
+        def __init__(self, text: str) -> None:
+            self.output = [_FakeBlock(text)]
+
+    invalid_fields_json = {
+        "fields": {
+            "model": "501",
+            "fr_size": "44",
+            "us_w": "28",
+            "us_l": "30",
+            "fit_leg": "slim",
+            "rise_class": "moyenne",
+            "rise_measurement_cm": "",
+            "waist_measurement_cm": "",
+            **MEASUREMENT_EMPTY,
+            "cotton_pct": "99",
+            "polyester_pct": "0",
+            "polyamide_pct": "",
+            "viscose_pct": "0",
+            "acrylic_pct": "",
+            "elastane_pct": "1",
+            "gender": "Femme",
+            "color_main": "Bleu",
+            "defects": "aucune anomalie",
+            "sku": "PTF12",
+            "defect_tags": [],
+            "size_label_visible": True,
+            "fabric_label_visible": True,
+        }
+    }
+
+    class _FakeResponses:
+        def __init__(self, text: str) -> None:
+            self._text = text
+
+        def create(self, **_kwargs: object) -> _FakeResponse:
+            return _FakeResponse(self._text)
+
+    class _FakeClient:
+        def __init__(self, text: str) -> None:
+            self.responses = _FakeResponses(text)
+
+    generator._client = _FakeClient(json.dumps(invalid_fields_json))  # type: ignore[attr-defined]
+
+    result = generator.generate_listing([], "", template)
+
+    assert result.title.endswith("SKU/nc")
+
+
 def test_template_render_falls_back_to_free_text(template_registry: ListingTemplateRegistry) -> None:
     template = template_registry.get_template(template_registry.default_template)
     fields = ListingFields.from_dict(
