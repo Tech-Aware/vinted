@@ -547,7 +547,7 @@ class ListingFields:
                     \"size_label_visible\": \"true/false : true uniquement si l'étiquette de taille est parfaitement lisible\",
                     \"fabric_label_visible\": \"true/false : true uniquement si l'étiquette de composition est parfaitement lisible\",
                     \"fabric_label_cut\": \"true/false : true si l'étiquette matière a été coupée volontairement pour plus de confort ; false sinon\",
-                    \"sku\": \"SKU Pull Tommy Femme : PTF + numéro (1-3 chiffres) lorsque l'étiquette est lisible ; renvoie \"\" sinon (ne jamais inventer, le rendu affichera 'SKU/nc')\",
+                    \"sku\": \"SKU Pull Tommy Femme : PTF + numéro (1-3 chiffres) lorsque l'étiquette est lisible ; renvoie \"\" sinon (ne jamais inventer, sinon la génération échouera et le rendu affichera 'SKU/nc')\",
                     \"is_cardigan\": \"true/false : true si l'article est un gilet (avec ouverture complète) ; false sinon\",
                     \"is_dress\": \"true/false : true uniquement si l'article est une robe (pas un pull/gilet) ; false sinon\"
                   }}
@@ -558,6 +558,7 @@ class ListingFields:
                 Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.
                 Mentionne « Made in Europe » uniquement si l'étiquette confirme un pays européen et n'invente jamais de provenance.
                 Dans le titre, supprime les pourcentages de laine ou de cachemire lorsqu'ils sont faibles, mais conserve la valeur numérique exacte dans la description et recopie-la dans les champs 'wool_pct' et 'cashmere_pct' dès que l'étiquette est lisible ; écris simplement « coton » si le pourcentage de coton est inférieur à 60%.
+                Si une étiquette SKU claire est visible, tu dois recopier exactement la référence PTF correspondante sinon la génération échouera.
                 """
             ).strip()
         else:

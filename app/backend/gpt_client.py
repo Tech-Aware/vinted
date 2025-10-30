@@ -17,7 +17,7 @@ limitations under the License.
 import json
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterable, List, Optional, Sequence
 
 try:
@@ -133,8 +133,9 @@ class ListingGenerator:
         self, encoded_images: Iterable[str], user_comment: str, template: ListingTemplate
     ) -> ListingResult:
         logger.step("Début de la génération d'annonce")
+        encoded_images_list = list(encoded_images)
         try:
-            messages = self._build_messages(encoded_images, user_comment, template)
+            messages = self._build_messages(encoded_images_list, user_comment, template)
             response = self.client.responses.create(
                 model=self.model,
                 input=messages,
@@ -170,9 +171,75 @@ class ListingGenerator:
                 "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
             ) from exc
 
+        if template.name == "template-pull-tommy-femme" and not (fields.sku and fields.sku.strip()):
+            logger.step("Récupération ciblée du SKU Tommy Hilfiger")
+            recovered_sku = self._recover_tommy_sku(encoded_images_list, user_comment)
+            recovered_sku = (recovered_sku or "").strip().upper()
+            if not recovered_sku:
+                raise ValueError(
+                    "Impossible de récupérer un SKU Tommy Hilfiger lisible. "
+                    "Merci de fournir la référence dans le commentaire ou des photos plus nettes."
+                )
+            if not re.fullmatch(r"PTF\d{1,3}", recovered_sku):
+                raise ValueError(
+                    "Référence SKU Tommy Hilfiger invalide récupérée (%s). "
+                    "Merci de recopier exactement le code PTF visible." % recovered_sku
+                )
+            fields = replace(fields, sku=recovered_sku)
+
         title, description = template.render(fields)
         logger.success("Titre et description générés depuis les données structurées")
         return ListingResult(title=title, description=description)
+
+    def _recover_tommy_sku(
+        self, encoded_images: Sequence[str], user_comment: str
+    ) -> str:
+        """Run a targeted prompt to recover the Tommy Hilfiger SKU."""
+
+        user_content: List[dict] = []
+        for image in encoded_images:
+            user_content.append({"type": "input_image", "image_url": image})
+
+        prompt_lines = [
+            "Analyse uniquement les photos ci-dessus.",
+            "Repère le SKU Tommy Hilfiger au format PTF suivi de 1 à 3 chiffres.",
+            "Si tu lis clairement ce code, réponds uniquement avec ce SKU exact.",
+            "Si aucun code n'est lisible, réponds avec une chaîne vide sans autre texte.",
+        ]
+        if user_comment:
+            prompt_lines.append(
+                "Ignore les spéculations du commentaire utilisateur sauf s'il confirme explicitement le SKU."
+            )
+
+        user_content.append({"type": "input_text", "text": "\n".join(prompt_lines)})
+
+        messages = [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": (
+                            "Tu es un assistant vendeur Vinted. Retourne uniquement le SKU Tommy Hilfiger demandé."
+                        ),
+                    }
+                ],
+            },
+            {"role": "user", "content": user_content},
+        ]
+
+        try:
+            response = self.client.responses.create(
+                model=self.model,
+                input=messages,
+                max_output_tokens=50,
+                temperature=0.0,
+            )
+        except Exception:
+            logger.exception("Échec de la récupération ciblée du SKU Tommy Hilfiger")
+            raise
+
+        return self._extract_response_text(response)
 
     def _extract_response_text(self, response: object) -> str:
         """Extract textual content from the OpenAI response payload."""
