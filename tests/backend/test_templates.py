@@ -188,6 +188,49 @@ def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
     assert len(hashtags) >= 10
 
 
+def test_render_pull_tommy_femme_estimates_size_from_bust_measurement() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+    fields = ListingFields(
+        model="",
+        fr_size="",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="100",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="bleu marine",
+        defects="",
+        defect_tags=(),
+        size_label_visible=False,
+        fabric_label_visible=False,
+        sku="",
+        knit_pattern="",
+        made_in="",
+        bust_flat_measurement_cm=48.0,
+        length_measurement_cm=50.0,
+        sleeve_measurement_cm=61.0,
+        shoulder_measurement_cm=39.0,
+        waist_flat_measurement_cm=46.0,
+        hem_flat_measurement_cm=47.0,
+    )
+
+    title, description = template.render(fields)
+
+    assert "taille estimée FR 40 (L)" in title
+    assert "Taille estimée depuis un tour de poitrine ~96 cm (largeur à plat x2)." in description
+    assert "Coupe courte (~50 cm de l'épaule à l'ourlet)." in description
+    assert "Manches mesurées à ~61 cm" in description
+    assert "Mesures à plat disponibles" in description
+    assert "#durin31tfFR40L" in description
+
+
 def test_render_pull_tommy_femme_splits_neckline_from_pattern() -> None:
     template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
     fields = ListingFields(

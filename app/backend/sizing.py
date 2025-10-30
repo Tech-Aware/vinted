@@ -26,11 +26,103 @@ class NormalizedSizes:
     note: Optional[str]
 
 
+@dataclass
+class TopSizeEstimate:
+    estimated_size: Optional[str]
+    note: Optional[str]
+    length_descriptor: Optional[str]
+
+
 _ELASTANE_NOTE = "Mesure FR étendue par la présence d'élasthane dans la composition"
 _WAIST_MEASUREMENT_NOTE = (
     "Taille estimée à partir du tour de taille mesuré visuellement sur les photos"
 )
 _CM_PER_INCH = 2.54
+
+_SIZE_CHART_BUST_CM = (
+    (84.0, "FR 34 (XS)"),
+    (88.0, "FR 36 (S)"),
+    (92.0, "FR 38 (M)"),
+    (98.0, "FR 40 (L)"),
+    (104.0, "FR 42 (XL)"),
+    (112.0, "FR 44 (XXL)"),
+)
+
+_MIN_REASONABLE_BUST_CM = 70.0
+_MAX_REASONABLE_BUST_CM = 130.0
+
+
+def _format_measurement(value: float) -> str:
+    return f"~{int(round(value))} cm"
+
+
+def _describe_top_length(length_measurement_cm: Optional[float]) -> Optional[str]:
+    if length_measurement_cm is None or length_measurement_cm <= 0:
+        return None
+
+    if length_measurement_cm < 52:
+        return (
+            f"Coupe courte ({_format_measurement(length_measurement_cm)} de l'épaule à l'ourlet)."
+        )
+    if length_measurement_cm <= 62:
+        return (
+            f"Longueur standard ({_format_measurement(length_measurement_cm)} de l'épaule à l'ourlet)."
+        )
+    return (
+        f"Coupe longue ({_format_measurement(length_measurement_cm)} de l'épaule à l'ourlet)."
+    )
+
+
+def estimate_fr_top_size(
+    bust_flat_measurement_cm: Optional[float], *, length_measurement_cm: Optional[float] = None
+) -> TopSizeEstimate:
+    """Estimate a FR top size from a flat bust measurement.
+
+    The function doubles the flat bust measurement to approximate the chest circumference
+    and maps it to a FR size bracket ranging from XS to XXL. A descriptive note explicitly
+    reminds that the computation relies on the flat width multiplied by two. When the
+    measurement falls outside of reasonable human ranges, no size is returned and the note
+    highlights the incoherence. A shoulder-to-hem length, when available, is converted to a
+    qualitative descriptor (court/standard/long).
+    """
+
+    length_descriptor = _describe_top_length(length_measurement_cm)
+
+    if bust_flat_measurement_cm is None or bust_flat_measurement_cm <= 0:
+        return TopSizeEstimate(estimated_size=None, note=None, length_descriptor=length_descriptor)
+
+    chest_circumference_cm = bust_flat_measurement_cm * 2
+    rounded_circumference = int(round(chest_circumference_cm))
+
+    if chest_circumference_cm < _MIN_REASONABLE_BUST_CM:
+        note = (
+            f"Mesure de poitrine trop faible pour une taille adulte (~{rounded_circumference} cm)."
+        )
+        return TopSizeEstimate(estimated_size=None, note=note, length_descriptor=length_descriptor)
+
+    if chest_circumference_cm > _MAX_REASONABLE_BUST_CM:
+        note = (
+            f"Mesure de poitrine hors plage réaliste (~{rounded_circumference} cm)."
+        )
+        return TopSizeEstimate(estimated_size=None, note=note, length_descriptor=length_descriptor)
+
+    estimated_size: Optional[str] = None
+    for upper_bound, label in _SIZE_CHART_BUST_CM:
+        if chest_circumference_cm <= upper_bound:
+            estimated_size = label
+            break
+
+    if estimated_size is None:
+        note = f"Mesure de poitrine hors grille (~{rounded_circumference} cm)."
+        return TopSizeEstimate(estimated_size=None, note=note, length_descriptor=length_descriptor)
+
+    note = (
+        f"Taille estimée depuis un tour de poitrine ~{rounded_circumference} cm "
+        "(largeur à plat x2)."
+    )
+    return TopSizeEstimate(
+        estimated_size=estimated_size, note=note, length_descriptor=length_descriptor
+    )
 
 
 def _extract_int(value: Optional[str]) -> Optional[int]:

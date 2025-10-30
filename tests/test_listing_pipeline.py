@@ -23,6 +23,16 @@ def template_registry() -> ListingTemplateRegistry:
     return ListingTemplateRegistry()
 
 
+MEASUREMENT_EMPTY = {
+    "bust_flat_measurement_cm": "",
+    "length_measurement_cm": "",
+    "sleeve_measurement_cm": "",
+    "shoulder_measurement_cm": "",
+    "waist_flat_measurement_cm": "",
+    "hem_flat_measurement_cm": "",
+}
+
+
 def test_json_instruction_mentions_defect_synonyms() -> None:
     instruction = ListingFields.json_instruction()
     assert "faded_crotch" in instruction
@@ -47,6 +57,12 @@ def test_json_instruction_for_pull_tommy_mentions_new_fields() -> None:
     assert "nylon_pct" in instruction
     assert "acrylic_pct" in instruction
     assert "polyamide_pct" in instruction
+    assert "bust_flat_measurement_cm" in instruction
+    assert "largeur de poitrine à plat" in instruction
+    assert "length_measurement_cm" in instruction
+    assert "sleeve_measurement_cm" in instruction
+    assert "waist_flat_measurement_cm" in instruction
+    assert "hem_flat_measurement_cm" in instruction
     assert "N'invente jamais de matière" in instruction
     assert "dans le titre" in instruction.lower()
     assert "la génération échouera" in instruction
@@ -62,6 +78,7 @@ def test_listing_fields_from_dict_requires_all_keys() -> None:
         "rise_class": "haute",
         "rise_measurement_cm": "",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "viscose_pct": "0",
@@ -87,6 +104,7 @@ def test_listing_fields_enforces_sku_prefix_by_gender() -> None:
         "rise_class": "haute",
         "rise_measurement_cm": "",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "viscose_pct": "0",
@@ -135,6 +153,7 @@ def test_listing_fields_rejects_unknown_defect_tags() -> None:
         "rise_class": "haute",
         "rise_measurement_cm": "",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "viscose_pct": "0",
@@ -162,6 +181,7 @@ def test_listing_fields_splits_comma_separated_defect_tags() -> None:
         "rise_class": "haute",
         "rise_measurement_cm": "",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "viscose_pct": "0",
@@ -179,6 +199,48 @@ def test_listing_fields_splits_comma_separated_defect_tags() -> None:
     assert fields.defect_tags == ("stylish_holes", "ripped")
 
 
+def test_listing_fields_parse_new_measurements_for_tommy_template() -> None:
+    payload = {
+        "model": "",
+        "fr_size": "",
+        "us_w": "",
+        "us_l": "",
+        "fit_leg": "",
+        "rise_class": "",
+        "rise_measurement_cm": "",
+        "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
+        "bust_flat_measurement_cm": "48,5 cm",
+        "length_measurement_cm": "60",
+        "sleeve_measurement_cm": "58 cm",
+        "shoulder_measurement_cm": "38 cm",
+        "waist_flat_measurement_cm": "46.0",
+        "hem_flat_measurement_cm": "47",
+        "cotton_pct": "100",
+        "polyester_pct": "",
+        "polyamide_pct": "",
+        "viscose_pct": "",
+        "acrylic_pct": "",
+        "elastane_pct": "",
+        "gender": "Femme",
+        "color_main": "bleu",
+        "defects": "",
+        "sku": "PTF10",
+        "size_label_visible": False,
+        "fabric_label_visible": False,
+    }
+
+    fields = ListingFields.from_dict(
+        payload, template_name="template-pull-tommy-femme"
+    )
+
+    assert fields.bust_flat_measurement_cm == pytest.approx(48.5)
+    assert fields.length_measurement_cm == pytest.approx(60)
+    assert fields.sleeve_measurement_cm == pytest.approx(58)
+    assert fields.shoulder_measurement_cm == pytest.approx(38)
+    assert fields.waist_flat_measurement_cm == pytest.approx(46)
+    assert fields.hem_flat_measurement_cm == pytest.approx(47)
+
 def test_listing_fields_parses_visibility_flags() -> None:
     payload = {
         "model": "501",
@@ -189,6 +251,7 @@ def test_listing_fields_parses_visibility_flags() -> None:
         "rise_class": "haute",
         "rise_measurement_cm": "",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "viscose_pct": "0",
@@ -218,6 +281,7 @@ def test_listing_fields_parses_waist_measurement() -> None:
         "rise_class": "",
         "rise_measurement_cm": "",
         "waist_measurement_cm": "74,5",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "",
         "polyester_pct": "",
         "polyamide_pct": "",
@@ -245,6 +309,7 @@ def test_listing_fields_defaults_visibility_flags_to_false() -> None:
         "rise_class": "haute",
         "rise_measurement_cm": "",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "polyamide_pct": "",
@@ -284,6 +349,7 @@ def test_listing_fields_resolves_rise_class_from_measurement(
         "rise_class": "",
         "rise_measurement_cm": measurement,
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "polyamide_pct": "",
@@ -313,6 +379,7 @@ def test_listing_fields_resolved_rise_class_handles_invalid_measurement() -> Non
         "rise_class": "",
         "rise_measurement_cm": "non lisible",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "polyamide_pct": "",
@@ -342,6 +409,7 @@ def test_listing_fields_resolved_rise_class_prefers_explicit_value() -> None:
         "rise_class": "haute",
         "rise_measurement_cm": "20",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "polyamide_pct": "",
@@ -371,6 +439,7 @@ def test_listing_fields_resolved_rise_class_uses_measurement_even_when_label_vis
         "rise_class": "",
         "rise_measurement_cm": "28",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "polyamide_pct": "",
@@ -400,6 +469,7 @@ def test_listing_fields_infers_defect_tag_from_text() -> None:
         "rise_class": "haute",
         "rise_measurement_cm": "",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "polyamide_pct": "",
@@ -426,6 +496,7 @@ def test_listing_fields_normalizes_model_code() -> None:
         "rise_class": "haute",
         "rise_measurement_cm": "",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "polyamide_pct": "",
@@ -508,6 +579,7 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
             "rise_class": "haute",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "99",
             "polyester_pct": "0",
             "polyamide_pct": "",
@@ -551,6 +623,7 @@ def test_template_render_translates_main_color_to_french(
             "rise_class": "haute",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "99",
             "polyester_pct": "0",
             "polyamide_pct": "",
@@ -588,6 +661,7 @@ def test_template_render_handles_viscose_composition(
             "rise_class": "moyenne",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "60",
             "polyester_pct": "10",
             "polyamide_pct": "",
@@ -625,6 +699,7 @@ def test_template_render_mentions_wool_cashmere_nylon(
             "rise_class": "moyenne",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "70",
             "wool_pct": "20",
             "cashmere_pct": "5",
@@ -662,6 +737,7 @@ def test_template_render_combines_related_defects(template_registry: ListingTemp
             "rise_class": "haute",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "99",
             "polyester_pct": "0",
             "polyamide_pct": "",
@@ -701,6 +777,7 @@ def test_template_pull_tommy_mentions_nylon_and_acrylic(
             "rise_class": "",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "65",
             "wool_pct": "25",
             "cashmere_pct": "5",
@@ -742,6 +819,7 @@ def test_template_render_mentions_missing_labels_individually(
         "rise_class": "haute",
         "rise_measurement_cm": "",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "polyamide_pct": "",
@@ -782,6 +860,7 @@ def test_template_render_uses_waist_measurement_when_label_hidden(
             "rise_class": "moyenne",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "74",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "99",
             "polyester_pct": "0",
             "polyamide_pct": "",
@@ -818,6 +897,7 @@ def test_template_render_mentions_polyester(template_registry: ListingTemplateRe
             "rise_class": "moyenne",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "60",
             "polyester_pct": "35",
             "polyamide_pct": "",
@@ -853,6 +933,7 @@ def test_template_render_skips_composition_when_label_missing(
             "rise_class": "haute",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "99",
             "polyester_pct": "0",
             "polyamide_pct": "",
@@ -887,6 +968,7 @@ def test_listing_fields_resets_fiber_flags_when_label_missing() -> None:
             "rise_class": "haute",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "99",
             "polyester_pct": "12",
             "polyamide_pct": "",
@@ -921,6 +1003,7 @@ def test_template_render_omits_model_when_missing(
         "rise_class": "haute",
         "rise_measurement_cm": "",
         "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
         "cotton_pct": "99",
         "polyester_pct": "0",
         "polyamide_pct": "",
@@ -964,6 +1047,7 @@ def test_template_render_avoids_defaulting_missing_fields(
             "rise_class": "",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "",
             "polyester_pct": "",
             "polyamide_pct": "",
@@ -1015,6 +1099,7 @@ def test_generator_parses_json_and_renders(template_registry: ListingTemplateReg
             "rise_class": "moyenne",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "99",
             "polyester_pct": "0",
             "polyamide_pct": "",
@@ -1063,6 +1148,7 @@ def test_template_render_falls_back_to_free_text(template_registry: ListingTempl
             "rise_class": "haute",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "99",
             "polyester_pct": "0",
             "polyamide_pct": "",
@@ -1097,6 +1183,7 @@ def test_template_render_ignores_positive_defect_phrase(
             "rise_class": "haute",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "99",
             "polyester_pct": "0",
             "polyamide_pct": "",
@@ -1132,6 +1219,7 @@ def test_template_render_mentions_catalog_defect_without_duplication(
             "rise_class": "haute",
             "rise_measurement_cm": "",
             "waist_measurement_cm": "",
+        **MEASUREMENT_EMPTY,
             "cotton_pct": "99",
             "polyester_pct": "0",
             "polyamide_pct": "",
