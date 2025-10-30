@@ -224,10 +224,20 @@ def test_render_pull_tommy_femme_estimates_size_from_bust_measurement() -> None:
     title, description = template.render(fields)
 
     assert "taille estimée FR 40 (L)" in title
+
+    first_paragraph_lines = description.split("\n\n")[0].split("\n")
+    assert first_paragraph_lines[0] == (
+        "Pull Tommy Hilfiger pour femme taille estimée FR 40 (L) (~96 cm de poitrine, longueur épaule-ourlet ~50 cm)."
+    )
+
     assert "Taille estimée depuis un tour de poitrine ~96 cm (largeur à plat x2)." in description
     assert "Coupe courte (~50 cm de l'épaule à l'ourlet)." in description
     assert "Manches mesurées à ~61 cm" in description
-    assert "Mesures à plat disponibles" in description
+
+    measurement_lines = description.split("\n\n")[2].split("\n")
+    summary_line = next(line for line in measurement_lines if line.startswith("Mesures à plat disponibles"))
+    assert "Poitrine" not in summary_line
+    assert "Longueur épaule-ourlet" not in summary_line
     assert "#durin31tfFR40L" in description
 
 
@@ -273,6 +283,47 @@ def test_render_pull_tommy_femme_splits_neckline_from_pattern() -> None:
         "Maille composée de 60% coton pour une sensation douce et respirante. "
         "L'esprit marinière signe une allure marine iconique. Col V pour une jolie finition."
     )
+
+
+def test_render_pull_tommy_femme_omits_irrelevant_bust_measurement() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+    fields = ListingFields(
+        model="",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="100",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="bleu marine",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="PTF03",
+        knit_pattern="",
+        bust_flat_measurement_cm=47.0,
+        length_measurement_cm=55.0,
+        sleeve_measurement_cm=60.0,
+        shoulder_measurement_cm=38.0,
+        waist_flat_measurement_cm=45.0,
+        hem_flat_measurement_cm=46.0,
+    )
+
+    _, description = template.render(fields)
+
+    first_line = description.split("\n\n")[0].split("\n")[0]
+    assert "poitrine" not in first_line.lower()
+
+    measurement_section = description.split("\n\n")[2]
+    assert "Poitrine" not in measurement_section
 
 
 def test_render_pull_tommy_femme_handles_fabric_label_cut() -> None:
