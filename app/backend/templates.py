@@ -100,6 +100,19 @@ def _normalize_size_hashtag(value: Optional[str], *, default: str = "M") -> str:
     return fallback or default
 
 
+def _extract_primary_size_label(value: Optional[str]) -> Optional[str]:
+    """Return the core size value (e.g. ``XL`` from ``FR 42 (XL)``)."""
+
+    if not value:
+        return None
+
+    match = re.search(r"\(([^)]+)\)", value)
+    if match:
+        return match.group(1).strip() or value.strip()
+
+    return value.strip()
+
+
 def _format_measurement(value: Optional[float]) -> Optional[str]:
     if value is None:
         return None
@@ -707,6 +720,9 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         top_size_estimate.estimated_size if not fields.size_label_visible else None
     )
     estimated_size_note = top_size_estimate.note if not fields.size_label_visible else None
+    estimated_size_primary = (
+        _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
+    )
     length_descriptor = top_size_estimate.length_descriptor
     bust_flat_display = _format_measurement(fields.bust_flat_measurement_cm)
     length_display = _format_measurement(fields.length_measurement_cm)
@@ -764,7 +780,9 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     if fields.size_label_visible and (size_for_title or size_value):
         title_parts.append(f"taille {size_for_title or size_value}")
     elif estimated_size_label:
-        title_parts.append(f"taille estimée {estimated_size_label}")
+        title_parts.append(
+            f"taille {estimated_size_primary or estimated_size_label}"
+        )
     elif size_value:
         title_parts.append(f"taille {size_value}")
     if material_segment:
@@ -791,7 +809,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     )
 
     size_measurement_details: List[str] = []
-    if bust_measurement_used:
+    if bust_measurement_used and not estimated_size_note:
         bust_circumference_display = _format_measurement(
             fields.bust_flat_measurement_cm * 2 if fields.bust_flat_measurement_cm else None
         )
@@ -815,10 +833,21 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
                 f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
             )
     elif estimated_size_label:
-        size_sentence = f"estimée {estimated_size_label}"
+        size_sentence = estimated_size_primary or estimated_size_label
+        estimated_details: List[str] = []
+        if estimated_size_note:
+            estimated_details.append(estimated_size_note)
+        if size_measurement_details:
+            estimated_details.extend(size_measurement_details)
+
         first_sentence = (
-            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}{size_measurement_suffix}."
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}"
         )
+        if estimated_details:
+            joined_details = " ".join(detail.strip() for detail in estimated_details)
+            first_sentence = f"{first_sentence} ({joined_details})"
+        if not first_sentence.endswith("."):
+            first_sentence = f"{first_sentence}."
     elif size_value:
         size_sentence = size_value
         first_sentence = (
@@ -956,7 +985,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         defects = raw_defects if raw_defects else ""
 
     first_paragraph_lines: List[str] = [first_sentence]
-    if estimated_size_note:
+    if estimated_size_note and not estimated_size_label:
         first_paragraph_lines.append(estimated_size_note)
     if style_sentence:
         first_paragraph_lines.append(style_sentence)
@@ -1024,7 +1053,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     estimated_size_for_hashtag = None
     if estimated_size_label:
         estimated_size_for_hashtag = (
-            estimated_size_label.replace("(", "").replace(")", "").replace(" ", "")
+            estimated_size_primary or estimated_size_label
         )
     size_reference_for_hashtag = (
         size_for_title or size_value or estimated_size_for_hashtag or estimated_size_label

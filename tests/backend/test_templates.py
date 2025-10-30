@@ -223,14 +223,15 @@ def test_render_pull_tommy_femme_estimates_size_from_bust_measurement() -> None:
 
     title, description = template.render(fields)
 
-    assert "taille estimée FR 40 (L)" in title
+    assert "taille L" in title
+    assert "estimée" not in title
 
     first_paragraph_lines = description.split("\n\n")[0].split("\n")
     assert first_paragraph_lines[0] == (
-        "Pull Tommy Hilfiger pour femme taille estimée FR 40 (L) (~96 cm de poitrine, longueur épaule-ourlet ~50 cm)."
+        "Pull Tommy Hilfiger pour femme taille L (Taille estimée depuis un tour de poitrine ~96 cm (largeur à plat x2). longueur épaule-ourlet ~50 cm)."
     )
 
-    assert "Taille estimée depuis un tour de poitrine ~96 cm (largeur à plat x2)." in description
+    assert "Taille estimée depuis un tour de poitrine ~96 cm (largeur à plat x2)." in first_paragraph_lines[0]
     assert "Coupe courte (~50 cm de l'épaule à l'ourlet)." in description
     assert "Manches mesurées à ~61 cm" in description
 
@@ -238,7 +239,7 @@ def test_render_pull_tommy_femme_estimates_size_from_bust_measurement() -> None:
     summary_line = next(line for line in measurement_lines if line.startswith("Mesures à plat disponibles"))
     assert "Poitrine" not in summary_line
     assert "Longueur épaule-ourlet" not in summary_line
-    assert "#durin31tfFR40L" in description
+    assert "#durin31tfL" in description
 
 
 def test_render_pull_tommy_femme_splits_neckline_from_pattern() -> None:
