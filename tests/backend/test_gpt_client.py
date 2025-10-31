@@ -13,6 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.backend.gpt_client import ListingGenerator
+from app.backend.listing_fields import ListingFields
 from app.backend.templates import ListingTemplate
 
 
@@ -151,3 +152,27 @@ def test_generate_listing_raises_when_recovery_fails(monkeypatch: pytest.MonkeyP
         generator.generate_listing(["data:image/png;base64,BBB"], "", template)
 
     assert len(fake_client.responses.calls) == 2
+
+
+def test_listing_fields_allows_missing_measurements_for_levis() -> None:
+    payload = _base_fields_payload(sku="JLF10", gender="Femme")
+    for key in (
+        "bust_flat_measurement_cm",
+        "length_measurement_cm",
+        "sleeve_measurement_cm",
+        "shoulder_measurement_cm",
+        "waist_flat_measurement_cm",
+        "hem_flat_measurement_cm",
+    ):
+        payload.pop(key, None)
+
+    fields = ListingFields.from_dict(
+        payload, template_name="template-jean-levis-femme"
+    )
+
+    assert fields.bust_flat_measurement_cm is None
+    assert fields.length_measurement_cm is None
+    assert fields.sleeve_measurement_cm is None
+    assert fields.shoulder_measurement_cm is None
+    assert fields.waist_flat_measurement_cm is None
+    assert fields.hem_flat_measurement_cm is None

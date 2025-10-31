@@ -161,36 +161,44 @@ class ListingFields:
     def from_dict(
         cls, data: Mapping[str, Any], *, template_name: Optional[str] = None
     ) -> "ListingFields":
-        missing = [
-            key
-            for key in (
-                "model",
-                "fr_size",
-                "us_w",
-                "us_l",
-                "fit_leg",
-                "rise_class",
-                "rise_measurement_cm",
-                "waist_measurement_cm",
-                "cotton_pct",
-                "polyester_pct",
-                "polyamide_pct",
-                "viscose_pct",
-                "elastane_pct",
-                "acrylic_pct",
-                "bust_flat_measurement_cm",
-                "length_measurement_cm",
-                "sleeve_measurement_cm",
-                "shoulder_measurement_cm",
-                "waist_flat_measurement_cm",
-                "hem_flat_measurement_cm",
-                "gender",
-                "color_main",
-                "defects",
-                "sku",
-            )
-            if key not in data
-        ]
+        template_normalized = (template_name or "").strip().lower()
+
+        always_required_fields = (
+            "model",
+            "fr_size",
+            "us_w",
+            "us_l",
+            "fit_leg",
+            "rise_class",
+            "rise_measurement_cm",
+            "waist_measurement_cm",
+            "cotton_pct",
+            "polyester_pct",
+            "polyamide_pct",
+            "viscose_pct",
+            "elastane_pct",
+            "acrylic_pct",
+            "gender",
+            "color_main",
+            "defects",
+            "sku",
+        )
+        measurement_fields = (
+            "bust_flat_measurement_cm",
+            "length_measurement_cm",
+            "sleeve_measurement_cm",
+            "shoulder_measurement_cm",
+            "waist_flat_measurement_cm",
+            "hem_flat_measurement_cm",
+        )
+
+        required_fields: tuple[str, ...]
+        if template_normalized == "template-pull-tommy-femme":
+            required_fields = always_required_fields + measurement_fields
+        else:
+            required_fields = always_required_fields
+
+        missing = [key for key in required_fields if key not in data]
         if missing:
             raise ValueError(f"Champs manquants dans la réponse JSON: {', '.join(missing)}")
 
@@ -276,7 +284,6 @@ class ListingFields:
 
         if sku:
             gender_normalized = (gender or "").lower()
-            template_normalized = (template_name or "").strip().lower()
             allowed_patterns: list[str] = []
 
             if template_normalized == "template-pull-tommy-femme":
