@@ -283,21 +283,12 @@ class ListingFields:
         )
 
         if sku:
-            gender_normalized = (gender or "").lower()
             allowed_patterns: list[str] = []
 
             if template_normalized == "template-pull-tommy-femme":
                 allowed_patterns.append(r"^PTF\d{1,3}$")
             else:
-                if "homme" in gender_normalized:
-                    allowed_patterns.append(r"^JLH\d{1,3}$")
-                elif "femme" in gender_normalized:
-                    allowed_patterns.append(r"^JLF\d{1,3}$")
-                else:
-                    allowed_patterns.extend([r"^JLH\d{1,3}$", r"^JLF\d{1,3}$"])
-
-            if not allowed_patterns:
-                allowed_patterns.extend([r"^JLH\d{1,3}$", r"^JLF\d{1,3}$"])
+                allowed_patterns.append(r"^JLF\d{1,3}$")
 
             if not any(re.fullmatch(pattern, sku) for pattern in allowed_patterns):
                 if template_normalized == "template-pull-tommy-femme":
@@ -305,7 +296,7 @@ class ListingFields:
                         "SKU invalide: utilise le préfixe PTF suivi de 1 à 3 chiffres pour le template Pull Tommy femme."
                     )
                 raise ValueError(
-                    "SKU invalide: utilise un préfixe Levi's autorisé (JLF ou JLH) correspondant au genre détecté."
+                    "SKU invalide: utilise le préfixe Levi's autorisé (JLF) suivi de 1 à 3 chiffres."
                 )
 
         return cls(
@@ -645,7 +636,7 @@ class ListingFields:
                     \"size_label_visible\": \"true/false : true uniquement si une étiquette de taille est réellement lisible\",
                     \"fabric_label_visible\": \"true/false : true uniquement si une étiquette de composition est réellement lisible\",
                     \"non_size_labels_visible\": \"true/false : true si une autre étiquette (composition, marque, SKU, consignes d'entretien) est clairement visible sur les photos ; false sinon\",
-                    \"sku\": \"SKU Levi's : JLF + numéro (1-3 chiffres) pour un jean femme, JLH + numéro (1-3 chiffres) pour un jean homme ; renvoie \"\" si l'étiquette n'est pas lisible (ne jamais inventer, le rendu affichera 'SKU/nc')\"
+                    \"sku\": \"SKU Levi's : JLF + numéro (1-3 chiffres) ; renvoie \"\" si l'étiquette n'est pas lisible (ne jamais inventer, le rendu affichera 'SKU/nc')\"
                   }}
                 }}
                 N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
