@@ -118,12 +118,12 @@ def test_listing_fields_enforces_sku_prefix_by_gender() -> None:
     }
 
     femme_payload = {**base_payload, "gender": "Femme", "sku": "JLF6"}
-    homme_payload = {**base_payload, "gender": "Homme", "sku": "JLH12"}
+    homme_payload = {**base_payload, "gender": "Homme", "sku": "JLF12"}
     mix_payload = {**base_payload, "gender": "Mixte", "sku": "JLF3"}
     tommy_payload = {**base_payload, "gender": "Femme", "sku": "PTF7"}
 
     assert ListingFields.from_dict(femme_payload).sku == "JLF6"
-    assert ListingFields.from_dict(homme_payload).sku == "JLH12"
+    assert ListingFields.from_dict(homme_payload).sku == "JLF12"
     assert ListingFields.from_dict(mix_payload).sku == "JLF3"
     tommy_fields = ListingFields.from_dict(
         tommy_payload, template_name="template-pull-tommy-femme"
@@ -137,7 +137,7 @@ def test_listing_fields_enforces_sku_prefix_by_gender() -> None:
         ListingFields.from_dict({**base_payload, "gender": "Femme", "sku": "JLH7"})
 
     with pytest.raises(ValueError):
-        ListingFields.from_dict({**base_payload, "gender": "Homme", "sku": "JLF9"})
+        ListingFields.from_dict({**base_payload, "gender": "Homme", "sku": "JLH9"})
 
     with pytest.raises(ValueError):
         ListingFields.from_dict({**base_payload, "gender": "Homme", "sku": "PTF4"})

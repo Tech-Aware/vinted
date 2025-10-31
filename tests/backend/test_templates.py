@@ -105,7 +105,7 @@ def test_render_jean_levis_handles_fabric_label_cut() -> None:
 
     _, description = template.render(fields)
 
-    assert description.count("Étiquette coupée pour plus de confort.") == 1
+    assert description.count("Étiquettes coupées pour plus de confort.") == 1
 
 
 def test_render_jean_levis_avoids_duplicate_missing_fabric_label_sentence() -> None:
@@ -136,7 +136,7 @@ def test_render_jean_levis_avoids_duplicate_missing_fabric_label_sentence() -> N
 
     _, description = template.render(fields)
 
-    assert description.count("Étiquette coupée pour plus de confort.") == 1
+    assert description.count("Étiquettes coupées pour plus de confort.") == 1
     assert "Étiquette taille non visible sur les photos." not in description
 
 
@@ -235,7 +235,7 @@ def test_render_pull_tommy_femme_estimates_size_from_bust_measurement() -> None:
     assert "Coupe courte" not in description
     assert "Manches mesurées" not in description
 
-    assert description.count("Étiquette coupée pour plus de confort.") == 1
+    assert description.count("Étiquettes coupées pour plus de confort.") == 1
     assert "Mesures à plat disponibles" not in description
     assert "#durin31tfL" in description
 
@@ -400,7 +400,7 @@ def test_render_pull_tommy_femme_handles_fabric_label_cut() -> None:
 
     _, description = template.render(fields)
 
-    assert description.count("Étiquette coupée pour plus de confort.") == 1
+    assert description.count("Étiquettes coupées pour plus de confort.") == 1
     assert "Référence SKU" not in description
 
 
@@ -433,7 +433,7 @@ def test_render_pull_tommy_femme_skips_cut_sentence_when_other_labels_visible() 
 
     _, description = template.render(fields)
 
-    assert description.count("Étiquette coupée pour plus de confort.") == 1
+    assert description.count("Étiquettes coupées pour plus de confort.") == 1
     assert "Composition non lisible sur l'étiquette (voir photos pour confirmation)." not in description
 
 
@@ -466,7 +466,7 @@ def test_render_pull_tommy_femme_handles_hidden_fabric_label() -> None:
 
     _, description = template.render(fields)
 
-    assert description.count("Étiquette coupée pour plus de confort.") == 1
+    assert description.count("Étiquettes coupées pour plus de confort.") == 1
     assert "Étiquette composition non visible sur les photos." not in description
     assert "Référence SKU" not in description
 

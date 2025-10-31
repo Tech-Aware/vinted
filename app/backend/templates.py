@@ -304,7 +304,11 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
         _ensure_percent(fields.nylon_pct) if fields.fabric_label_visible else ""
     )
 
-    label_cut_message = "Étiquette coupée pour plus de confort."
+    label_cut_message = "Étiquettes coupées pour plus de confort."
+    fabric_message = "Étiquette composition non visible sur les photos."
+    size_message = "Étiquette taille non visible sur les photos."
+    combined_message = "Étiquettes taille et composition non visibles sur les photos."
+
     composition_parts: List[str] = []
     if fields.fabric_label_cut:
         composition_sentence = label_cut_message
@@ -338,7 +342,7 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
                 "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
             )
     else:
-        composition_sentence = label_cut_message
+        composition_sentence = fabric_message
 
     defect_texts = get_defect_descriptions(fields.defect_tags)
     raw_defects = (fields.defects or "").strip()
@@ -437,13 +441,23 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     else:
         third_paragraph_lines.append("Très bon état")
 
-    label_issue_detected = (
-        not fields.size_label_visible
-        or not fields.fabric_label_visible
-        or fields.fabric_label_cut
-    )
-    if label_issue_detected and composition_sentence.strip() != label_cut_message:
+    size_label_missing = not fields.size_label_visible
+    fabric_label_missing = not fields.fabric_label_visible
+    label_issue_detected = size_label_missing or fabric_label_missing or fields.fabric_label_cut
+
+    if not label_issue_detected:
+        pass
+    elif fields.fabric_label_cut:
+        if composition_sentence.strip() != label_cut_message:
+            third_paragraph_lines.append(label_cut_message)
+    elif size_label_missing and fabric_label_missing:
+        third_paragraph_lines.append(combined_message)
         third_paragraph_lines.append(label_cut_message)
+    elif size_label_missing:
+        third_paragraph_lines.append(size_message)
+    elif fabric_label_missing:
+        if composition_sentence.strip() != label_cut_message:
+            third_paragraph_lines.append(label_cut_message)
 
     third_paragraph_lines.extend(
         [
@@ -724,7 +738,10 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
 
     cotton_percent = _ensure_percent(fields.cotton_pct) if fields.cotton_pct else ""
     cotton_value = fields.cotton_percentage_value
-    label_cut_message = "Étiquette coupée pour plus de confort."
+    label_cut_message = "Étiquettes coupées pour plus de confort."
+    fabric_message = "Étiquette composition non visible sur les photos."
+    size_message = "Étiquette taille non visible sur les photos."
+    combined_message = "Étiquettes taille et composition non visibles sur les photos."
 
     material_segment = ""
     pattern_lower = pattern.lower() if pattern else ""
@@ -980,13 +997,22 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     else:
         third_paragraph_lines.append("Très bon état")
 
-    label_issue_detected = (
-        not fields.size_label_visible
-        or not fields.fabric_label_visible
-        or fields.fabric_label_cut
-    )
-    if label_issue_detected and composition_sentence.strip() != label_cut_message:
-        third_paragraph_lines.append(label_cut_message)
+    size_label_missing = not fields.size_label_visible
+    fabric_label_missing = not fields.fabric_label_visible
+    label_issue_detected = size_label_missing or fabric_label_missing or fields.fabric_label_cut
+
+    if not label_issue_detected:
+        pass
+    elif fields.fabric_label_cut:
+        if composition_sentence.strip() != label_cut_message:
+            third_paragraph_lines.append(label_cut_message)
+    elif size_label_missing and fabric_label_missing:
+        third_paragraph_lines.append(combined_message)
+    elif size_label_missing:
+        third_paragraph_lines.append(size_message)
+    elif fabric_label_missing:
+        if composition_sentence.strip() != label_cut_message:
+            third_paragraph_lines.append(label_cut_message)
 
     third_paragraph_lines.extend(
         [
@@ -1085,7 +1111,7 @@ class ListingTemplateRegistry:
                     - Matière = {{cotton_pct}}% coton (+ {{polyester_pct}}% polyester si présent, + {{polyamide_pct}}% polyamide si présent, + {{elastane_pct}}% élasthanne si présent)
                     - Genre = {{gender}}  (valeurs attendues : femme, homme, mix)
                     - Tâches et défauts = Ce qui doit impérativement apparaître dans l'annonce si identifié sur photos ou fournit en commentaire {{defects}}
-                    - SKU = {{sku}} (utilise JLF + numéro (1 à 3 chiffres) si jean femme, JLH + numéro si jean homme ;
+                    - SKU = {{sku}} (utilise JLF + numéro (1 à 3 chiffres) ;
                       reprends exactement le numéro présent sur l’étiquette blanche visible sur le jean)
 
                     Utilise ce format :
