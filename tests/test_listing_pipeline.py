@@ -14,7 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.backend.gpt_client import ListingGenerator
 from app.backend.listing_fields import ListingFields
 from app.backend.sizing import NormalizedSizes, normalize_sizes
-from app.backend.templates import ListingTemplateRegistry
+from app.backend.templates import ListingTemplateRegistry, render_template_jean_levis_femme
 from app.backend.text_normalization import normalize_fit_terms
 
 
@@ -567,6 +567,20 @@ def test_normalize_sizes_falls_back_to_waist_measurement() -> None:
     assert "74 cm" in computed.note
 
 
+def test_normalize_sizes_prefers_measurement_when_conflict() -> None:
+    computed: NormalizedSizes = normalize_sizes(
+        "28",
+        "38",
+        False,
+        ensure_even_fr=True,
+        waist_measurement_cm=74,
+    )
+    assert computed.fr_size == "74"
+    assert computed.us_size is None
+    assert computed.note is not None
+    assert "74 cm" in computed.note
+
+
 def test_template_render_injects_normalized_terms(template_registry: ListingTemplateRegistry) -> None:
     template = template_registry.get_template(template_registry.default_template)
     fields = ListingFields.from_dict(
@@ -607,6 +621,45 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert "Étiquettes coupées pour plus de confort." in description
     assert "Très bon état : entrejambe légèrement délavée (voir photos)" in description
     assert "Étiquettes taille et composition non visibles sur les photos." in description
+
+
+def test_render_template_prefers_measurement_when_conflict(
+    template_registry: ListingTemplateRegistry,
+) -> None:
+    fields = ListingFields.from_dict(
+        {
+            "model": "501",
+            "fr_size": "38",
+            "us_w": "28",
+            "us_l": "30",
+            "fit_leg": "bootcut",
+            "rise_class": "haute",
+            "rise_measurement_cm": "",
+            **MEASUREMENT_EMPTY,
+            "waist_measurement_cm": "74",
+            "cotton_pct": "99",
+            "polyester_pct": "0",
+            "polyamide_pct": "",
+            "viscose_pct": "0",
+            "acrylic_pct": "",
+            "elastane_pct": "0",
+            "gender": "Femme",
+            "color_main": "Bleu",
+            "defects": "aucun défaut",
+            "sku": "JLF6",
+            "defect_tags": [],
+            "size_label_visible": True,
+            "fabric_label_visible": False,
+        }
+    )
+
+    title, description = render_template_jean_levis_femme(fields)
+
+    assert "FR74" in title
+    assert "W28" not in title
+    assert "Taille 74 FR" in description
+    assert "Taille 28 US" not in description
+    assert "~74 cm" in description
 
 
 def test_template_render_translates_main_color_to_french(

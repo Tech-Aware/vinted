@@ -39,6 +39,8 @@ _WAIST_MEASUREMENT_NOTE = (
 )
 _CM_PER_INCH = 2.54
 
+_WAIST_MEASUREMENT_OVERRIDE_THRESHOLD_CM = 4
+
 _SIZE_CHART_BUST_CM = (
     (84.0, "FR 34 (XS)"),
     (88.0, "FR 36 (S)"),
@@ -180,6 +182,11 @@ def normalize_sizes(
     - Otherwise fall back to computing ``FR = US + 10`` when a US size exists.
     - When ``ensure_even_fr`` is ``True``, an FR size derived from the US measurement
       is rounded up to the next even number.
+    - Whenever a waist measurement is provided, compute the corresponding FR size and
+      compare it to the labeled FR value (if any) and to the FR size derived from the
+      US size. If the measurement differs from either label by at least
+      ``_WAIST_MEASUREMENT_OVERRIDE_THRESHOLD_CM``, prefer the measurement: return only
+      the measurement-based FR size and keep the measurement note.
     - When both FR and US labels are missing, rely on the waist measurement in
       centimeters to infer a normalized FR size.
     """
@@ -193,33 +200,65 @@ def normalize_sizes(
             computed += 1
         return computed
 
-    if us_value is not None and fr_value is not None:
-        delta = fr_value - us_value
-        if delta > 12 or delta < 8:
-            note = _ELASTANE_NOTE if has_elastane and delta > 12 else None
-            return NormalizedSizes(fr_size=str(fr_value), us_size=None, note=note)
-        computed_fr = _from_us(us_value)
-        return NormalizedSizes(fr_size=str(computed_fr), us_size=str(us_value), note=None)
-
+    computed_fr_from_us: Optional[int] = None
     if us_value is not None:
-        computed_fr = _from_us(us_value)
-        return NormalizedSizes(fr_size=str(computed_fr), us_size=str(us_value), note=None)
-
-    if fr_value is not None:
-        return NormalizedSizes(fr_size=str(fr_value), us_size=None, note=None)
+        computed_fr_from_us = _from_us(us_value)
 
     measurement_fr = fr_size_from_waist_measurement(
         waist_measurement_cm, ensure_even=ensure_even_fr
     )
+    measurement_value = _extract_int(measurement_fr)
+    measurement_note: Optional[str] = None
+    measurement_sizes: Optional[NormalizedSizes] = None
     if measurement_fr is not None:
         measurement_note = _WAIST_MEASUREMENT_NOTE
         if waist_measurement_cm is not None:
             measurement_note = (
                 f"{measurement_note} (~{int(round(waist_measurement_cm))} cm)."
             )
-        return NormalizedSizes(
+        measurement_sizes = NormalizedSizes(
             fr_size=measurement_fr, us_size=None, note=measurement_note
         )
+
+    if (
+        measurement_sizes is not None
+        and measurement_value is not None
+        and (
+            (
+                fr_value is not None
+                and abs(measurement_value - fr_value)
+                >= _WAIST_MEASUREMENT_OVERRIDE_THRESHOLD_CM
+            )
+            or (
+                computed_fr_from_us is not None
+                and abs(measurement_value - computed_fr_from_us)
+                >= _WAIST_MEASUREMENT_OVERRIDE_THRESHOLD_CM
+            )
+        )
+    ):
+        return measurement_sizes
+
+    if us_value is not None and fr_value is not None:
+        delta = fr_value - us_value
+        if delta > 12 or delta < 8:
+            note = _ELASTANE_NOTE if has_elastane and delta > 12 else None
+            return NormalizedSizes(fr_size=str(fr_value), us_size=None, note=note)
+        computed_fr = (
+            computed_fr_from_us if computed_fr_from_us is not None else _from_us(us_value)
+        )
+        return NormalizedSizes(fr_size=str(computed_fr), us_size=str(us_value), note=None)
+
+    if us_value is not None:
+        computed_fr = (
+            computed_fr_from_us if computed_fr_from_us is not None else _from_us(us_value)
+        )
+        return NormalizedSizes(fr_size=str(computed_fr), us_size=str(us_value), note=None)
+
+    if fr_value is not None:
+        return NormalizedSizes(fr_size=str(fr_value), us_size=None, note=None)
+
+    if measurement_sizes is not None:
+        return measurement_sizes
 
     return NormalizedSizes(fr_size=None, us_size=None, note=None)
 
