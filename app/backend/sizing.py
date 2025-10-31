@@ -144,23 +144,24 @@ def _extract_int(value: Optional[str]) -> Optional[int]:
 def fr_size_from_waist_measurement(
     waist_measurement_cm: Optional[float], *, ensure_even: bool = True
 ) -> Optional[str]:
-    """Convert a waist measurement in centimeters to the closest FR size."""
+    """Round a waist measurement (cm) to a FR size value.
+
+    The measurement is rounded to the nearest integer centimeter. When ``ensure_even``
+    is ``True`` and the rounded value is odd, the next even number is returned.
+    """
 
     if waist_measurement_cm is None:
         return None
     if waist_measurement_cm <= 0:
         return None
 
-    us_equivalent = waist_measurement_cm / _CM_PER_INCH
-    # Round to the nearest integer to match standard W measurements.
-    us_size = int(round(us_equivalent))
-    if us_size <= 0:
+    rounded_value = int(round(waist_measurement_cm))
+    if rounded_value <= 0:
         return None
 
-    fr_value = us_size + 10
-    if ensure_even and fr_value % 2:
-        fr_value += 1
-    return str(fr_value)
+    if ensure_even and rounded_value % 2:
+        rounded_value += 1
+    return str(rounded_value)
 
 
 def normalize_sizes(
