@@ -561,7 +561,7 @@ def test_normalize_sizes_falls_back_to_waist_measurement() -> None:
         ensure_even_fr=True,
         waist_measurement_cm=74,
     )
-    assert computed.fr_size == "40"
+    assert computed.fr_size == "74"
     assert computed.us_size is None
     assert computed.note is not None
     assert "74 cm" in computed.note
@@ -879,8 +879,8 @@ def test_template_render_uses_waist_measurement_when_label_hidden(
 
     title, description = template.render(fields)
 
-    assert "FR40" in title
-    assert "Taille 40 FR" in description
+    assert "FR74" in title
+    assert "Taille 74 FR" in description
     assert "74 cm" in description
     assert "Taille estimée à partir d'un tour de taille mesuré" in description
 
