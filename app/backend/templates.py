@@ -309,7 +309,7 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
         _ensure_percent(fields.nylon_pct) if fields.fabric_label_visible else ""
     )
 
-    label_cut_message = "Étiquettes coupées pour plus de confort."
+    label_cut_message = "Etiquettes coupées pour plus de confort."
     fabric_message = "Étiquette composition non visible sur les photos."
     size_message = "Étiquette taille non visible sur les photos."
     combined_message = "Étiquettes taille et composition non visibles sur les photos."
@@ -747,7 +747,7 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
 
     cotton_percent = _ensure_percent(fields.cotton_pct) if fields.cotton_pct else ""
     cotton_value = fields.cotton_percentage_value
-    label_cut_message = "Étiquettes coupées pour plus de confort."
+    label_cut_message = "Etiquettes coupées pour plus de confort."
     fabric_message = "Étiquette composition non visible sur les photos."
     size_message = "Étiquette taille non visible sur les photos."
     combined_message = "Étiquettes taille et composition non visibles sur les photos."
