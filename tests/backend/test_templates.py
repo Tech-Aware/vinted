@@ -133,6 +133,71 @@ def test_render_jean_levis_handles_fabric_label_cut() -> None:
     assert description.count("Étiquettes coupées pour plus de confort.") == 1
 
 
+def test_render_jean_levis_marks_estimated_size_without_forbidden_note() -> None:
+    template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
+    fields = ListingFields(
+        model="",  # no explicit context
+        fr_size="",
+        us_w="",
+        us_l="",
+        fit_leg="straight",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=41.2,
+        cotton_pct="",  # composition irrelevant here
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="Femme",
+        color_main="",
+        defects="",
+        defect_tags=(),
+        size_label_visible=False,
+        fabric_label_visible=False,
+        fabric_label_cut=False,
+        sku="JLF22",
+    )
+
+    title, description = template.render(fields)
+
+    assert "(voir photos)" in description
+    assert "Taille estimée à partir" not in title
+    assert "Taille estimée à partir" not in description
+
+
+def test_render_jean_levis_fabric_label_missing_no_duplicate_messages() -> None:
+    template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
+    fields = ListingFields(
+        model="",  # minimal context
+        fr_size="38",
+        us_w="28",
+        us_l="",
+        fit_leg="slim",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="Femme",
+        color_main="",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=False,
+        fabric_label_cut=False,
+        sku="JLF23",
+    )
+
+    _, description = template.render(fields)
+
+    assert description.count("Étiquette composition non visible sur les photos.") == 1
+    assert "Étiquettes coupées pour plus de confort." not in description
+
+
 def test_render_jean_levis_avoids_duplicate_missing_fabric_label_sentence() -> None:
     template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
     fields = ListingFields(
@@ -161,8 +226,10 @@ def test_render_jean_levis_avoids_duplicate_missing_fabric_label_sentence() -> N
 
     _, description = template.render(fields)
 
-    assert description.count("Étiquettes coupées pour plus de confort.") == 1
+    assert description.count("Étiquette composition non visible sur les photos.") == 1
+    assert "Étiquettes coupées pour plus de confort." not in description
     assert "Étiquette taille non visible sur les photos." not in description
+    assert "Étiquettes taille et composition non visibles sur les photos." in description
 
 
 def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:

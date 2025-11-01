@@ -121,6 +121,15 @@ def _format_measurement(value: Optional[float]) -> Optional[str]:
     return f"~{int(round(value))} cm"
 
 
+def _is_waist_measurement_note(note: Optional[str]) -> bool:
+    if not note:
+        return False
+    normalized = note.strip().casefold()
+    return normalized.startswith("taille estimée à partir du tour de taille") or normalized.startswith(
+        "taille estimée à partir d'un tour de taille"
+    )
+
+
 def _normalize_text_for_comparison(value: str) -> str:
     """Normalize text for accent-insensitive substring checks."""
 
@@ -231,6 +240,9 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
         fields.waist_measurement_cm, ensure_even=True
     )
 
+    size_note: Optional[str] = None
+    size_estimated = False
+
     if fields.size_label_visible:
         normalized_sizes: NormalizedSizes = normalize_sizes(
             fields.us_w,
@@ -242,23 +254,16 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
         fr_display = normalized_sizes.fr_size or _clean(fields.fr_size)
         us_display = normalized_sizes.us_size
         size_note = normalized_sizes.note
+        if _is_waist_measurement_note(size_note):
+            size_estimated = True
+            size_note = None
     else:
         fr_candidate = _clean(fields.fr_size)
         us_candidate = _clean(fields.us_w)
-        size_note = None
         if not fr_candidate and not us_candidate and measurement_fr:
             fr_display = measurement_fr
             us_display = None
-            measurement_value = fields.waist_measurement_cm
-            if measurement_value is not None:
-                size_note = (
-                    "Taille estimée à partir d'un tour de taille mesuré à environ "
-                    f"{int(round(measurement_value))} cm."
-                )
-            else:
-                size_note = (
-                    "Taille estimée à partir du tour de taille mesuré visuellement sur les photos."
-                )
+            size_estimated = True
         else:
             fr_display = fr_candidate
             us_display = None
@@ -404,7 +409,12 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     rise_phrase = rise or "non précisée"
     size_fragments.append(f"coupe {fit_phrase}")
     size_fragments.append(f"à taille {rise_phrase}")
-    size_sentence = ", ".join(size_fragments) + ", pour une silhouette ajustée et confortable."
+    size_sentence_core = ", ".join(size_fragments)
+    if size_estimated:
+        size_sentence_core = f"{size_sentence_core} (voir photos)"
+    size_sentence = (
+        f"{size_sentence_core}, pour une silhouette ajustée et confortable."
+    )
 
     if model and gender_value:
         first_sentence = f"Jean Levi’s modèle {model} pour {gender_value}."
@@ -452,12 +462,11 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
             third_paragraph_lines.append(label_cut_message)
     elif size_label_missing and fabric_label_missing:
         third_paragraph_lines.append(combined_message)
-        third_paragraph_lines.append(label_cut_message)
     elif size_label_missing:
         third_paragraph_lines.append(size_message)
     elif fabric_label_missing:
-        if composition_sentence.strip() != label_cut_message:
-            third_paragraph_lines.append(label_cut_message)
+        if fabric_message not in second_paragraph_lines:
+            third_paragraph_lines.append(fabric_message)
 
     third_paragraph_lines.extend(
         [
