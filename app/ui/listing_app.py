@@ -207,6 +207,14 @@ class VintedListingApp(ctk.CTk):
 
     def display_result(self, result: ListingResult) -> None:
         self._stop_loading_state()
+        sku_missing = getattr(result, "sku_missing", False)
+        placeholder_in_title = "SKU/nc" in (result.title or "")
+
+        if sku_missing or placeholder_in_title:
+            logger.warning("SKU manquant détecté dans le résultat, notification utilisateur")
+            self._show_error_popup("Sku non visible, merci de le fournir puis recommencer")
+            return
+
         self.title_box.delete("1.0", "end")
         self.title_box.insert("1.0", result.title)
 
