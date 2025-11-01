@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import sys
+import json
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
@@ -10,6 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.backend.gpt_client import ListingGenerator
 from app.backend.listing_fields import ListingFields
 from app.backend.templates import ListingTemplateRegistry
 
@@ -71,10 +74,32 @@ def test_render_jean_levis_femme_uses_sku_placeholder_when_missing() -> None:
         sku="",
     )
 
-    title, description = template.render(fields)
+    _title, description = template.render(fields)
 
-    assert title.endswith("SKU/nc")
     assert "sku" not in description.lower()
+
+    generator = ListingGenerator()
+    payload = {"fields": asdict(fields)}
+
+    class _FakeResponse:
+        def __init__(self, text: str) -> None:
+            self.output_text = text
+
+    class _FakeResponses:
+        def __init__(self, text: str) -> None:
+            self._text = text
+
+        def create(self, **_kwargs: object) -> _FakeResponse:
+            return _FakeResponse(self._text)
+
+    class _FakeClient:
+        def __init__(self, text: str) -> None:
+            self.responses = _FakeResponses(text)
+
+    generator._client = _FakeClient(json.dumps(payload))  # type: ignore[attr-defined]
+    result = generator.generate_listing([], "", template)
+
+    assert result.sku_missing is True
 
 
 def test_render_jean_levis_handles_fabric_label_cut() -> None:

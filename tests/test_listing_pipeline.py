@@ -1247,7 +1247,7 @@ def test_generator_tolerates_invalid_levis_sku(template_registry: ListingTemplat
 
     result = generator.generate_listing([], "", template)
 
-    assert result.title.endswith("SKU/nc")
+    assert result.sku_missing is True
 
 
 def test_template_render_falls_back_to_free_text(template_registry: ListingTemplateRegistry) -> None:

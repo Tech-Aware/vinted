@@ -39,6 +39,7 @@ class ListingResult:
 
     title: str
     description: str
+    sku_missing: bool = False
 
 
 class ListingGenerator:
@@ -204,7 +205,12 @@ class ListingGenerator:
 
         title, description = template.render(fields)
         logger.success("Titre et description générés depuis les données structurées")
-        return ListingResult(title=title, description=description)
+
+        sku_missing = not bool(fields.sku and fields.sku.strip())
+        if sku_missing:
+            logger.warning("SKU absent des données générées, signalement au frontal")
+
+        return ListingResult(title=title, description=description, sku_missing=sku_missing)
 
     def _recover_tommy_sku(
         self, encoded_images: Sequence[str], user_comment: str
