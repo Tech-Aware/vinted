@@ -659,7 +659,8 @@ def test_render_template_prefers_measurement_when_conflict(
     assert "W28" not in title
     assert "Taille 74 FR" in description
     assert "Taille 28 US" not in description
-    assert "~74 cm" in description
+    assert "(voir photos)" in description
+    assert "Taille estimée à partir" not in description
 
 
 def test_template_render_translates_main_color_to_french(
