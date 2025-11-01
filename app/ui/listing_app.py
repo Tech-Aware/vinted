@@ -31,6 +31,8 @@ from app.ui.image_preview import ImagePreview
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
+COMMENT_PLACEHOLDER = "Décrivez tâches et défauts..."
+
 
 logger = get_logger(__name__)
 
@@ -86,8 +88,10 @@ class VintedListingApp(ctk.CTk):
         self._template_combo_default_state = self.template_combo.cget("state") or "normal"
 
         self.comment_box = ctk.CTkTextbox(form_frame, height=28)
-        self.comment_box.insert("1.0", "Décrivez tâches et défauts...")
+        self._insert_comment_placeholder()
         self.comment_box.grid(row=2, column=0, sticky="ew", padx=12, pady=(12, 4))
+        self.comment_box.bind("<FocusIn>", self._on_comment_focus_in)
+        self.comment_box.bind("<FocusOut>", self._on_comment_focus_out)
 
         button_frame = ctk.CTkFrame(form_frame)
         button_frame.grid(row=3, column=0, sticky="ew", padx=12, pady=(4, 4))
@@ -173,7 +177,7 @@ class VintedListingApp(ctk.CTk):
             logger.error("Analyse annulée: aucune image sélectionnée")
             return
 
-        comment = self.comment_box.get("1.0", "end").strip()
+        comment = self._normalize_comment(self.comment_box.get("1.0", "end"))
         template_name = self.template_var.get()
         logger.step("Récupération du template: %s", template_name)
         try:
@@ -228,10 +232,9 @@ class VintedListingApp(ctk.CTk):
         self.selected_images.clear()
         self._image_directories.clear()
         self.preview_frame.update_images([])
-        self.comment_box.delete("1.0", "end")
         self.title_box.delete("1.0", "end")
         self.description_box.delete("1.0", "end")
-        self.comment_box.insert("1.0", "Décrivez tâches et défauts...")
+        self._insert_comment_placeholder()
         logger.step("Application réinitialisée")
 
     def _remove_image(self, path: Path) -> None:
@@ -319,6 +322,27 @@ class VintedListingApp(ctk.CTk):
 
         textbox.bind("<Control-a>", handler)
         textbox.bind("<Control-A>", handler)
+
+    def _insert_comment_placeholder(self) -> None:
+        self.comment_box.delete("1.0", "end")
+        self.comment_box.insert("1.0", COMMENT_PLACEHOLDER)
+
+    def _on_comment_focus_in(self, event: object) -> None:
+        current_text = self.comment_box.get("1.0", "end").strip()
+        if current_text == COMMENT_PLACEHOLDER:
+            self.comment_box.delete("1.0", "end")
+
+    def _on_comment_focus_out(self, event: object) -> None:
+        current_text = self.comment_box.get("1.0", "end").strip()
+        if not current_text:
+            self._insert_comment_placeholder()
+
+    @staticmethod
+    def _normalize_comment(value: str) -> str:
+        cleaned = value.strip()
+        if cleaned == COMMENT_PLACEHOLDER:
+            return ""
+        return cleaned
 
     def _copy_to_clipboard(self, textbox: ctk.CTkTextbox) -> None:
         content = textbox.get("1.0", "end-1c")
