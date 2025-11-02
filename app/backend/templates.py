@@ -242,6 +242,7 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
 
     size_note: Optional[str] = None
     size_estimated = False
+    measurement_display = _format_measurement(fields.waist_measurement_cm)
 
     if fields.size_label_visible:
         normalized_sizes: NormalizedSizes = normalize_sizes(
@@ -412,6 +413,16 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     size_sentence_core = ", ".join(size_fragments)
     if size_estimated:
         size_sentence_core = f"{size_sentence_core} (voir photos)"
+        if (
+            measurement_display
+            and not size_note
+            and not fields.size_label_visible
+            and fields.fabric_label_cut
+        ):
+            size_note = (
+                "Taille estimée à partir d'un tour de taille mesuré "
+                f"{measurement_display}."
+            )
     size_sentence = (
         f"{size_sentence_core}, pour une silhouette ajustée et confortable."
     )
@@ -457,9 +468,6 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
 
     if not label_issue_detected:
         pass
-    elif fields.fabric_label_cut:
-        if composition_sentence.strip() != label_cut_message:
-            third_paragraph_lines.append(label_cut_message)
     elif size_label_missing and fabric_label_missing:
         third_paragraph_lines.append(combined_message)
     elif size_label_missing:
@@ -467,6 +475,20 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     elif fabric_label_missing:
         if fabric_message not in second_paragraph_lines:
             third_paragraph_lines.append(fabric_message)
+    if (
+        fields.fabric_label_cut
+        and label_cut_message not in second_paragraph_lines
+        and label_cut_message not in third_paragraph_lines
+    ):
+        third_paragraph_lines.append(label_cut_message)
+
+    if (
+        size_estimated
+        and measurement_display
+        and not fields.size_label_visible
+        and fields.fabric_label_cut
+    ):
+        third_paragraph_lines.append(f"Tour de taille mesuré à {measurement_display}.")
 
     third_paragraph_lines.extend(
         [

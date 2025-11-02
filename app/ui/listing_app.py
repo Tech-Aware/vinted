@@ -16,7 +16,7 @@ limitations under the License.
 
 import threading
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import List, Optional, Sequence, Set, Tuple
 
 from tkinter import filedialog, messagebox
 
@@ -25,6 +25,7 @@ import customtkinter as ctk
 from app.backend.api_key_manager import ensure_api_key
 from app.backend.gpt_client import ListingGenerator, ListingResult
 from app.backend.image_encoding import encode_images_to_base64
+from app.backend.template_classifier import TemplateClassificationError, infer_template
 from app.backend.templates import ListingTemplateRegistry
 from app.logger import get_logger
 from app.ui.image_preview import ImagePreview
@@ -35,6 +36,25 @@ COMMENT_PLACEHOLDER = "Décrivez tâches et défauts..."
 
 
 logger = get_logger(__name__)
+
+
+def generate_listing_with_auto_template(
+    selected_template: str,
+    image_paths: Sequence[Path],
+    comment: str,
+    template_registry: ListingTemplateRegistry,
+    generator: ListingGenerator,
+) -> Tuple[ListingResult, str]:
+    """Generate a listing, inferring the template when requested."""
+
+    encoded_images = encode_images_to_base64(image_paths)
+    resolved_template = selected_template
+    if selected_template == "auto":
+        resolved_template = infer_template(encoded_images, comment)
+
+    template = template_registry.get_template(resolved_template)
+    result = generator.generate_listing(encoded_images, comment, template)
+    return result, resolved_template
 
 
 class VintedListingApp(ctk.CTk):
@@ -78,11 +98,13 @@ class VintedListingApp(ctk.CTk):
         form_frame.columnconfigure(0, weight=1)
         form_frame.rowconfigure(5, weight=1)
 
+        self._auto_template_option = "auto"
         self.template_var = ctk.StringVar(value=self.template_registry.default_template)
         template_label = ctk.CTkLabel(form_frame, text="Modèle d'annonce")
         template_label.grid(row=0, column=0, sticky="w", padx=12, pady=(12, 4))
+        template_options = [self._auto_template_option, *self.template_registry.available_templates]
         self.template_combo = ctk.CTkComboBox(
-            form_frame, values=self.template_registry.available_templates, variable=self.template_var
+            form_frame, values=template_options, variable=self.template_var
         )
         self.template_combo.grid(row=1, column=0, sticky="ew", padx=12)
         self._template_combo_default_state = self.template_combo.cget("state") or "normal"
@@ -179,14 +201,15 @@ class VintedListingApp(ctk.CTk):
 
         comment = self._normalize_comment(self.comment_box.get("1.0", "end"))
         template_name = self.template_var.get()
-        logger.step("Récupération du template: %s", template_name)
-        try:
-            template = self.template_registry.get_template(template_name)
-        except KeyError as exc:
-            self._show_error_popup(str(exc))
-            logger.error("Template introuvable: %s", template_name, exc_info=exc)
-            return
-        logger.success("Template '%s' récupéré", template_name)
+        logger.step("Option de template sélectionnée: %s", template_name)
+        if template_name != self._auto_template_option:
+            try:
+                self.template_registry.get_template(template_name)
+            except KeyError as exc:
+                self._show_error_popup(str(exc))
+                logger.error("Template introuvable: %s", template_name, exc_info=exc)
+                return
+            logger.success("Template '%s' disponible", template_name)
         logger.info(
             "Lancement de l'analyse (%d image(s), %d caractère(s) de commentaire)",
             len(self.selected_images),
@@ -198,8 +221,25 @@ class VintedListingApp(ctk.CTk):
         def worker() -> None:
             try:
                 logger.step("Thread d'analyse démarré")
-                encoded_images = encode_images_to_base64(self.selected_images)
-                result = self.generator.generate_listing(encoded_images, comment, template)
+                try:
+                    result, resolved_template = generate_listing_with_auto_template(
+                        template_name,
+                        self.selected_images,
+                        comment,
+                        self.template_registry,
+                        self.generator,
+                    )
+                except TemplateClassificationError as exc:
+                    logger.warning("Classification automatique incertaine", exc_info=exc)
+                    self.after(0, lambda err=exc: self._handle_classification_uncertainty(err))
+                    return
+                except KeyError as exc:
+                    logger.error("Template introuvable durant l'analyse", exc_info=exc)
+                    self.after(0, lambda err=exc: self._handle_error(err))
+                    return
+
+                logger.success("Template '%s' sélectionné", resolved_template)
+                self.after(0, lambda name=resolved_template: self.template_var.set(name))
                 logger.success("Analyse terminée avec succès")
                 self.after(0, lambda: self.display_result(result))
             except Exception as exc:  # pragma: no cover - UI feedback
@@ -311,6 +351,12 @@ class VintedListingApp(ctk.CTk):
     def _handle_error(self, error: Exception) -> None:
         self._stop_loading_state()
         self._show_error_popup(f"Erreur: {error}")
+
+    def _handle_classification_uncertainty(self, error: TemplateClassificationError) -> None:
+        logger.warning("Classification automatique impossible: %s", error)
+        self._stop_loading_state()
+        self.template_var.set(self.template_registry.default_template)
+        self._show_error_popup(str(error))
 
     def _show_error_popup(self, message: str) -> None:
         messagebox.showerror("Erreur", message)

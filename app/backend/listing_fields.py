@@ -250,7 +250,7 @@ class ListingFields:
             data.get("fabric_label_visible"), default=False
         )
         fabric_label_cut = ListingFields._normalize_visibility_flag(
-            data.get("fabric_label_cut"), default=False
+            data.get("fabric_label_cut"), default=not fabric_label_visible
         )
         non_size_labels_visible = ListingFields._normalize_visibility_flag(
             data.get("non_size_labels_visible"), default=False
