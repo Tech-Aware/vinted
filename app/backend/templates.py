@@ -268,6 +268,9 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
             fr_display = fr_candidate
             us_display = None
 
+    size_label_missing = not fields.size_label_visible
+    composition_label_unavailable = (not fields.fabric_label_visible) or fields.fabric_label_cut
+
     model = (fields.model or "").strip()
     gender = _clean(fields.gender)
     has_context = any(
@@ -309,14 +312,16 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
         _ensure_percent(fields.nylon_pct) if fields.fabric_label_visible else ""
     )
 
-    label_cut_message = "Etiquettes coupées pour plus de confort."
-    fabric_message = "Étiquette composition non visible sur les photos."
-    size_message = "Étiquette taille non visible sur les photos."
-    combined_message = "Étiquettes taille et composition non visibles sur les photos."
+    size_label_cut_message = "Étiquette taille coupée pour plus de confort."
+    composition_label_cut_message = "Étiquette composition coupée pour plus de confort."
+    combined_label_cut_message = "Étiquette taille et compos coupées pour plus de confort."
 
     composition_parts: List[str] = []
-    if fields.fabric_label_cut:
-        composition_sentence = label_cut_message
+    if composition_label_unavailable:
+        if size_label_missing:
+            composition_sentence = combined_label_cut_message
+        else:
+            composition_sentence = composition_label_cut_message
     elif fields.fabric_label_visible:
         if cotton:
             composition_parts.append(f"{cotton} coton")
@@ -347,7 +352,7 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
                 "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
             )
     else:
-        composition_sentence = fabric_message
+        composition_sentence = "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
 
     defect_texts = get_defect_descriptions(fields.defect_tags)
     raw_defects = (fields.defects or "").strip()
@@ -451,22 +456,23 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     else:
         third_paragraph_lines.append("Très bon état")
 
-    size_label_missing = not fields.size_label_visible
-    fabric_label_missing = not fields.fabric_label_visible
-    label_issue_detected = size_label_missing or fabric_label_missing or fields.fabric_label_cut
+    label_notice: Optional[str] = None
+    if size_label_missing and not composition_label_unavailable:
+        label_notice = size_label_cut_message
+    elif size_label_missing and composition_label_unavailable:
+        if composition_sentence.strip() != combined_label_cut_message:
+            label_notice = combined_label_cut_message
+    elif composition_label_unavailable:
+        if composition_sentence.strip() not in (
+            composition_label_cut_message,
+            combined_label_cut_message,
+        ):
+            label_notice = composition_label_cut_message
 
-    if not label_issue_detected:
-        pass
-    elif fields.fabric_label_cut:
-        if composition_sentence.strip() != label_cut_message:
-            third_paragraph_lines.append(label_cut_message)
-    elif size_label_missing and fabric_label_missing:
-        third_paragraph_lines.append(combined_message)
-    elif size_label_missing:
-        third_paragraph_lines.append(size_message)
-    elif fabric_label_missing:
-        if fabric_message not in second_paragraph_lines:
-            third_paragraph_lines.append(fabric_message)
+    if label_notice:
+        existing_lines = second_paragraph_lines + third_paragraph_lines
+        if not any(label_notice == line.strip() for line in existing_lines):
+            third_paragraph_lines.append(label_notice)
 
     third_paragraph_lines.extend(
         [
@@ -747,10 +753,11 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
 
     cotton_percent = _ensure_percent(fields.cotton_pct) if fields.cotton_pct else ""
     cotton_value = fields.cotton_percentage_value
-    label_cut_message = "Etiquettes coupées pour plus de confort."
-    fabric_message = "Étiquette composition non visible sur les photos."
-    size_message = "Étiquette taille non visible sur les photos."
-    combined_message = "Étiquettes taille et composition non visibles sur les photos."
+    size_label_missing = not fields.size_label_visible
+    composition_label_unavailable = (not fields.fabric_label_visible) or fields.fabric_label_cut
+    size_label_cut_message = "Étiquette taille coupée pour plus de confort."
+    composition_label_cut_message = "Étiquette composition coupée pour plus de confort."
+    combined_label_cut_message = "Étiquette taille et compos coupées pour plus de confort."
 
     material_segment = ""
     pattern_lower = pattern.lower() if pattern else ""
@@ -915,8 +922,10 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     style_sentence = " ".join(style_segments).strip()
 
     def build_composition_sentence() -> str:
-        if fields.fabric_label_cut or not fields.fabric_label_visible:
-            return label_cut_message
+        if composition_label_unavailable:
+            if size_label_missing:
+                return combined_label_cut_message
+            return composition_label_cut_message
 
         def _normalized_percent(value: Optional[str]) -> Tuple[str, Optional[float]]:
             if not value:
@@ -1006,22 +1015,23 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     else:
         third_paragraph_lines.append("Très bon état")
 
-    size_label_missing = not fields.size_label_visible
-    fabric_label_missing = not fields.fabric_label_visible
-    label_issue_detected = size_label_missing or fabric_label_missing or fields.fabric_label_cut
+    label_notice: Optional[str] = None
+    if size_label_missing and not composition_label_unavailable:
+        label_notice = size_label_cut_message
+    elif size_label_missing and composition_label_unavailable:
+        if composition_sentence.strip() != combined_label_cut_message:
+            label_notice = combined_label_cut_message
+    elif composition_label_unavailable:
+        if composition_sentence.strip() not in (
+            composition_label_cut_message,
+            combined_label_cut_message,
+        ):
+            label_notice = composition_label_cut_message
 
-    if not label_issue_detected:
-        pass
-    elif fields.fabric_label_cut:
-        if composition_sentence.strip() != label_cut_message:
-            third_paragraph_lines.append(label_cut_message)
-    elif size_label_missing and fabric_label_missing:
-        third_paragraph_lines.append(combined_message)
-    elif size_label_missing:
-        third_paragraph_lines.append(size_message)
-    elif fabric_label_missing:
-        if composition_sentence.strip() != label_cut_message:
-            third_paragraph_lines.append(label_cut_message)
+    if label_notice:
+        existing_lines = second_paragraph_lines + third_paragraph_lines
+        if not any(label_notice == line.strip() for line in existing_lines):
+            third_paragraph_lines.append(label_notice)
 
     third_paragraph_lines.extend(
         [

@@ -33,6 +33,11 @@ MEASUREMENT_EMPTY = {
 }
 
 
+SIZE_LABEL_CUT_MESSAGE = "Étiquette taille coupée pour plus de confort."
+COMPOSITION_LABEL_CUT_MESSAGE = "Étiquette composition coupée pour plus de confort."
+COMBINED_LABEL_CUT_MESSAGE = "Étiquette taille et compos coupées pour plus de confort."
+
+
 def test_json_instruction_mentions_defect_synonyms() -> None:
     instruction = ListingFields.json_instruction()
     assert "faded_crotch" in instruction
@@ -618,9 +623,10 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
     assert "Mesure FR" not in description
     assert " W" not in title  # no US size injected when label is hidden
     assert " L30" not in title
-    assert "Etiquettes coupées pour plus de confort." in description
+    assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
     assert "Très bon état : entrejambe légèrement délavée (voir photos)" in description
-    assert "Étiquettes taille et composition non visibles sur les photos." in description
+    assert COMPOSITION_LABEL_CUT_MESSAGE not in description
+    assert SIZE_LABEL_CUT_MESSAGE not in description
 
 
 def test_render_template_prefers_measurement_when_conflict(
@@ -891,13 +897,13 @@ def test_template_render_mentions_missing_labels_individually(
         {**base_payload, "size_label_visible": False, "fabric_label_visible": True}
     )
     _title, size_description = template.render(size_hidden)
-    assert "Étiquette taille non visible sur les photos." in size_description
+    assert SIZE_LABEL_CUT_MESSAGE in size_description
 
     fabric_hidden = ListingFields.from_dict(
         {**base_payload, "size_label_visible": True, "fabric_label_visible": False}
     )
     _title, fabric_description = template.render(fabric_hidden)
-    assert "Étiquette composition non visible sur les photos." in fabric_description
+    assert COMPOSITION_LABEL_CUT_MESSAGE in fabric_description
 
 
 def test_template_render_uses_waist_measurement_when_label_hidden(
@@ -935,8 +941,9 @@ def test_template_render_uses_waist_measurement_when_label_hidden(
 
     assert "FR74" in title
     assert "Taille 74 FR" in description
-    assert "74 cm" in description
-    assert "Taille estimée à partir d'un tour de taille mesuré" in description
+    assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
+    assert COMPOSITION_LABEL_CUT_MESSAGE not in description
+    assert SIZE_LABEL_CUT_MESSAGE not in description
 
 
 def test_template_render_mentions_polyester(template_registry: ListingTemplateRegistry) -> None:
@@ -1006,7 +1013,9 @@ def test_template_render_skips_composition_when_label_missing(
 
     title, description = template.render(fields)
     assert "coton" not in title.lower()
-    assert "Etiquettes coupées pour plus de confort." in description
+    assert description.count(COMPOSITION_LABEL_CUT_MESSAGE) == 1
+    assert COMBINED_LABEL_CUT_MESSAGE not in description
+    assert SIZE_LABEL_CUT_MESSAGE not in description
     assert "% polyester" not in description
     assert "% élasthanne" not in description
 

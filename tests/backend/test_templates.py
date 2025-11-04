@@ -17,6 +17,11 @@ from app.backend.listing_fields import ListingFields
 from app.backend.templates import ListingTemplateRegistry
 
 
+SIZE_LABEL_CUT_MESSAGE = "Étiquette taille coupée pour plus de confort."
+COMPOSITION_LABEL_CUT_MESSAGE = "Étiquette composition coupée pour plus de confort."
+COMBINED_LABEL_CUT_MESSAGE = "Étiquette taille et compos coupées pour plus de confort."
+
+
 def test_render_defaults_to_femme_when_gender_missing_levis() -> None:
     template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
     fields = ListingFields(
@@ -130,7 +135,7 @@ def test_render_jean_levis_handles_fabric_label_cut() -> None:
 
     _, description = template.render(fields)
 
-    assert description.count("Etiquettes coupées pour plus de confort.") == 1
+    assert description.count(COMPOSITION_LABEL_CUT_MESSAGE) == 1
 
 
 def test_render_jean_levis_marks_estimated_size_without_forbidden_note() -> None:
@@ -194,8 +199,9 @@ def test_render_jean_levis_fabric_label_missing_no_duplicate_messages() -> None:
 
     _, description = template.render(fields)
 
-    assert description.count("Étiquette composition non visible sur les photos.") == 1
-    assert "Etiquettes coupées pour plus de confort." not in description
+    assert description.count(COMPOSITION_LABEL_CUT_MESSAGE) == 1
+    assert SIZE_LABEL_CUT_MESSAGE not in description
+    assert COMBINED_LABEL_CUT_MESSAGE not in description
 
 
 def test_render_jean_levis_avoids_duplicate_missing_fabric_label_sentence() -> None:
@@ -226,10 +232,9 @@ def test_render_jean_levis_avoids_duplicate_missing_fabric_label_sentence() -> N
 
     _, description = template.render(fields)
 
-    assert description.count("Étiquette composition non visible sur les photos.") == 1
-    assert "Etiquettes coupées pour plus de confort." not in description
-    assert "Étiquette taille non visible sur les photos." not in description
-    assert "Étiquettes taille et composition non visibles sur les photos." in description
+    assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
+    assert COMPOSITION_LABEL_CUT_MESSAGE not in description
+    assert SIZE_LABEL_CUT_MESSAGE not in description
 
 
 def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
@@ -327,7 +332,7 @@ def test_render_pull_tommy_femme_estimates_size_from_bust_measurement() -> None:
     assert "Coupe courte" not in description
     assert "Manches mesurées" not in description
 
-    assert description.count("Etiquettes coupées pour plus de confort.") == 1
+    assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
     assert "Mesures à plat disponibles" not in description
     assert "#durin31tfL" in description
 
@@ -492,7 +497,7 @@ def test_render_pull_tommy_femme_handles_fabric_label_cut() -> None:
 
     _, description = template.render(fields)
 
-    assert description.count("Etiquettes coupées pour plus de confort.") == 1
+    assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
     assert "Référence SKU" not in description
 
 
@@ -525,7 +530,7 @@ def test_render_pull_tommy_femme_skips_cut_sentence_when_other_labels_visible() 
 
     _, description = template.render(fields)
 
-    assert description.count("Etiquettes coupées pour plus de confort.") == 1
+    assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
     assert "Composition non lisible sur l'étiquette (voir photos pour confirmation)." not in description
 
 
@@ -558,8 +563,9 @@ def test_render_pull_tommy_femme_handles_hidden_fabric_label() -> None:
 
     _, description = template.render(fields)
 
-    assert description.count("Etiquettes coupées pour plus de confort.") == 1
-    assert "Étiquette composition non visible sur les photos." not in description
+    assert description.count(COMPOSITION_LABEL_CUT_MESSAGE) == 1
+    assert COMBINED_LABEL_CUT_MESSAGE not in description
+    assert SIZE_LABEL_CUT_MESSAGE not in description
     assert "Référence SKU" not in description
 
 
