@@ -33,9 +33,9 @@ MEASUREMENT_EMPTY = {
 }
 
 
-SIZE_LABEL_CUT_MESSAGE = "Étiquette taille coupée pour plus de confort."
-COMPOSITION_LABEL_CUT_MESSAGE = "Étiquette composition coupée pour plus de confort."
-COMBINED_LABEL_CUT_MESSAGE = "Étiquette taille et compos coupées pour plus de confort."
+SIZE_LABEL_CUT_MESSAGE = "Étiquette de taille coupée pour plus de confort."
+COMPOSITION_LABEL_CUT_MESSAGE = "Étiquette de composition coupée pour plus de confort."
+COMBINED_LABEL_CUT_MESSAGE = "Étiquettes de taille et composition coupées pour plus de confort."
 
 
 def test_json_instruction_mentions_defect_synonyms() -> None:
@@ -558,6 +558,32 @@ def test_normalize_sizes_rounds_up_odd_us_when_requested() -> None:
     assert computed.note is None
 
 
+def test_normalize_sizes_rounds_down_when_measurement_is_smaller() -> None:
+    computed: NormalizedSizes = normalize_sizes(
+        "31",
+        None,
+        False,
+        ensure_even_fr=True,
+        waist_measurement_cm=38,
+    )
+    assert computed.fr_size == "40"
+    assert computed.us_size == "31"
+    assert computed.note is None
+
+
+def test_normalize_sizes_rounds_up_when_measurement_is_larger() -> None:
+    computed: NormalizedSizes = normalize_sizes(
+        "31",
+        None,
+        False,
+        ensure_even_fr=True,
+        waist_measurement_cm=44,
+    )
+    assert computed.fr_size == "42"
+    assert computed.us_size == "31"
+    assert computed.note is None
+
+
 def test_normalize_sizes_falls_back_to_waist_measurement() -> None:
     computed: NormalizedSizes = normalize_sizes(
         None,
@@ -584,6 +610,20 @@ def test_normalize_sizes_prefers_measurement_when_conflict() -> None:
     assert computed.us_size is None
     assert computed.note is not None
     assert "74 cm" in computed.note
+
+
+def test_normalize_sizes_prefers_measurement_when_gap_is_smaller() -> None:
+    computed: NormalizedSizes = normalize_sizes(
+        "31",
+        None,
+        False,
+        ensure_even_fr=True,
+        waist_measurement_cm=30,
+    )
+    assert computed.fr_size == "30"
+    assert computed.us_size is None
+    assert computed.note is not None
+    assert "30 cm" in computed.note
 
 
 def test_template_render_injects_normalized_terms(template_registry: ListingTemplateRegistry) -> None:

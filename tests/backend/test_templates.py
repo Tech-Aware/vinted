@@ -17,9 +17,9 @@ from app.backend.listing_fields import ListingFields
 from app.backend.templates import ListingTemplateRegistry
 
 
-SIZE_LABEL_CUT_MESSAGE = "Étiquette taille coupée pour plus de confort."
-COMPOSITION_LABEL_CUT_MESSAGE = "Étiquette composition coupée pour plus de confort."
-COMBINED_LABEL_CUT_MESSAGE = "Étiquette taille et compos coupées pour plus de confort."
+SIZE_LABEL_CUT_MESSAGE = "Étiquette de taille coupée pour plus de confort."
+COMPOSITION_LABEL_CUT_MESSAGE = "Étiquette de composition coupée pour plus de confort."
+COMBINED_LABEL_CUT_MESSAGE = "Étiquettes de taille et composition coupées pour plus de confort."
 
 
 def test_render_defaults_to_femme_when_gender_missing_levis() -> None:

@@ -312,9 +312,9 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
         _ensure_percent(fields.nylon_pct) if fields.fabric_label_visible else ""
     )
 
-    size_label_cut_message = "Étiquette taille coupée pour plus de confort."
-    composition_label_cut_message = "Étiquette composition coupée pour plus de confort."
-    combined_label_cut_message = "Étiquette taille et compos coupées pour plus de confort."
+    size_label_cut_message = "Étiquette de taille coupée pour plus de confort."
+    composition_label_cut_message = "Étiquette de composition coupée pour plus de confort."
+    combined_label_cut_message = "Étiquettes de taille et composition coupées pour plus de confort."
 
     composition_parts: List[str] = []
     if composition_label_unavailable:
@@ -755,9 +755,9 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     cotton_value = fields.cotton_percentage_value
     size_label_missing = not fields.size_label_visible
     composition_label_unavailable = (not fields.fabric_label_visible) or fields.fabric_label_cut
-    size_label_cut_message = "Étiquette taille coupée pour plus de confort."
-    composition_label_cut_message = "Étiquette composition coupée pour plus de confort."
-    combined_label_cut_message = "Étiquette taille et compos coupées pour plus de confort."
+    size_label_cut_message = "Étiquette de taille coupée pour plus de confort."
+    composition_label_cut_message = "Étiquette de composition coupée pour plus de confort."
+    combined_label_cut_message = "Étiquettes de taille et composition coupées pour plus de confort."
 
     material_segment = ""
     pattern_lower = pattern.lower() if pattern else ""
