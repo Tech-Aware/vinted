@@ -148,7 +148,7 @@ def test_render_jean_levis_marks_estimated_size_without_forbidden_note() -> None
         fit_leg="straight",
         rise_class="",
         rise_measurement_cm=None,
-        waist_measurement_cm=41.2,
+        waist_measurement_cm=None,
         cotton_pct="",  # composition irrelevant here
         polyester_pct="",
         polyamide_pct="",
@@ -162,6 +162,7 @@ def test_render_jean_levis_marks_estimated_size_without_forbidden_note() -> None
         fabric_label_visible=False,
         fabric_label_cut=False,
         sku="JLF22",
+        waist_flat_measurement_cm=41.2,
     )
 
     title, description = template.render(fields)

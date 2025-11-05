@@ -236,8 +236,16 @@ class ListingTemplate:
 
 def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
     fit_title, fit_description, fit_hashtag = normalize_fit_terms(fields.fit_leg)
+    waist_measurement_value = fields.waist_measurement_cm
+    if (
+        (waist_measurement_value is None or waist_measurement_value <= 0)
+        and fields.waist_flat_measurement_cm is not None
+        and fields.waist_flat_measurement_cm > 0
+    ):
+        waist_measurement_value = fields.waist_flat_measurement_cm
+
     measurement_fr = fr_size_from_waist_measurement(
-        fields.waist_measurement_cm, ensure_even=True
+        waist_measurement_value, ensure_even=True
     )
 
     size_note: Optional[str] = None
@@ -249,7 +257,7 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
             fields.fr_size,
             fields.has_elastane,
             ensure_even_fr=True,
-            waist_measurement_cm=fields.waist_measurement_cm,
+            waist_measurement_cm=waist_measurement_value,
         )
         fr_display = normalized_sizes.fr_size or _clean(fields.fr_size)
         us_display = normalized_sizes.us_size
