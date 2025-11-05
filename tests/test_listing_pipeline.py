@@ -558,17 +558,31 @@ def test_normalize_sizes_rounds_up_odd_us_when_requested() -> None:
     assert computed.note is None
 
 
+def test_normalize_sizes_keeps_labels_when_measurement_close() -> None:
+    computed: NormalizedSizes = normalize_sizes(
+        "31",
+        "42",
+        False,
+        ensure_even_fr=True,
+        waist_measurement_cm=43,
+    )
+    assert computed.fr_size == "42"
+    assert computed.us_size == "31"
+    assert computed.note is None
+
+
 def test_normalize_sizes_rounds_down_when_measurement_is_smaller() -> None:
     computed: NormalizedSizes = normalize_sizes(
         "31",
         None,
         False,
         ensure_even_fr=True,
-        waist_measurement_cm=38,
+        waist_measurement_cm=30,
     )
-    assert computed.fr_size == "40"
-    assert computed.us_size == "31"
-    assert computed.note is None
+    assert computed.fr_size == "34"
+    assert computed.us_size is None
+    assert computed.note is not None
+    assert "~60 cm" in computed.note
 
 
 def test_normalize_sizes_rounds_up_when_measurement_is_larger() -> None:
@@ -577,11 +591,12 @@ def test_normalize_sizes_rounds_up_when_measurement_is_larger() -> None:
         None,
         False,
         ensure_even_fr=True,
-        waist_measurement_cm=44,
+        waist_measurement_cm=48,
     )
-    assert computed.fr_size == "42"
-    assert computed.us_size == "31"
-    assert computed.note is None
+    assert computed.fr_size == "48"
+    assert computed.us_size is None
+    assert computed.note is not None
+    assert "~96 cm" in computed.note
 
 
 def test_normalize_sizes_falls_back_to_waist_measurement() -> None:
@@ -590,40 +605,53 @@ def test_normalize_sizes_falls_back_to_waist_measurement() -> None:
         None,
         False,
         ensure_even_fr=True,
-        waist_measurement_cm=74,
+        waist_measurement_cm=44,
     )
-    assert computed.fr_size == "74"
+    assert computed.fr_size == "44"
     assert computed.us_size is None
     assert computed.note is not None
-    assert "74 cm" in computed.note
+    assert "~88 cm" in computed.note
+
+
+def test_normalize_sizes_converts_small_flat_measurement() -> None:
+    computed: NormalizedSizes = normalize_sizes(
+        None,
+        None,
+        False,
+        ensure_even_fr=True,
+        waist_measurement_cm=33,
+    )
+    assert computed.fr_size == "36"
+    assert computed.us_size is None
+    assert computed.note is not None
+    assert "~66 cm" in computed.note
 
 
 def test_normalize_sizes_prefers_measurement_when_conflict() -> None:
     computed: NormalizedSizes = normalize_sizes(
-        "28",
-        "38",
+        "31",
+        "42",
         False,
         ensure_even_fr=True,
-        waist_measurement_cm=74,
+        waist_measurement_cm=33,
     )
-    assert computed.fr_size == "74"
+    assert computed.fr_size == "36"
     assert computed.us_size is None
     assert computed.note is not None
-    assert "74 cm" in computed.note
+    assert "~66 cm" in computed.note
 
 
 def test_normalize_sizes_prefers_measurement_when_gap_is_smaller() -> None:
     computed: NormalizedSizes = normalize_sizes(
         "31",
-        None,
+        "42",
         False,
         ensure_even_fr=True,
-        waist_measurement_cm=30,
+        waist_measurement_cm=44,
     )
-    assert computed.fr_size == "30"
-    assert computed.us_size is None
-    assert computed.note is not None
-    assert "30 cm" in computed.note
+    assert computed.fr_size == "42"
+    assert computed.us_size == "31"
+    assert computed.note is None
 
 
 def test_template_render_injects_normalized_terms(template_registry: ListingTemplateRegistry) -> None:
@@ -675,14 +703,15 @@ def test_render_template_prefers_measurement_when_conflict(
     fields = ListingFields.from_dict(
         {
             "model": "501",
-            "fr_size": "38",
-            "us_w": "28",
+            "fr_size": "42",
+            "us_w": "31",
             "us_l": "30",
             "fit_leg": "bootcut",
             "rise_class": "haute",
             "rise_measurement_cm": "",
+            "waist_measurement_cm": "",
             **MEASUREMENT_EMPTY,
-            "waist_measurement_cm": "74",
+            "waist_flat_measurement_cm": "33",
             "cotton_pct": "99",
             "polyester_pct": "0",
             "polyamide_pct": "",
@@ -701,10 +730,10 @@ def test_render_template_prefers_measurement_when_conflict(
 
     title, description = render_template_jean_levis_femme(fields)
 
-    assert "FR74" in title
-    assert "W28" not in title
-    assert "Taille 74 FR" in description
-    assert "Taille 28 US" not in description
+    assert "FR36" in title
+    assert "W31" not in title
+    assert "Taille 36 FR" in description
+    assert "Taille 31 US" not in description
     assert "(voir photos)" in description
     assert "Taille estimée à partir" not in description
 
@@ -959,8 +988,9 @@ def test_template_render_uses_waist_measurement_when_label_hidden(
             "fit_leg": "straight",
             "rise_class": "moyenne",
             "rise_measurement_cm": "",
-            "waist_measurement_cm": "74",
-        **MEASUREMENT_EMPTY,
+            "waist_measurement_cm": "",
+            **MEASUREMENT_EMPTY,
+            "waist_flat_measurement_cm": "44",
             "cotton_pct": "99",
             "polyester_pct": "0",
             "polyamide_pct": "",
@@ -979,8 +1009,8 @@ def test_template_render_uses_waist_measurement_when_label_hidden(
 
     title, description = template.render(fields)
 
-    assert "FR74" in title
-    assert "Taille 74 FR" in description
+    assert "FR44" in title
+    assert "Taille 44 FR" in description
     assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
     assert COMPOSITION_LABEL_CUT_MESSAGE not in description
     assert SIZE_LABEL_CUT_MESSAGE not in description

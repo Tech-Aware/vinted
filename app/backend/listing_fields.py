@@ -622,6 +622,7 @@ class ListingFields:
                     \"rise_class\": \"hauteur de taille (basse, moyenne, haute, très haute) ; renvoie \"\" si non confirmée\",
                     \"rise_measurement_cm\": \"mesure en cm entre le haut de la ceinture et l'entrejambe lorsque visible ; sinon renvoie \"\"\",
                     \"waist_measurement_cm\": \"tour de taille mesuré en cm lorsque visible ; sinon renvoie \"\"\",
+                    \"waist_flat_measurement_cm\": \"largeur taille à plat en cm (multiplie par 2 pour retrouver le tour complet) ; renvoie \"\" si absente ou floue\",
                     \"cotton_pct\": \"pourcentage de coton indiqué sur l'étiquette ; renvoie \"\" si l'information n'est pas lisible\",
                     \"polyester_pct\": \"pourcentage de polyester indiqué ; renvoie \"\" si absent ou illisible\",
                     \"polyamide_pct\": \"pourcentage de polyamide indiqué ; renvoie \"\" si absent ou illisible\",

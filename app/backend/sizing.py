@@ -16,7 +16,7 @@ limitations under the License.
 
 import re
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 
 
 @dataclass
@@ -40,6 +40,45 @@ _WAIST_MEASUREMENT_NOTE = (
 _CM_PER_INCH = 2.54
 
 _WAIST_MEASUREMENT_OVERRIDE_THRESHOLD_CM = 4
+
+
+def _compute_fr_from_waist_measurement(
+    measurement_cm: float, *, ensure_even_fr: bool
+) -> Optional[Tuple[int, int, float]]:
+    """Convert a raw waist measurement to FR/US size equivalents."""
+
+    if measurement_cm <= 0:
+        return None
+
+    circumference_cm = measurement_cm * 2 if measurement_cm < 60 else measurement_cm
+    if circumference_cm <= 0:
+        return None
+
+    waist_inch = circumference_cm / _CM_PER_INCH
+    if waist_inch <= 0:
+        return None
+
+    us_numeric = int(round(waist_inch))
+    if us_numeric <= 0:
+        return None
+
+    fr_float = waist_inch + 10
+    fr_numeric = int(round(fr_float))
+
+    if ensure_even_fr and fr_numeric % 2:
+        lower_even = fr_numeric - 1
+        upper_even = fr_numeric + 1
+        candidates: list[Tuple[float, int]] = []
+        if lower_even > 0:
+            candidates.append((abs(fr_float - lower_even), lower_even))
+        candidates.append((abs(fr_float - upper_even), upper_even))
+        candidates.sort(key=lambda item: (item[0], item[1]))
+        fr_numeric = candidates[0][1]
+
+    if fr_numeric <= 0:
+        return None
+
+    return fr_numeric, us_numeric, circumference_cm
 
 _SIZE_CHART_BUST_CM = (
     (84.0, "FR 34 (XS)"),
@@ -146,24 +185,24 @@ def _extract_int(value: Optional[str]) -> Optional[int]:
 def fr_size_from_waist_measurement(
     waist_measurement_cm: Optional[float], *, ensure_even: bool = True
 ) -> Optional[str]:
-    """Round a waist measurement (cm) to a FR size value.
-
-    The measurement is rounded to the nearest integer centimeter. When ``ensure_even``
-    is ``True`` and the rounded value is odd, the next even number is returned.
-    """
+    """Convert a waist measurement in centimeters to a FR size value."""
 
     if waist_measurement_cm is None:
         return None
-    if waist_measurement_cm <= 0:
+
+    try:
+        numeric_value = float(waist_measurement_cm)
+    except (TypeError, ValueError):
         return None
 
-    rounded_value = int(round(waist_measurement_cm))
-    if rounded_value <= 0:
+    estimate = _compute_fr_from_waist_measurement(
+        numeric_value, ensure_even_fr=ensure_even
+    )
+    if estimate is None:
         return None
 
-    if ensure_even and rounded_value % 2:
-        rounded_value += 1
-    return str(rounded_value)
+    fr_numeric, _us_numeric, _circumference = estimate
+    return str(fr_numeric)
 
 
 def normalize_sizes(
@@ -203,26 +242,26 @@ def normalize_sizes(
         except (TypeError, ValueError):
             measurement_numeric = None
 
-    if measurement_numeric is not None and measurement_numeric <= 0:
-        measurement_numeric = None
+    measurement_estimate: Optional[Tuple[int, int, float]] = None
+    if measurement_numeric is not None:
+        measurement_estimate = _compute_fr_from_waist_measurement(
+            measurement_numeric, ensure_even_fr=ensure_even_fr
+        )
 
     measurement_value: Optional[int] = None
-    if measurement_numeric is not None:
-        measurement_value = int(round(measurement_numeric))
-
-    measurement_fr = fr_size_from_waist_measurement(
-        measurement_numeric, ensure_even=ensure_even_fr
-    )
     measurement_note: Optional[str] = None
     measurement_sizes: Optional[NormalizedSizes] = None
-    if measurement_fr is not None:
+    if measurement_estimate is not None:
+        measurement_fr_numeric, _measurement_us_numeric, measurement_circumference = (
+            measurement_estimate
+        )
+        measurement_value = measurement_fr_numeric
         measurement_note = _WAIST_MEASUREMENT_NOTE
-        if measurement_numeric is not None:
-            measurement_note = (
-                f"{measurement_note} (~{int(round(measurement_numeric))} cm)."
-            )
+        measurement_note = (
+            f"{measurement_note} (~{int(round(measurement_circumference))} cm)."
+        )
         measurement_sizes = NormalizedSizes(
-            fr_size=measurement_fr, us_size=None, note=measurement_note
+            fr_size=str(measurement_fr_numeric), us_size=None, note=measurement_note
         )
 
     def _adjust_even(value: int) -> int:
