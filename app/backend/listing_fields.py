@@ -643,8 +643,15 @@ class ListingFields:
                 Indique la coupe en anglais dans 'fit_leg' (ex: bootcut, straight, slim).
                 Ne remplis jamais un champ avec une valeur estimée ou supposée ; retourne la chaîne vide quand une information est manquante ou incertaine.
                 N'invente jamais de matière : si une fibre n'est pas clairement indiquée ou que la ligne est illisible, renvoie la chaîne vide pour ce champ.
-                Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.
+                Lis systématiquement trois étiquettes distinctes :
+                  • l'étiquette principale à l'intérieur de la ceinture pour récupérer UNIQUEMENT la marque Levi's, le code modèle, la hauteur de taille et la coupe ;
+                  • l'étiquette de composition pour recopier chaque fibre et son pourcentage ;
+                  • l'étiquette de taille placée derrière la composition pour noter précisément le couple W/L.
+                Ne retiens aucune autre information figurant sur ces étiquettes et ignore le reste du texte.
+                Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible sur les photos.
+                Si l'étiquette de composition est absente, coupée pour plus de confort ou illisible, laisse tous les pourcentages vides, mets 'fabric_label_visible' à false et positionne 'fabric_label_cut' à true uniquement lorsqu'une coupe volontaire est manifeste ; sinon laisse 'fabric_label_cut' à false.
                 Lorsque l'étiquette de taille est absente ou illisible mais qu'une mesure nette du tour de taille est visible, renseigne 'waist_measurement_cm' en centimètres et laisse les champs 'fr_size', 'us_w' et 'us_l' vides.
+                Si les étiquettes de taille ET de composition ont été retirées pour plus de confort, mets 'size_label_visible' et 'fabric_label_visible' à false et 'fabric_label_cut' à true.
                 """
             ).strip()
 
