@@ -1201,8 +1201,10 @@ def _build_base_polaire_payload(**overrides: object) -> dict[str, object]:
         "waist_flat_measurement_cm": 48.0,
         "hem_flat_measurement_cm": 49.0,
         "zip_style": "1/4 zip",
+        "neckline_style": "col montant",
         "feature_notes": "Empiècements contrastés",
         "technical_features": "Polartec recyclé",
+        "special_logo": "",
         "has_hood": True,
     }
     payload.update(overrides)
@@ -1255,8 +1257,10 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
         sku="PTNF-42",
         brand="The North Face",
         zip_style="1/4 zip",
+        neckline_style="col montant",
         feature_notes="Col montant doublé",
         technical_features="Polartec recyclé",
+        special_logo="ruban rose",
         has_hood=True,
         bust_flat_measurement_cm=49.0,
         length_measurement_cm=62.0,
@@ -1271,6 +1275,8 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
     assert "Polaire The North Face" in title
     assert "PTNF-42" in title
     assert "1/4 zip" in title
+    assert "col montant" in title
+    assert "ruban rose" in title
     assert "Composition : 100% polyester" in description
     assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
 
@@ -1278,6 +1284,7 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
     assert "#thenorthface" in hashtags_line
     assert "#polairefemme" in hashtags_line
     assert "#durin31tnfM" in hashtags_line
+    assert "#durin31fM" in hashtags_line
 
 
 def test_render_polaire_outdoor_skips_polyester_default_when_defects_mentions_fiber() -> None:
@@ -1306,8 +1313,10 @@ def test_render_polaire_outdoor_skips_polyester_default_when_defects_mentions_fi
         sku="PTNF-43",
         brand="The North Face",
         zip_style="1/4 zip",
+        neckline_style="col montant",
         feature_notes="Col montant doublé",
         technical_features="Polartec recyclé",
+        special_logo="",
         has_hood=True,
         bust_flat_measurement_cm=49.0,
         length_measurement_cm=62.0,
@@ -1349,8 +1358,10 @@ def test_render_polaire_outdoor_handles_columbia_material_and_hashtags() -> None
         sku="PC-7",
         brand="Columbia",
         zip_style="zip intégral",
+        neckline_style="col montant",
         feature_notes="Poches zippées",
         technical_features="Omni-Heat",
+        special_logo="patch expédition",
         has_hood=False,
         bust_flat_measurement_cm=52.0,
         length_measurement_cm=64.0,
@@ -1367,6 +1378,7 @@ def test_render_polaire_outdoor_handles_columbia_material_and_hashtags() -> None
     assert "PC-7" in title
     assert "Poches zippées" in description
     assert "Omni-Heat" in description
+    assert "patch expédition" in title
     assert "80% polyester" in description
 
     hashtags_line = description.splitlines()[-1]
