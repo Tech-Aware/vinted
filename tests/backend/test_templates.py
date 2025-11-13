@@ -1241,13 +1241,13 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
         rise_measurement_cm=None,
         waist_measurement_cm=None,
         cotton_pct="",
-        polyester_pct="",
+        polyester_pct="100",
         polyamide_pct="",
         viscose_pct="",
         elastane_pct="",
         gender="Femme",
         color_main="noir",
-        defects="",
+        defects="Petite tache sur la manche",
         defect_tags=(),
         size_label_visible=False,
         fabric_label_visible=False,
@@ -1278,6 +1278,49 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
     assert "#thenorthface" in hashtags_line
     assert "#polairefemme" in hashtags_line
     assert "#durin31tnfM" in hashtags_line
+
+
+def test_render_polaire_outdoor_skips_polyester_default_when_defects_mentions_fiber() -> None:
+    template = ListingTemplateRegistry().get_template("template-polaire-outdoor")
+    fields = ListingFields(
+        model="Denali",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="",
+        polyester_pct="100",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="Femme",
+        color_main="noir",
+        defects="Matière rappelant plutôt un mélange coton",
+        defect_tags=(),
+        size_label_visible=False,
+        fabric_label_visible=False,
+        fabric_label_cut=False,
+        sku="PTNF-43",
+        brand="The North Face",
+        zip_style="1/4 zip",
+        feature_notes="Col montant doublé",
+        technical_features="Polartec recyclé",
+        has_hood=True,
+        bust_flat_measurement_cm=49.0,
+        length_measurement_cm=62.0,
+        sleeve_measurement_cm=60.0,
+        shoulder_measurement_cm=41.0,
+        waist_flat_measurement_cm=48.0,
+        hem_flat_measurement_cm=47.0,
+    )
+
+    _, description = template.render(fields)
+
+    assert "Composition : 100% polyester" not in description
+    assert COMBINED_LABEL_CUT_MESSAGE in description
 
 
 def test_render_polaire_outdoor_handles_columbia_material_and_hashtags() -> None:
