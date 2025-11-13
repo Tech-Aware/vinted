@@ -1456,7 +1456,9 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
 
     fourth_paragraph_lines = [
         f"✨ Retrouvez toutes mes polaires {brand_display} ici 👉 #durin31{brand_short_code}{size_hashtag}",
-        f"👀 Filtre toutes mes pièces {audience_label} taille {size_hashtag} (polaire, pull, jacket…) 👉 {gender_size_hashtag}",
+        "",
+        f"👀 Filtrez toutes mes pièces {audience_label} taille {size_hashtag} (polaire, pull, jacket…) 👉 {gender_size_hashtag}",
+        "",
         "💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !",
     ]
 
@@ -1647,7 +1649,9 @@ class ListingTemplateRegistry:
                     📦 Envoi rapide et soigné
 
                     ✨ Retrouvez toutes mes polaires {{brand}} ici 👉 #durin31{{brand_short_code}}{{fr_size}}
-                    👀 Filtre toutes mes pièces {{gender}} taille {{fr_size}} (polaire, pull, jacket…) 👉 #durin31f{{fr_size}} ou #durin31h{{fr_size}} selon le genre
+
+                    👀 Filtrez toutes mes pièces {{gender}} taille {{fr_size}} (polaire, pull, jacket…) 👉 #durin31f{{fr_size}} ou #durin31h{{fr_size}} selon le genre
+
                     💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !
 
                     #thenorthface ou #columbia selon la marque + hashtags outdoor (max 10, inclure le hashtag taille #durin31f{{fr_size}} / #durin31h{{fr_size}}).
