@@ -1283,9 +1283,7 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     if composition_parts:
         composition_sentence = f"Composition : {_join_fibers(composition_parts)}."
     elif should_assume_polyester:
-        composition_sentence = (
-            "Composition : 100% polyester (information standard confirmée faute d'étiquette lisible)."
-        )
+        composition_sentence = "Composition : 100% polyester"
     elif composition_label_unavailable:
         if size_label_missing:
             composition_sentence = combined_label_cut_message
