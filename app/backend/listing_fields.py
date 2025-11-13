@@ -149,6 +149,11 @@ class ListingFields:
     acrylic_pct: FieldValue = None
     knit_pattern: FieldValue = None
     made_in: FieldValue = None
+    brand: FieldValue = None
+    zip_style: FieldValue = None
+    feature_notes: FieldValue = None
+    technical_features: FieldValue = None
+    has_hood: bool = False
     bust_flat_measurement_cm: Optional[float] = None
     length_measurement_cm: Optional[float] = None
     sleeve_measurement_cm: Optional[float] = None
@@ -193,7 +198,10 @@ class ListingFields:
         )
 
         required_fields: tuple[str, ...]
-        if template_normalized == "template-pull-tommy-femme":
+        if template_normalized in {
+            "template-pull-tommy-femme",
+            "template-polaire-outdoor",
+        }:
             required_fields = always_required_fields + measurement_fields
         else:
             required_fields = always_required_fields
@@ -237,6 +245,10 @@ class ListingFields:
         cashmere_pct = normalize(data.get("cashmere_pct"))
         knit_pattern = normalize(data.get("knit_pattern"))
         made_in = normalize(data.get("made_in"))
+        brand = normalize(data.get("brand"))
+        zip_style = normalize(data.get("zip_style"))
+        feature_notes = normalize(data.get("feature_notes"))
+        technical_features = normalize(data.get("technical_features"))
         sku_raw = normalize(data.get("sku"))
 
         defect_tags_raw = data.get("defect_tags", [])
@@ -261,6 +273,9 @@ class ListingFields:
         )
         is_dress = ListingFields._normalize_visibility_flag(
             data.get("is_dress"), default=False
+        )
+        has_hood = ListingFields._normalize_visibility_flag(
+            data.get("has_hood"), default=False
         )
 
         bust_flat_measurement_cm = ListingFields._parse_measurement(
@@ -287,6 +302,8 @@ class ListingFields:
 
             if template_normalized == "template-pull-tommy-femme":
                 allowed_patterns.append(r"^PTF\d{1,3}$")
+            elif template_normalized == "template-polaire-outdoor":
+                allowed_patterns.extend([r"^PTNF-\d{1,3}$", r"^PC-\d{1,3}$"])
             else:
                 allowed_patterns.append(r"^JLF\d{1,3}$")
 
@@ -295,9 +312,24 @@ class ListingFields:
                     raise ValueError(
                         "SKU invalide: utilise le préfixe PTF suivi de 1 à 3 chiffres pour le template Pull Tommy femme."
                     )
+                if template_normalized == "template-polaire-outdoor":
+                    raise ValueError(
+                        "SKU invalide: utilise PTNF-n pour The North Face ou PC-n pour Columbia (1 à 3 chiffres)."
+                    )
                 raise ValueError(
                     "SKU invalide: utilise le préfixe Levi's autorisé (JLF) suivi de 1 à 3 chiffres."
                 )
+
+            if template_normalized == "template-polaire-outdoor" and brand:
+                normalized_brand = _normalize_text(brand)
+                if "north face" in normalized_brand and not sku.startswith("PTNF-"):
+                    raise ValueError(
+                        "SKU invalide: les articles The North Face doivent utiliser le préfixe PTNF-."
+                    )
+                if "columbia" in normalized_brand and not sku.startswith("PC-"):
+                    raise ValueError(
+                        "SKU invalide: les articles Columbia doivent utiliser le préfixe PC-."
+                    )
 
         return cls(
             model=normalize_model_code(model),
@@ -327,6 +359,11 @@ class ListingFields:
             cashmere_pct=cashmere_pct,
             knit_pattern=knit_pattern,
             made_in=made_in,
+            brand=brand,
+            zip_style=zip_style,
+            feature_notes=feature_notes,
+            technical_features=technical_features,
+            has_hood=has_hood,
             is_cardigan=is_cardigan,
             is_dress=is_dress,
             bust_flat_measurement_cm=bust_flat_measurement_cm,
@@ -606,6 +643,62 @@ class ListingFields:
                 Mentionne « Made in Europe » uniquement si l'étiquette confirme un pays européen et n'invente jamais de provenance.
                 Dans le titre, supprime les pourcentages de laine ou de cachemire lorsqu'ils sont faibles, mais conserve la valeur numérique exacte dans la description et recopie-la dans les champs 'wool_pct' et 'cashmere_pct' dès que l'étiquette est lisible ; écris simplement « coton » si le pourcentage de coton est inférieur à 60%.
                 Si une étiquette SKU claire est visible, tu dois recopier exactement la référence PTF correspondante sinon la génération échouera.
+                """
+            ).strip()
+        elif template_name == "template-polaire-outdoor":
+            instruction = dedent(
+                f"""
+                Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :
+                {{
+                  \"fields\": {{
+                    \"brand\": \"marque lisible (The North Face, Columbia) ; laisse vide si incertain\",
+                    \"model\": \"nom ou référence du produit ; renvoie \"\" si aucune info fiable\",
+                    \"fr_size\": \"taille FR visible (XS/S/M/...) ; renvoie \"\" si non lisible\",
+                    \"us_w\": \"laisse ce champ vide pour les polaires\",
+                    \"us_l\": \"laisse ce champ vide pour les polaires\",
+                    \"fit_leg\": \"laisse ce champ vide pour les polaires\",
+                    \"rise_class\": \"laisse ce champ vide pour les polaires\",
+                    \"rise_measurement_cm\": \"laisse vide pour les polaires\",
+                    \"waist_measurement_cm\": \"laisse vide pour les polaires\",
+                    \"bust_flat_measurement_cm\": \"largeur de poitrine à plat en cm ; laisse vide si absente\",
+                    \"length_measurement_cm\": \"longueur dos en cm si une mesure nette est visible ; sinon renvoie \"\"\",
+                    \"sleeve_measurement_cm\": \"longueur de manche mesurée ; sinon renvoie \"\"\",
+                    \"shoulder_measurement_cm\": \"largeur d'épaule à plat ; sinon renvoie \"\"\",
+                    \"waist_flat_measurement_cm\": \"largeur taille à plat ; sinon renvoie \"\"\",
+                    \"hem_flat_measurement_cm\": \"largeur bas de vêtement à plat ; sinon renvoie \"\"\",
+                    \"cotton_pct\": \"pourcentage de coton lisible ; renvoie \"\" si absent\",
+                    \"wool_pct\": \"pourcentage de laine lisible ; renvoie \"\" si absent\",
+                    \"cashmere_pct\": \"pourcentage de cachemire lisible ; renvoie \"\" si absent\",
+                    \"polyester_pct\": \"pourcentage de polyester lisible ; si aucune autre matière n'est mentionnée dans la boîte tâches/défauts et qu'aucune étiquette n'est exploitable, renseigne 100\",
+                    \"polyamide_pct\": \"pourcentage de polyamide lisible ; renvoie \"\" si absent\",
+                    \"viscose_pct\": \"pourcentage de viscose lisible ; renvoie \"\" si absent\",
+                    \"elastane_pct\": \"pourcentage d'élasthanne lisible ; renvoie \"\" si absent\",
+                    \"nylon_pct\": \"pourcentage de nylon lisible ; renvoie \"\" si absent\",
+                    \"acrylic_pct\": \"pourcentage d'acrylique lisible ; renvoie \"\" si absent\",
+                    \"gender\": \"genre ciblé (femme, homme, mix) ; renvoie \"\" si incertain\",
+                    \"color_main\": \"couleur principale visible\",
+                    \"zip_style\": \"type d'ouverture (1/4 zip, zip intégral, col montant, demi-zip, etc.)\",
+                    \"feature_notes\": \"notes de style (poche kangourou, col montant, ourlet ajustable) ; renvoie \"\" si rien à signaler\",
+                    \"technical_features\": \"technologies ou matières (Polartec, Omni-Heat, DryVent, etc.) ; renvoie \"\" si rien à signaler\",
+                    \"has_hood\": \"true/false : true uniquement si une capuche est visible\",
+                    \"defects\": \"défauts ou taches identifiés ; renvoie \"\" s'il n'y en a pas\",
+                    \"defect_tags\": \"liste de slugs parmi [{slugs}] à renseigner UNIQUEMENT si le défaut est visible\",
+                    \"size_label_visible\": \"true/false : true uniquement si l'étiquette de taille est parfaitement lisible\",
+                    \"fabric_label_visible\": \"true/false : true uniquement si l'étiquette de composition est parfaitement lisible\",
+                    \"fabric_label_cut\": \"true/false : true si l'étiquette matière a été coupée volontairement ; false sinon\",
+                    \"non_size_labels_visible\": \"true/false : true si d'autres étiquettes (marque, made in, instructions) sont visibles\",
+                    \"sku\": \"SKU polaire : PTNF-n (1 à 3 chiffres) pour The North Face, PC-n pour Columbia ; renvoie \"\" si non lisible et ne jamais inventer\"
+                  }}
+                }}
+                N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
+                Règles spécifiques :
+                - Renseigne systématiquement les mesures à plat lorsqu'elles sont visibles, sinon renvoie la chaîne vide.
+                - Ne mets la matière dans le titre que lorsque la fibre est intéressante (coton, laine, cachemire, soie) et sans pourcentage.
+                - Sauf commentaire explicite dans la boîte tâches/défauts signalant une matière différente, considère les polaires comme 100% polyester lorsque l'étiquette n'est pas lisible : mets \"polyester_pct\" à \"100\" et laisse les autres fibres vides.
+                - Les champs brand/model/zip_style/feature_notes/technical_features ne doivent contenir que des informations confirmées par les photos.
+                - has_hood = true uniquement si une capuche est clairement visible.
+                - Le SKU doit reprendre exactement le format PTNF-n ou PC-n selon la marque détectée ; renvoie \"\" si l'information est absente.
+                - Rappelle les mentions d'étiquettes coupées via fabric_label_visible/fabric_label_cut.
                 """
             ).strip()
         else:
