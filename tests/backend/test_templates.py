@@ -1225,6 +1225,30 @@ def test_listing_fields_accepts_polaire_sku_prefixes() -> None:
     assert fields_col.sku == "PC-9"
 
 
+def test_listing_fields_normalizes_polaire_sku_variants() -> None:
+    payload = _build_base_polaire_payload(sku="ptnf 12", brand="The North Face")
+    fields = ListingFields.from_dict(payload, template_name="template-polaire-outdoor")
+    assert fields.sku == "PTNF-12"
+
+    digits_only_payload = _build_base_polaire_payload(sku="17", brand="The North Face")
+    digits_only_fields = ListingFields.from_dict(
+        digits_only_payload, template_name="template-polaire-outdoor"
+    )
+    assert digits_only_fields.sku == "PTNF-17"
+
+    compact_payload = _build_base_polaire_payload(sku="pc12", brand="Columbia")
+    compact_fields = ListingFields.from_dict(
+        compact_payload, template_name="template-polaire-outdoor"
+    )
+    assert compact_fields.sku == "PC-12"
+
+    long_payload = _build_base_polaire_payload(sku="ptnf-1234", brand="The North Face")
+    long_fields = ListingFields.from_dict(
+        long_payload, template_name="template-polaire-outdoor"
+    )
+    assert long_fields.sku == "PTNF-123"
+
+
 def test_listing_fields_rejects_mismatched_polaire_brand_and_sku() -> None:
     payload = _build_base_polaire_payload(sku="PTNF-20", brand="Columbia")
     with pytest.raises(ValueError):
@@ -1285,6 +1309,50 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
     assert "#polairefemme" in hashtags_line
     assert "#durin31tnfM" in hashtags_line
     assert "#durin31fM" in hashtags_line
+
+
+def test_generate_listing_recovers_missing_polaire_sku(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    template = ListingTemplateRegistry().get_template("template-polaire-outdoor")
+    base_payload = _build_base_polaire_payload(sku="", brand="The North Face")
+    payload = {"fields": base_payload}
+
+    class _FakeResponse:
+        def __init__(self, text: str) -> None:
+            self.output_text = text
+
+    class _FakeResponses:
+        def __init__(self, text: str) -> None:
+            self._text = text
+
+        def create(self, **_kwargs: object) -> _FakeResponse:
+            return _FakeResponse(self._text)
+
+    class _FakeClient:
+        def __init__(self, text: str) -> None:
+            self.responses = _FakeResponses(text)
+
+    generator = ListingGenerator()
+    generator._client = _FakeClient(json.dumps(payload))  # type: ignore[attr-defined]
+
+    calls: dict[str, int] = {"count": 0}
+
+    def _fake_recover(
+        self: ListingGenerator, encoded_images: list[str], user_comment: str
+    ) -> str:
+        calls["count"] += 1
+        assert encoded_images == []
+        assert user_comment == ""
+        return "```text\nPTNF-77```"
+
+    monkeypatch.setattr(ListingGenerator, "_recover_polaire_sku", _fake_recover, raising=True)
+
+    result = generator.generate_listing([], "", template)
+
+    assert calls["count"] == 1
+    assert "PTNF-77" in result.title
+    assert result.sku_missing is False
 
 
 def test_render_polaire_outdoor_skips_polyester_default_when_defects_mentions_fiber() -> None:

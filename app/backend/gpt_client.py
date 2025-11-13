@@ -203,6 +203,22 @@ class ListingGenerator:
             recovered_sku = match.group(0).strip().upper()
             fields = replace(fields, sku=recovered_sku)
 
+        if template.name == "template-polaire-outdoor" and not (fields.sku and fields.sku.strip()):
+            logger.step("Récupération ciblée du SKU polaire")
+            recovered_sku_raw = self._recover_polaire_sku(encoded_images_list, user_comment)
+            recovered_sku_raw = (recovered_sku_raw or "").strip()
+            fenced = re.fullmatch(r"```[a-zA-Z0-9_-]*\s*(.*?)\s*```", recovered_sku_raw, re.DOTALL)
+            if fenced:
+                recovered_sku_raw = fenced.group(1)
+            match = re.search(r"(PTNF|PC)-\d{1,3}", recovered_sku_raw, re.IGNORECASE)
+            if not match:
+                raise ValueError(
+                    "Impossible de récupérer un SKU polaire lisible. "
+                    "Merci de fournir la référence dans le commentaire ou des photos plus nettes."
+                )
+            recovered_sku = match.group(0).strip().upper()
+            fields = replace(fields, sku=recovered_sku)
+
         title, description = template.render(fields)
         logger.success("Titre et description générés depuis les données structurées")
 
@@ -258,6 +274,56 @@ class ListingGenerator:
             )
         except Exception:
             logger.exception("Échec de la récupération ciblée du SKU Tommy Hilfiger")
+            raise
+
+        return self._extract_response_text(response)
+
+    def _recover_polaire_sku(
+        self, encoded_images: Sequence[str], user_comment: str
+    ) -> str:
+        """Run a targeted prompt to recover the polaire SKU."""
+
+        user_content: List[dict] = []
+        for image in encoded_images:
+            user_content.append({"type": "input_image", "image_url": image})
+
+        prompt_lines = [
+            "Analyse uniquement les photos ci-dessus.",
+            "Repère un SKU polaire au format PTNF-n (1 à 3 chiffres) pour The North Face ou PC-n pour Columbia.",
+            "Si tu lis clairement ce code, réponds uniquement avec ce SKU exact.",
+            "Si aucun code n'est lisible, réponds avec une chaîne vide sans autre texte.",
+        ]
+        if user_comment:
+            prompt_lines.append(
+                "Ignore les spéculations du commentaire utilisateur sauf s'il confirme explicitement le SKU."
+            )
+
+        user_content.append({"type": "input_text", "text": "\n".join(prompt_lines)})
+
+        messages = [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": (
+                            "Tu es un assistant vendeur Vinted. Retourne uniquement le SKU polaire demandé."
+                        ),
+                    }
+                ],
+            },
+            {"role": "user", "content": user_content},
+        ]
+
+        try:
+            response = self.client.responses.create(
+                model=self.model,
+                input=messages,
+                max_output_tokens=50,
+                temperature=0.0,
+            )
+        except Exception:
+            logger.exception("Échec de la récupération ciblée du SKU polaire")
             raise
 
         return self._extract_response_text(response)

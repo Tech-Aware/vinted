@@ -275,6 +275,8 @@ class ListingFields:
             data.get("non_size_labels_visible"), default=False
         )
         sku = sku_raw.upper() if sku_raw else sku_raw
+        if sku and template_normalized == "template-polaire-outdoor":
+            sku = ListingFields._normalize_polaire_sku(sku, brand)
         is_cardigan = ListingFields._normalize_visibility_flag(
             data.get("is_cardigan"), default=False
         )
@@ -383,6 +385,46 @@ class ListingFields:
             hem_flat_measurement_cm=hem_flat_measurement_cm,
             non_size_labels_visible=non_size_labels_visible,
         )
+
+    @staticmethod
+    def _normalize_polaire_sku(value: str, brand: FieldValue) -> str:
+        """Normalize loosely formatted polaire SKUs before validation."""
+
+        cleaned = value.strip().upper()
+        if not cleaned:
+            return cleaned
+
+        collapsed = re.sub(r"[^A-Z0-9]", "", cleaned)
+        if not collapsed:
+            return cleaned
+
+        prefix_match = re.search(r"(PTNF|PC)", collapsed)
+        if prefix_match:
+            prefix = prefix_match.group(1)
+            digits_source = collapsed[prefix_match.end() :]
+        else:
+            prefix = ListingFields._infer_polaire_prefix_from_brand(brand)
+            digits_source = collapsed
+
+        digits = re.sub(r"\D", "", digits_source)
+        if len(digits) > 3:
+            digits = digits[:3]
+
+        if prefix and digits:
+            return f"{prefix}-{digits}"
+
+        return cleaned
+
+    @staticmethod
+    def _infer_polaire_prefix_from_brand(brand: FieldValue) -> Optional[str]:
+        if not brand:
+            return None
+        normalized_brand = _normalize_text(brand)
+        if "north face" in normalized_brand:
+            return "PTNF"
+        if "columbia" in normalized_brand:
+            return "PC"
+        return None
 
     @staticmethod
     def _parse_measurement(value: Any, *, field_name: str) -> Optional[float]:
