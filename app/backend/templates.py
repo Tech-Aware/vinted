@@ -143,6 +143,43 @@ def _contains_normalized_phrase(haystack: str, needle: str) -> bool:
     return _normalize_text_for_comparison(needle) in _normalize_text_for_comparison(haystack)
 
 
+_POLYESTER_CONTRADICTION_KEYWORDS = tuple(
+    _normalize_text_for_comparison(keyword)
+    for keyword in (
+        "coton",
+        "cotton",
+        "laine",
+        "wool",
+        "cachemire",
+        "cashmere",
+        "soie",
+        "silk",
+        "lin",
+        "linen",
+        "chanvre",
+        "hemp",
+        "viscose",
+        "rayonne",
+        "modal",
+        "polyamide",
+        "nylon",
+        "acrylique",
+        "acrylic",
+        "elasthanne",
+        "elastane",
+        "spandex",
+        "lycra",
+    )
+)
+
+
+def _defects_contradict_polyester(text: Optional[str]) -> bool:
+    if not text:
+        return False
+    normalized_text = _normalize_text_for_comparison(text)
+    return any(keyword in normalized_text for keyword in _POLYESTER_CONTRADICTION_KEYWORDS)
+
+
 _NECKLINE_CANDIDATES = (
     "col v",
     "col en v",
@@ -1179,6 +1216,7 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     technical_features = _clean(fields.technical_features)
     sku = (fields.sku or "").strip()
     sku_display = sku if sku else "SKU/nc"
+    defects_original_text = (fields.defects or "").strip()
 
     top_size_estimate = estimate_fr_top_size(
         fields.bust_flat_measurement_cm,
@@ -1201,21 +1239,10 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     composition_label_cut_message = "Étiquette de composition coupée pour plus de confort."
     combined_label_cut_message = "Étiquettes de taille et composition coupées pour plus de confort."
 
-    def _should_apply_polyester_default() -> bool:
-        fiber_candidates = (
-            fields.cotton_pct,
-            fields.wool_pct,
-            fields.cashmere_pct,
-            fields.polyester_pct,
-            fields.polyamide_pct,
-            fields.viscose_pct,
-            fields.elastane_pct,
-            fields.nylon_pct,
-            fields.acrylic_pct,
-        )
-        if any(_clean(value) for value in fiber_candidates):
-            return False
-        return not _clean(fields.defects)
+    should_assume_polyester = (
+        not fields.fabric_label_visible
+        and not _defects_contradict_polyester(defects_original_text)
+    )
 
     cotton_percent = _ensure_percent(fields.cotton_pct) if fields.cotton_pct else ""
     polyester_value = _ensure_percent(fields.polyester_pct) if fields.polyester_pct else ""
@@ -1253,7 +1280,7 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     composition_sentence: str
     if composition_parts:
         composition_sentence = f"Composition : {_join_fibers(composition_parts)}."
-    elif _should_apply_polyester_default():
+    elif should_assume_polyester:
         composition_sentence = (
             "Composition : 100% polyester (information standard confirmée faute d'étiquette lisible)."
         )
