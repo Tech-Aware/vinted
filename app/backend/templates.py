@@ -533,6 +533,30 @@ class PatternRule:
     material_override: Optional[str] = None
 
 
+@dataclass(frozen=True)
+class PolaireBrandRule:
+    keywords: Tuple[str, ...]
+    display: str
+    hashtag: str
+    short_code: str
+
+
+_POLAIRE_BRAND_RULES: Tuple[PolaireBrandRule, ...] = (
+    PolaireBrandRule(
+        keywords=("thenorthface", "north face", "the north face", "tnf"),
+        display="The North Face",
+        hashtag="#thenorthface",
+        short_code="tnf",
+    ),
+    PolaireBrandRule(
+        keywords=("columbia",),
+        display="Columbia",
+        hashtag="#columbia",
+        short_code="col",
+    ),
+)
+
+
 PATTERN_RULES: Tuple[PatternRule, ...] = (
     PatternRule(
         tokens=("losang", "argyle", "ecoss"),
@@ -620,6 +644,29 @@ PATTERN_RULES: Tuple[PatternRule, ...] = (
         hashtags=("#{item_label_lower}graphique",),
     ),
 )
+
+
+def _resolve_polaire_brand(fields: ListingFields) -> Tuple[str, str, str]:
+    sku_value = (fields.sku or "").strip().upper()
+    if sku_value.startswith("PTNF-"):
+        return "The North Face", "#thenorthface", "tnf"
+    if sku_value.startswith("PC-"):
+        return "Columbia", "#columbia", "col"
+
+    candidates = [fields.brand, fields.model]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        normalized_candidate = _normalize_text_for_comparison(candidate)
+        if not normalized_candidate:
+            continue
+        for spec in _POLAIRE_BRAND_RULES:
+            if any(keyword in normalized_candidate for keyword in spec.keywords):
+                return spec.display, spec.hashtag, spec.short_code
+
+    fallback_display = _clean(fields.brand) or "Polaire"
+    fallback_hashtag = "#polaireoutdoor"
+    return fallback_display, fallback_hashtag, "polaire"
 
 
 def _find_pattern_rule(pattern_normalized: str) -> Optional[PatternRule]:
@@ -1120,6 +1167,298 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     return title, description
 
 
+def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
+    size_value = _normalize_apparel_fr_size(fields.fr_size)
+    size_for_title = size_value.upper() if size_value else ""
+    gender_value = _clean(fields.gender) or "femme"
+    brand_display, brand_hashtag, brand_short_code = _resolve_polaire_brand(fields)
+    color = translate_color_to_french(fields.color_main)
+    color = _clean(color)
+    zip_style_value = _clean(fields.zip_style)
+    feature_notes = _clean(fields.feature_notes)
+    technical_features = _clean(fields.technical_features)
+    sku = (fields.sku or "").strip()
+    sku_display = sku if sku else "SKU/nc"
+
+    top_size_estimate = estimate_fr_top_size(
+        fields.bust_flat_measurement_cm,
+        length_measurement_cm=fields.length_measurement_cm,
+    )
+    estimated_size_label = (
+        top_size_estimate.estimated_size if not fields.size_label_visible else None
+    )
+    estimated_size_note = top_size_estimate.note if not fields.size_label_visible else None
+    estimated_size_primary = (
+        _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
+    )
+    length_descriptor = top_size_estimate.length_descriptor
+    bust_flat_display = _format_measurement(fields.bust_flat_measurement_cm)
+    length_display = _format_measurement(fields.length_measurement_cm)
+
+    size_label_missing = not fields.size_label_visible
+    composition_label_unavailable = (not fields.fabric_label_visible) or fields.fabric_label_cut
+    size_label_cut_message = "Étiquette de taille coupée pour plus de confort."
+    composition_label_cut_message = "Étiquette de composition coupée pour plus de confort."
+    combined_label_cut_message = "Étiquettes de taille et composition coupées pour plus de confort."
+
+    def _should_apply_polyester_default() -> bool:
+        fiber_candidates = (
+            fields.cotton_pct,
+            fields.wool_pct,
+            fields.cashmere_pct,
+            fields.polyester_pct,
+            fields.polyamide_pct,
+            fields.viscose_pct,
+            fields.elastane_pct,
+            fields.nylon_pct,
+            fields.acrylic_pct,
+        )
+        if any(_clean(value) for value in fiber_candidates):
+            return False
+        return not _clean(fields.defects)
+
+    cotton_percent = _ensure_percent(fields.cotton_pct) if fields.cotton_pct else ""
+    polyester_value = _ensure_percent(fields.polyester_pct) if fields.polyester_pct else ""
+    viscose_value = _ensure_percent(fields.viscose_pct) if fields.viscose_pct else ""
+    elastane_value = _ensure_percent(fields.elastane_pct) if fields.elastane_pct else ""
+    polyamide_value = _ensure_percent(fields.polyamide_pct) if fields.polyamide_pct else ""
+    wool_value = _ensure_percent(fields.wool_pct) if fields.wool_pct else ""
+    cashmere_value = _ensure_percent(fields.cashmere_pct) if fields.cashmere_pct else ""
+    nylon_value = _ensure_percent(fields.nylon_pct) if fields.nylon_pct else ""
+    acrylic_value = _ensure_percent(fields.acrylic_pct) if fields.acrylic_pct else ""
+
+    composition_parts: List[str] = []
+    if fields.fabric_label_visible:
+        if cotton_percent:
+            composition_parts.append(f"{cotton_percent} coton")
+        if fields.has_wool:
+            composition_parts.append(wool_value + " laine" if wool_value else "laine")
+        if fields.has_cashmere:
+            composition_parts.append(
+                cashmere_value + " cachemire" if cashmere_value else "cachemire"
+            )
+        if polyester_value:
+            composition_parts.append(f"{polyester_value} polyester")
+        if polyamide_value:
+            composition_parts.append(f"{polyamide_value} polyamide")
+        if viscose_value:
+            composition_parts.append(f"{viscose_value} viscose")
+        if nylon_value:
+            composition_parts.append(f"{nylon_value} nylon")
+        if elastane_value:
+            composition_parts.append(f"{elastane_value} élasthanne")
+        if acrylic_value:
+            composition_parts.append(f"{acrylic_value} acrylique")
+
+    composition_sentence: str
+    if composition_parts:
+        composition_sentence = f"Composition : {_join_fibers(composition_parts)}."
+    elif _should_apply_polyester_default():
+        composition_sentence = (
+            "Composition : 100% polyester (information standard confirmée faute d'étiquette lisible)."
+        )
+    elif composition_label_unavailable:
+        if size_label_missing:
+            composition_sentence = combined_label_cut_message
+        else:
+            composition_sentence = composition_label_cut_message
+    else:
+        composition_sentence = "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
+
+    def _material_segment_for_title() -> str:
+        if fields.has_cashmere:
+            return "en cachemire"
+        if fields.has_wool:
+            return "en laine"
+        cotton_value = fields.cotton_percentage_value
+        if cotton_value is not None and cotton_value > 0:
+            return "en coton"
+        return ""
+
+    material_segment = _material_segment_for_title()
+
+    title_parts = [f"Polaire {brand_display}"]
+    if gender_value:
+        title_parts.append(gender_value)
+    if fields.size_label_visible and (size_for_title or size_value):
+        title_parts.append(f"taille {size_for_title or size_value}")
+    elif estimated_size_label:
+        title_parts.append(f"taille {estimated_size_primary or estimated_size_label}")
+    elif size_value:
+        title_parts.append(f"taille {size_value}")
+    if zip_style_value:
+        title_parts.append(zip_style_value)
+    if fields.has_hood:
+        title_parts.append("capuche")
+    if material_segment:
+        title_parts.append(material_segment)
+    if color:
+        title_parts.append(color)
+    title_parts.extend(["-", sku_display])
+    title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
+
+    bust_measurement_used = (
+        not fields.size_label_visible
+        and fields.bust_flat_measurement_cm is not None
+        and fields.bust_flat_measurement_cm > 0
+    )
+    length_measurement_used = (
+        not fields.size_label_visible
+        and length_descriptor is not None
+        and fields.length_measurement_cm is not None
+        and fields.length_measurement_cm > 0
+    )
+
+    size_measurement_details: List[str] = []
+    if bust_measurement_used and not estimated_size_note:
+        bust_circumference_display = _format_measurement(
+            fields.bust_flat_measurement_cm * 2 if fields.bust_flat_measurement_cm else None
+        )
+        if bust_circumference_display:
+            size_measurement_details.append(f"{bust_circumference_display} de poitrine")
+    if length_measurement_used and length_display:
+        size_measurement_details.append(f"longueur épaule-ourlet {length_display}")
+
+    first_paragraph_lines: List[str] = []
+    audience_label = gender_value or "femme"
+    intro_parts = ["Polaire", brand_display, "pour", audience_label]
+    first_paragraph_lines.append(" ".join(part for part in intro_parts if part).strip() + ".")
+    if fields.size_label_visible and size_value:
+        first_paragraph_lines.append(f"Taille FR {size_value} confirmée sur l'étiquette.")
+    elif estimated_size_label and estimated_size_note:
+        first_paragraph_lines.append(estimated_size_note)
+    style_tokens: List[str] = []
+    if color:
+        style_tokens.append(f"Coloris {color}")
+    if zip_style_value:
+        style_tokens.append(zip_style_value)
+    if fields.has_hood:
+        style_tokens.append("capuche protectrice")
+    if style_tokens:
+        first_paragraph_lines.append(", ".join(style_tokens) + ".")
+    if size_measurement_details:
+        first_paragraph_lines.append(
+            f"Mesures clés : {', '.join(size_measurement_details)} (voir photos)."
+        )
+
+    marketing_lines: List[str] = []
+    length_sentence = (
+        f"Coupe {length_descriptor} confortable." if length_descriptor else "Coupe cosy et respirante."
+    )
+    marketing_lines.append(length_sentence)
+    if feature_notes:
+        marketing_lines.append(feature_notes)
+    if technical_features:
+        marketing_lines.append(technical_features)
+    if fields.made_in_europe:
+        marketing_lines.append("Mention Made in Europe confirmée.")
+    marketing_lines.append(composition_sentence)
+
+    defect_texts = get_defect_descriptions(fields.defect_tags)
+    raw_defects = (fields.defects or "").strip()
+    positive_state_aliases = {"très bon état", "très bon état général"}
+    positive_state_aliases_casefold = {alias.casefold() for alias in positive_state_aliases}
+    if raw_defects.casefold() in positive_state_aliases_casefold:
+        raw_defects = ""
+    if defect_texts:
+        defects = ", ".join(defect_texts)
+    else:
+        defects = raw_defects if raw_defects else ""
+
+    third_paragraph_lines: List[str] = []
+    if defects:
+        third_paragraph_lines.append(f"Très bon état : {defects} (voir photos)")
+    else:
+        third_paragraph_lines.append("Très bon état")
+
+    label_notice: Optional[str] = None
+    if size_label_missing and not composition_label_unavailable:
+        label_notice = size_label_cut_message
+    elif size_label_missing and composition_label_unavailable:
+        if composition_sentence.strip() != combined_label_cut_message:
+            label_notice = combined_label_cut_message
+    elif composition_label_unavailable:
+        if composition_sentence.strip() not in (
+            composition_label_cut_message,
+            combined_label_cut_message,
+        ):
+            label_notice = composition_label_cut_message
+
+    if label_notice:
+        existing_lines = marketing_lines + third_paragraph_lines
+        if not any(label_notice == line.strip() for line in existing_lines):
+            third_paragraph_lines.append(label_notice)
+
+    third_paragraph_lines.extend(
+        [
+            "📏 Mesures détaillées visibles en photo pour valider l'ajustement.",
+            "📦 Envoi rapide et soigné",
+        ]
+    )
+
+    size_reference_for_hashtag = (
+        size_for_title
+        or size_value
+        or estimated_size_primary
+        or estimated_size_label
+        or "M"
+    )
+    size_hashtag = _normalize_size_hashtag(size_reference_for_hashtag)
+
+    fourth_paragraph_lines = [
+        f"✨ Retrouvez toutes mes polaires {brand_display} ici 👉 #durin31{brand_short_code}{size_hashtag}",
+        "💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !",
+    ]
+
+    hashtags: List[str] = []
+
+    def add_hashtag(tag: str) -> None:
+        tag_clean = tag.strip()
+        if tag_clean and tag_clean not in hashtags:
+            hashtags.append(tag_clean)
+
+    gender_hashtag_map = {
+        "femme": "#polairefemme",
+        "homme": "#polairehomme",
+    }
+    gender_hashtag = gender_hashtag_map.get(gender_value.lower(), "#polairemixte")
+
+    add_hashtag(brand_hashtag)
+    add_hashtag(gender_hashtag)
+    add_hashtag("#outdoor")
+    add_hashtag("#randonnée")
+    add_hashtag("#preloved")
+    add_hashtag(f"#durin31{brand_short_code}{size_hashtag}")
+    if zip_style_value:
+        zip_token = "#" + zip_style_value.replace(" ", "").replace("/", "")
+        add_hashtag(zip_token.lower())
+    if color:
+        add_hashtag(f"#polaire{color.split()[0].lower()}")
+    if material_segment:
+        add_hashtag("#matierepremium")
+
+    fallback_tags = ["#layering", "#polaire", "#secondevie"]
+    for tag in fallback_tags:
+        if len(hashtags) >= 10:
+            break
+        add_hashtag(tag)
+
+    hashtags_tokens = hashtags[:10]
+    hashtags_paragraph_lines = [" ".join(hashtags_tokens)]
+
+    description = "\n\n".join(
+        [
+            "\n".join(first_paragraph_lines),
+            "\n".join(marketing_lines),
+            "\n".join(third_paragraph_lines),
+            "\n".join(fourth_paragraph_lines),
+            "\n".join(hashtags_paragraph_lines),
+        ]
+    ).strip()
+
+    return title, description
+
+
 class ListingTemplateRegistry:
     """Registry holding available listing templates."""
 
@@ -1211,6 +1550,54 @@ class ListingTemplateRegistry:
                     """
                 ).strip(),
                 render_callback=render_template_pull_tommy_femme,
+            ),
+            "template-polaire-outdoor": ListingTemplate(
+                name="template-polaire-outdoor",
+                description="Template polaire outdoor (The North Face / Columbia)",
+                prompt=dedent(
+                    """
+                    Prend en considération cette légende :
+                    - Marque = {{brand}} (The North Face ou Columbia, laisse vide si incertain)
+                    - Modèle = {{model}} (nom exact ou référence)
+                    - Taille = {{fr_size}} (XS/S/M/L/XL...), {{bust_flat_measurement_cm}}/{{length_measurement_cm}}/{{sleeve_measurement_cm}}/{{shoulder_measurement_cm}}/{{waist_flat_measurement_cm}}/{{hem_flat_measurement_cm}} en cm lorsque visibles
+                    - Genre = {{gender}} (femme, homme, mix)
+                    - Couleur principale = {{color_main}}
+                    - Type de zip = {{zip_style}} (1/4 zip, zip intégral, demi-zip…)
+                    - Capuche = {{has_hood}} (true si la capuche est visible)
+                    - Notes style/techniques = {{feature_notes}} / {{technical_features}} (Polartec, Omni-Heat, renforts, poches…)
+                    - Composition = {{cotton_pct}}, {{wool_pct}}, {{cashmere_pct}}, {{polyester_pct}}, {{polyamide_pct}}, {{viscose_pct}}, {{elastane_pct}}, {{nylon_pct}}, {{acrylic_pct}}
+                    - Made in = {{made_in}}
+                    - Défauts = {{defects}} + {{defect_tags}}
+                    - Visibilité des étiquettes = {{size_label_visible}}, {{fabric_label_visible}}, {{fabric_label_cut}}, {{non_size_labels_visible}}
+                    - SKU = {{sku}} (PTNF-n pour The North Face, PC-n pour Columbia, n ∈ [1;999])
+
+                    Règles :
+                    - Les mensurations à plat sont obligatoires dès qu’une photo claire les affiche.
+                    - Sauf commentaire explicite dans la boîte tâches/défauts mentionnant une autre fibre, considère les polaires comme 100% polyester quand l’étiquette n’est pas lisible : renseigne {{polyester_pct}} = "100" et laisse les autres champs matière vides.
+                    - Ne mentionne la matière dans le titre que pour les fibres intéressantes (coton, laine, cachemire, soie) et jamais avec un pourcentage.
+                    - Le SKU doit respecter exactement le format PTNF-n ou PC-n ; renvoie la chaîne vide si l’information manque.
+                    - Signale toute étiquette coupée via {{fabric_label_cut}} et rappelle si les étiquettes taille/composition sont absentes.
+
+                    Utilise ce format :
+                    TITRE
+                    Polaire {{brand}} {{gender}} taille {{fr_size}} {{zip_style}} {{color_main}} - {{sku}}
+
+                    DESCRIPTION + HASHTAG
+                    Polaire {{brand}} pour {{gender}}.
+                    Taille {{fr_size}} (ou estimation via mesures). {{zip_style}} {{feature_notes}}.
+                    {{technical_features}}
+                    Composition : {{cotton_pct}}% coton{{#if wool_pct}}, laine{{/if}}{{#if cashmere_pct}}, cachemire{{/if}}{{#if polyester_pct}}, {{polyester_pct}}% polyester{{/if}}… (respecte exactement l’étiquette ou applique la règle 100% polyester par défaut).
+                    Très bon état {{defects}} (voir photos). Mentionne les étiquettes coupées quand c’est le cas.
+                    📏 Mesures détaillées visibles en photo.
+                    📦 Envoi rapide et soigné
+
+                    ✨ Retrouvez toutes mes polaires {{brand}} ici 👉 #durin31{{fr_size}}
+                    💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !
+
+                    #thenorthface ou #columbia selon la marque + hashtags outdoor (max 10).
+                    """
+                ).strip(),
+                render_callback=render_template_polaire_outdoor,
             ),
         }
         self.default_template = "template-jean-levis-femme"

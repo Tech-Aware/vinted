@@ -1138,6 +1138,9 @@ def test_render_pull_tommy_femme_pattern_specific_rules(
         "polyamide_pct": "",
         "viscose_pct": "",
         "elastane_pct": "",
+        "acrylic_pct": "",
+        "acrylic_pct": "",
+        "acrylic_pct": "",
         "gender": "",
         "color_main": "bleu",
         "defects": "",
@@ -1163,3 +1166,167 @@ def test_render_pull_tommy_femme_pattern_specific_rules(
 
     if expected_material_segment:
         assert expected_material_segment in title
+
+
+def _build_base_polaire_payload(**overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "brand": "The North Face",
+        "model": "Denali",
+        "fr_size": "M",
+        "us_w": "",
+        "us_l": "",
+        "fit_leg": "",
+        "rise_class": "",
+        "rise_measurement_cm": "",
+        "waist_measurement_cm": "",
+        "cotton_pct": "",
+        "polyester_pct": "100",
+        "polyamide_pct": "",
+        "viscose_pct": "",
+        "elastane_pct": "",
+        "acrylic_pct": "",
+        "gender": "Femme",
+        "color_main": "noir",
+        "defects": "",
+        "defect_tags": [],
+        "size_label_visible": True,
+        "fabric_label_visible": True,
+        "fabric_label_cut": False,
+        "non_size_labels_visible": True,
+        "sku": "PTNF-10",
+        "bust_flat_measurement_cm": 50.0,
+        "length_measurement_cm": 60.0,
+        "sleeve_measurement_cm": 58.0,
+        "shoulder_measurement_cm": 42.0,
+        "waist_flat_measurement_cm": 48.0,
+        "hem_flat_measurement_cm": 49.0,
+        "zip_style": "1/4 zip",
+        "feature_notes": "Empiècements contrastés",
+        "technical_features": "Polartec recyclé",
+        "has_hood": True,
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_listing_fields_accepts_polaire_sku_prefixes() -> None:
+    base_payload = _build_base_polaire_payload(sku="PTNF-12", brand="The North Face")
+    fields = ListingFields.from_dict(base_payload, template_name="template-polaire-outdoor")
+    assert fields.sku == "PTNF-12"
+
+    columbia_payload = _build_base_polaire_payload(
+        sku="PC-9", brand="Columbia", polyester_pct="95", cotton_pct="5"
+    )
+    fields_col = ListingFields.from_dict(
+        columbia_payload, template_name="template-polaire-outdoor"
+    )
+    assert fields_col.sku == "PC-9"
+
+
+def test_listing_fields_rejects_mismatched_polaire_brand_and_sku() -> None:
+    payload = _build_base_polaire_payload(sku="PTNF-20", brand="Columbia")
+    with pytest.raises(ValueError):
+        ListingFields.from_dict(payload, template_name="template-polaire-outdoor")
+
+
+def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -> None:
+    template = ListingTemplateRegistry().get_template("template-polaire-outdoor")
+    fields = ListingFields(
+        model="Denali",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="Femme",
+        color_main="noir",
+        defects="",
+        defect_tags=(),
+        size_label_visible=False,
+        fabric_label_visible=False,
+        fabric_label_cut=False,
+        sku="PTNF-42",
+        brand="The North Face",
+        zip_style="1/4 zip",
+        feature_notes="Col montant doublé",
+        technical_features="Polartec recyclé",
+        has_hood=True,
+        bust_flat_measurement_cm=49.0,
+        length_measurement_cm=62.0,
+        sleeve_measurement_cm=60.0,
+        shoulder_measurement_cm=41.0,
+        waist_flat_measurement_cm=48.0,
+        hem_flat_measurement_cm=47.0,
+    )
+
+    title, description = template.render(fields)
+
+    assert "Polaire The North Face" in title
+    assert "PTNF-42" in title
+    assert "1/4 zip" in title
+    assert "Composition : 100% polyester" in description
+    assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
+
+    hashtags_line = description.splitlines()[-1]
+    assert "#thenorthface" in hashtags_line
+    assert "#polairefemme" in hashtags_line
+    assert "#durin31tnfM" in hashtags_line
+
+
+def test_render_polaire_outdoor_handles_columbia_material_and_hashtags() -> None:
+    template = ListingTemplateRegistry().get_template("template-polaire-outdoor")
+    fields = ListingFields(
+        model="Fast Trek II",
+        fr_size="L",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="20",
+        polyester_pct="80",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="Femme",
+        color_main="bleu",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        fabric_label_cut=False,
+        sku="PC-7",
+        brand="Columbia",
+        zip_style="zip intégral",
+        feature_notes="Poches zippées",
+        technical_features="Omni-Heat",
+        has_hood=False,
+        bust_flat_measurement_cm=52.0,
+        length_measurement_cm=64.0,
+        sleeve_measurement_cm=61.0,
+        shoulder_measurement_cm=42.0,
+        waist_flat_measurement_cm=50.0,
+        hem_flat_measurement_cm=51.0,
+    )
+
+    title, description = template.render(fields)
+
+    assert "Polaire Columbia" in title
+    assert "en coton" in title
+    assert "PC-7" in title
+    assert "Poches zippées" in description
+    assert "Omni-Heat" in description
+    assert "80% polyester" in description
+
+    hashtags_line = description.splitlines()[-1]
+    assert "#columbia" in hashtags_line
+    assert "#durin31colL" in hashtags_line
+    assert "#matierepremium" in hashtags_line

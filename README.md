@@ -64,6 +64,12 @@ comprend :
 
 Ajoutez vos propres structures en enrichissant le dictionnaire `_templates`.
 
+### Templates fournis par défaut
+
+- `template-jean-levis-femme` : gabarit historique pour les jeans Levi’s (SKU `JLF-n`).
+- `template-pull-tommy-femme` : descriptions détaillées des pulls et gilets Tommy Hilfiger (SKU `PTF-n`).
+- `template-polaire-outdoor` : polaires et pulls techniques The North Face (`PTNF-n`) ou Columbia (`PC-n`) avec règle métier « sauf commentaire contraire → 100 % polyester par défaut » et hashtags outdoor dédiés.
+
 ## Intégration OpenAI
 
 La classe `ListingGenerator` (fichier `app/backend/gpt_client.py`) encapsule
