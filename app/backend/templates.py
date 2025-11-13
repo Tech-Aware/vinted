@@ -1236,10 +1236,17 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     length_display = _format_measurement(fields.length_measurement_cm)
 
     size_label_missing = not fields.size_label_visible
-    composition_label_unavailable = (not fields.fabric_label_visible) or fields.fabric_label_cut
-    size_label_cut_message = "Étiquette de taille coupée pour plus de confort."
+    composition_label_missing = not fields.fabric_label_visible
+    fabric_label_cut = fields.fabric_label_cut
+    size_label_missing_message = "Étiquette de taille non visible sur les photos."
+    composition_label_missing_message = "Étiquette de composition non visible sur les photos."
     composition_label_cut_message = "Étiquette de composition coupée pour plus de confort."
-    combined_label_cut_message = "Étiquettes de taille et composition coupées pour plus de confort."
+    combined_label_missing_message = (
+        "Étiquettes de taille et composition non visibles sur les photos."
+    )
+    combined_label_cut_message = (
+        "Étiquettes de taille et composition coupées pour plus de confort."
+    )
 
     should_assume_polyester = (
         not fields.fabric_label_visible
@@ -1284,11 +1291,16 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
         composition_sentence = f"Composition : {_join_fibers(composition_parts)}."
     elif should_assume_polyester:
         composition_sentence = "Composition : 100% polyester"
-    elif composition_label_unavailable:
+    elif fabric_label_cut:
         if size_label_missing:
             composition_sentence = combined_label_cut_message
         else:
             composition_sentence = composition_label_cut_message
+    elif composition_label_missing:
+        if size_label_missing:
+            composition_sentence = combined_label_missing_message
+        else:
+            composition_sentence = composition_label_missing_message
     else:
         composition_sentence = "Composition non lisible sur l'étiquette (voir photos pour confirmation)."
 
@@ -1304,7 +1316,7 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
 
     material_segment = _material_segment_for_title()
 
-    title_parts = [f"Polaire {brand_display}"]
+    title_parts = [f"Polaire fleece {brand_display}"]
     if gender_value:
         title_parts.append(gender_value)
     if fields.size_label_visible and (size_for_title or size_value):
@@ -1352,10 +1364,10 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
 
     first_paragraph_lines: List[str] = []
     audience_label = gender_value or "femme"
-    intro_parts = ["Polaire", brand_display, "pour", audience_label]
+    intro_parts = ["Polaire fleece", brand_display, "pour", audience_label]
     first_paragraph_lines.append(" ".join(part for part in intro_parts if part).strip() + ".")
     if fields.size_label_visible and size_value:
-        first_paragraph_lines.append(f"Taille FR {size_value} confirmée sur l'étiquette.")
+        first_paragraph_lines.append(f"Taille FR {size_value}.")
     elif estimated_size_label and estimated_size_note:
         first_paragraph_lines.append(estimated_size_note)
     style_tokens: List[str] = []
@@ -1412,17 +1424,21 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
         third_paragraph_lines.append("Très bon état")
 
     label_notice: Optional[str] = None
-    if size_label_missing and not composition_label_unavailable:
-        label_notice = size_label_cut_message
-    elif size_label_missing and composition_label_unavailable:
-        if composition_sentence.strip() != combined_label_cut_message:
+    composition_sentence_clean = composition_sentence.strip()
+    if size_label_missing and not fabric_label_cut and not composition_label_missing:
+        label_notice = size_label_missing_message
+    elif size_label_missing and fabric_label_cut:
+        if composition_sentence_clean != combined_label_cut_message:
             label_notice = combined_label_cut_message
-    elif composition_label_unavailable:
-        if composition_sentence.strip() not in (
-            composition_label_cut_message,
-            combined_label_cut_message,
-        ):
+    elif size_label_missing and composition_label_missing:
+        if composition_sentence_clean != combined_label_missing_message:
+            label_notice = combined_label_missing_message
+    elif fabric_label_cut:
+        if composition_sentence_clean != composition_label_cut_message:
             label_notice = composition_label_cut_message
+    elif composition_label_missing:
+        if composition_sentence_clean != composition_label_missing_message:
+            label_notice = composition_label_missing_message
 
     if label_notice:
         existing_lines = marketing_lines + third_paragraph_lines

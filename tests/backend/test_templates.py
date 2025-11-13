@@ -20,6 +20,7 @@ from app.backend.templates import ListingTemplateRegistry
 SIZE_LABEL_CUT_MESSAGE = "Étiquette de taille coupée pour plus de confort."
 COMPOSITION_LABEL_CUT_MESSAGE = "Étiquette de composition coupée pour plus de confort."
 COMBINED_LABEL_CUT_MESSAGE = "Étiquettes de taille et composition coupées pour plus de confort."
+COMBINED_LABEL_MISSING_MESSAGE = "Étiquettes de taille et composition non visibles sur les photos."
 
 
 def test_render_defaults_to_femme_when_gender_missing_levis() -> None:
@@ -1296,13 +1297,13 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
 
     title, description = template.render(fields)
 
-    assert "Polaire The North Face" in title
+    assert "Polaire fleece The North Face" in title
     assert "PTNF-42" in title
     assert "1/4 zip" in title
     assert "col montant" in title
     assert "ruban rose" in title
     assert "Composition : 100% polyester" in description
-    assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
+    assert description.count(COMBINED_LABEL_MISSING_MESSAGE) == 1
 
     hashtags_line = description.splitlines()[-1]
     assert "#thenorthface" in hashtags_line
@@ -1397,7 +1398,7 @@ def test_render_polaire_outdoor_skips_polyester_default_when_defects_mentions_fi
     _, description = template.render(fields)
 
     assert "Composition : 100% polyester" not in description
-    assert COMBINED_LABEL_CUT_MESSAGE in description
+    assert COMBINED_LABEL_MISSING_MESSAGE in description
 
 
 def test_render_polaire_outdoor_handles_columbia_material_and_hashtags() -> None:
@@ -1441,7 +1442,7 @@ def test_render_polaire_outdoor_handles_columbia_material_and_hashtags() -> None
 
     title, description = template.render(fields)
 
-    assert "Polaire Columbia" in title
+    assert "Polaire fleece Columbia" in title
     assert "en coton" in title
     assert "PC-7" in title
     assert "Poches zippées" in description
