@@ -154,6 +154,8 @@ class ListingFields:
     feature_notes: FieldValue = None
     technical_features: FieldValue = None
     has_hood: bool = False
+    neckline_style: FieldValue = None
+    special_logo: FieldValue = None
     bust_flat_measurement_cm: Optional[float] = None
     length_measurement_cm: Optional[float] = None
     sleeve_measurement_cm: Optional[float] = None
@@ -198,10 +200,13 @@ class ListingFields:
         )
 
         required_fields: tuple[str, ...]
-        if template_normalized in {
-            "template-pull-tommy-femme",
-            "template-polaire-outdoor",
-        }:
+        polaire_additional_fields = ("neckline_style", "special_logo")
+
+        if template_normalized == "template-polaire-outdoor":
+            required_fields = (
+                always_required_fields + measurement_fields + polaire_additional_fields
+            )
+        elif template_normalized == "template-pull-tommy-femme":
             required_fields = always_required_fields + measurement_fields
         else:
             required_fields = always_required_fields
@@ -249,6 +254,8 @@ class ListingFields:
         zip_style = normalize(data.get("zip_style"))
         feature_notes = normalize(data.get("feature_notes"))
         technical_features = normalize(data.get("technical_features"))
+        neckline_style = normalize(data.get("neckline_style"))
+        special_logo = normalize(data.get("special_logo"))
         sku_raw = normalize(data.get("sku"))
 
         defect_tags_raw = data.get("defect_tags", [])
@@ -363,6 +370,8 @@ class ListingFields:
             zip_style=zip_style,
             feature_notes=feature_notes,
             technical_features=technical_features,
+            neckline_style=neckline_style,
+            special_logo=special_logo,
             has_hood=has_hood,
             is_cardigan=is_cardigan,
             is_dress=is_dress,
@@ -677,9 +686,11 @@ class ListingFields:
                     \"acrylic_pct\": \"pourcentage d'acrylique lisible ; renvoie \"\" si absent\",
                     \"gender\": \"genre ciblé (femme, homme, mix) ; renvoie \"\" si incertain\",
                     \"color_main\": \"couleur principale visible\",
-                    \"zip_style\": \"type d'ouverture (1/4 zip, zip intégral, col montant, demi-zip, etc.)\",
+                    \"zip_style\": \"type d'ouverture (full zip, 1/4 zip, boutons, col zippé, etc.)\",
+                    \"neckline_style\": \"type de col visible (col roulé, col montant, col V, col rond, patte boutonnée, etc.) ; renvoie \"\" si incertain\",
                     \"feature_notes\": \"notes de style (poche kangourou, col montant, ourlet ajustable) ; renvoie \"\" si rien à signaler\",
                     \"technical_features\": \"technologies ou matières (Polartec, Omni-Heat, DryVent, etc.) ; renvoie \"\" si rien à signaler\",
+                    \"special_logo\": \"logo ou détail distinctif (ruban rose, écusson commémoratif...) ; renvoie \"\" s'il n'y en a pas\",
                     \"has_hood\": \"true/false : true uniquement si une capuche est visible\",
                     \"defects\": \"défauts ou taches identifiés ; renvoie \"\" s'il n'y en a pas\",
                     \"defect_tags\": \"liste de slugs parmi [{slugs}] à renseigner UNIQUEMENT si le défaut est visible\",
@@ -693,6 +704,7 @@ class ListingFields:
                 N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
                 Règles spécifiques :
                 - Renseigne systématiquement les mesures à plat lorsqu'elles sont visibles, sinon renvoie la chaîne vide.
+                - Décris précisément zip_style/neckline_style pour refléter full zip / 1/4 zip / boutons et col roulé / col montant / col V / col rond, et repère les logos ou rubans spéciaux via special_logo.
                 - Ne mets la matière dans le titre que lorsque la fibre est intéressante (coton, laine, cachemire, soie) et sans pourcentage.
                 - Sauf commentaire explicite dans la boîte tâches/défauts signalant une matière différente, considère les polaires comme 100% polyester lorsque l'étiquette n'est pas lisible : mets \"polyester_pct\" à \"100\" et laisse les autres fibres vides.
                 - Les champs brand/model/zip_style/feature_notes/technical_features ne doivent contenir que des informations confirmées par les photos.

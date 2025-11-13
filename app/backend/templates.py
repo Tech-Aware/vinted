@@ -1212,6 +1212,8 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     color = translate_color_to_french(fields.color_main)
     color = _clean(color)
     zip_style_value = _clean(fields.zip_style)
+    neckline_style_value = _clean(fields.neckline_style)
+    special_logo_value = _clean(fields.special_logo)
     feature_notes = _clean(fields.feature_notes)
     technical_features = _clean(fields.technical_features)
     sku = (fields.sku or "").strip()
@@ -1315,12 +1317,16 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
         title_parts.append(f"taille {size_value}")
     if zip_style_value:
         title_parts.append(zip_style_value)
+    if neckline_style_value:
+        title_parts.append(neckline_style_value)
     if fields.has_hood:
         title_parts.append("capuche")
     if material_segment:
         title_parts.append(material_segment)
     if color:
         title_parts.append(color)
+    if special_logo_value:
+        title_parts.append(special_logo_value)
     title_parts.extend(["-", sku_display])
     title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
 
@@ -1361,6 +1367,13 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
         style_tokens.append(zip_style_value)
     if fields.has_hood:
         style_tokens.append("capuche protectrice")
+    if neckline_style_value:
+        style_tokens.append(neckline_style_value)
+    if special_logo_value:
+        normalized_logo_value = special_logo_value
+        if "logo" not in normalized_logo_value.lower():
+            normalized_logo_value = f"logo {normalized_logo_value}"
+        style_tokens.append(normalized_logo_value)
     if style_tokens:
         first_paragraph_lines.append(", ".join(style_tokens) + ".")
     if size_measurement_details:
@@ -1377,6 +1390,8 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
         marketing_lines.append(feature_notes)
     if technical_features:
         marketing_lines.append(technical_features)
+    if special_logo_value and "logo" not in special_logo_value.lower():
+        marketing_lines.append(f"Détail signature : {special_logo_value}.")
     if fields.made_in_europe:
         marketing_lines.append("Mention Made in Europe confirmée.")
     marketing_lines.append(composition_sentence)
@@ -1432,8 +1447,18 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     )
     size_hashtag = _normalize_size_hashtag(size_reference_for_hashtag)
 
+    gender_token = "f"
+    gender_lower = gender_value.lower()
+    if "hom" in gender_lower:
+        gender_token = "h"
+    elif "mix" in gender_lower or "unisexe" in gender_lower:
+        gender_token = "u"
+
+    gender_size_hashtag = f"#durin31{gender_token}{size_hashtag}"
+
     fourth_paragraph_lines = [
         f"✨ Retrouvez toutes mes polaires {brand_display} ici 👉 #durin31{brand_short_code}{size_hashtag}",
+        f"👀 Filtre toutes mes pièces {audience_label} taille {size_hashtag} (polaire, pull, jacket…) 👉 {gender_size_hashtag}",
         "💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !",
     ]
 
@@ -1456,6 +1481,7 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     add_hashtag("#randonnée")
     add_hashtag("#preloved")
     add_hashtag(f"#durin31{brand_short_code}{size_hashtag}")
+    add_hashtag(gender_size_hashtag)
     if zip_style_value:
         zip_token = "#" + zip_style_value.replace(" ", "").replace("/", "")
         add_hashtag(zip_token.lower())
@@ -1589,7 +1615,9 @@ class ListingTemplateRegistry:
                     - Taille = {{fr_size}} (XS/S/M/L/XL...), {{bust_flat_measurement_cm}}/{{length_measurement_cm}}/{{sleeve_measurement_cm}}/{{shoulder_measurement_cm}}/{{waist_flat_measurement_cm}}/{{hem_flat_measurement_cm}} en cm lorsque visibles
                     - Genre = {{gender}} (femme, homme, mix)
                     - Couleur principale = {{color_main}}
-                    - Type de zip = {{zip_style}} (1/4 zip, zip intégral, demi-zip…)
+                    - Type de zip = {{zip_style}} (full zip, 1/4 zip, 1/2 zip, boutons…)
+                    - Type de col / encolure = {{neckline_style}} (col roulé, col montant, col V, col rond, boutonné…)
+                    - Logo ou détail distinctif = {{special_logo}} (ex : ruban rose pour la lutte contre le cancer du sein)
                     - Capuche = {{has_hood}} (true si la capuche est visible)
                     - Notes style/techniques = {{feature_notes}} / {{technical_features}} (Polartec, Omni-Heat, renforts, poches…)
                     - Composition = {{cotton_pct}}, {{wool_pct}}, {{cashmere_pct}}, {{polyester_pct}}, {{polyamide_pct}}, {{viscose_pct}}, {{elastane_pct}}, {{nylon_pct}}, {{acrylic_pct}}
@@ -1600,14 +1628,16 @@ class ListingTemplateRegistry:
 
                     Règles :
                     - Les mensurations à plat sont obligatoires dès qu’une photo claire les affiche.
+                    - Dans le titre, combine un maximum de détails : {{zip_style}} (full zip / 1/4 zip / boutons…) + {{neckline_style}} (col roulé / col montant / col V / col rond) et signale toute information {{special_logo}} visible (ex : ruban rose).
                     - Sauf commentaire explicite dans la boîte tâches/défauts mentionnant une autre fibre, considère les polaires comme 100% polyester quand l’étiquette n’est pas lisible : renseigne {{polyester_pct}} = "100" et laisse les autres champs matière vides.
                     - Ne mentionne la matière dans le titre que pour les fibres intéressantes (coton, laine, cachemire, soie) et jamais avec un pourcentage.
                     - Le SKU doit respecter exactement le format PTNF-n ou PC-n ; renvoie la chaîne vide si l’information manque.
                     - Signale toute étiquette coupée via {{fabric_label_cut}} et rappelle si les étiquettes taille/composition sont absentes.
+                    - Ajoute un hashtag dédié aux tailles : #durin31f{{fr_size}} pour un modèle femme, #durin31h{{fr_size}} pour un modèle homme (majuscule), ou adapte pour une version mixte.
 
                     Utilise ce format :
                     TITRE
-                    Polaire {{brand}} {{gender}} taille {{fr_size}} {{zip_style}} {{color_main}} - {{sku}}
+                    Polaire {{brand}} {{gender}} taille {{fr_size}} {{zip_style}} {{neckline_style}} {{special_logo}} {{color_main}} - {{sku}}
 
                     DESCRIPTION + HASHTAG
                     Polaire {{brand}} pour {{gender}}.
@@ -1618,10 +1648,11 @@ class ListingTemplateRegistry:
                     📏 Mesures détaillées visibles en photo.
                     📦 Envoi rapide et soigné
 
-                    ✨ Retrouvez toutes mes polaires {{brand}} ici 👉 #durin31{{fr_size}}
+                    ✨ Retrouvez toutes mes polaires {{brand}} ici 👉 #durin31{{brand_short_code}}{{fr_size}}
+                    👀 Filtre toutes mes pièces {{gender}} taille {{fr_size}} (polaire, pull, jacket…) 👉 #durin31f{{fr_size}} ou #durin31h{{fr_size}} selon le genre
                     💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !
 
-                    #thenorthface ou #columbia selon la marque + hashtags outdoor (max 10).
+                    #thenorthface ou #columbia selon la marque + hashtags outdoor (max 10, inclure le hashtag taille #durin31f{{fr_size}} / #durin31h{{fr_size}}).
                     """
                 ).strip(),
                 render_callback=render_template_polaire_outdoor,
