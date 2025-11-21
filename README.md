@@ -17,7 +17,7 @@ sous Windows que sous Chromebook (via l'environnement Linux).
 ## Pré-requis
 
 - Python 3.8 ou plus récent (version 64 bits recommandée sur Windows).
-- Accès à l'API OpenAI avec un modèle vision (par exemple `gpt-4o-mini`).
+- Accès à l'API OpenAI avec un modèle vision (par exemple `gpt-5-mini`).
 - Clé API disponible via la variable d'environnement `OPENAI_API_KEY`.
 
 ## Installation
@@ -31,9 +31,9 @@ sous Windows que sous Chromebook (via l'environnement Linux).
    ```bash
    pip install -r requirements.txt
    ```
-3. (Optionnel) Définissez un modèle vision spécifique (par défaut l'application utilise `gpt-4o`).
+3. (Optionnel) Définissez un modèle vision spécifique (par défaut l'application utilise `gpt-5-mini`).
    ```bash
-   export OPENAI_VISION_MODEL=gpt-4.1
+   export OPENAI_VISION_MODEL=gpt-5-mini
    ```
 
 ## Lancement

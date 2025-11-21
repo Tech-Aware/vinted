@@ -52,7 +52,7 @@ class ListingGenerator:
         api_key: Optional[str] = None,
         temperature: float = 0.1,
     ) -> None:
-        self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
+        self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-5-mini")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not 0 <= temperature <= 1:
             raise ValueError("La température doit être comprise entre 0 et 1")
