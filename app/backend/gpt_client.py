@@ -51,18 +51,13 @@ class ListingGenerator:
         *,
         model: Optional[str] = None,
         api_key: Optional[str] = None,
-        temperature: float = 0.1,
     ) -> None:
         self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-5-mini")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not 0 <= temperature <= 1:
-            raise ValueError("La température doit être comprise entre 0 et 1")
-        self.temperature = temperature
         self._client: Optional[OpenAI] = None
         logger.step(
-            "ListingGenerator initialisé avec le modèle %s et une température de %.2f",
+            "ListingGenerator initialisé avec le modèle %s",
             self.model,
-            self.temperature,
         )
 
     @property
@@ -142,7 +137,6 @@ class ListingGenerator:
                 model=self.model,
                 input=messages,
                 max_output_tokens=700,
-                temperature=self.temperature,
             )
         except Exception:
             logger.exception("Échec de l'appel à l'API OpenAI")
@@ -276,7 +270,6 @@ class ListingGenerator:
                 model=self.model,
                 input=messages,
                 max_output_tokens=50,
-                temperature=0.0,
             )
         except Exception:
             logger.exception("Échec de la récupération ciblée du SKU Tommy Hilfiger")
@@ -326,7 +319,6 @@ class ListingGenerator:
                 model=self.model,
                 input=messages,
                 max_output_tokens=50,
-                temperature=0.0,
             )
         except Exception:
             logger.exception("Échec de la récupération ciblée du SKU polaire")
