@@ -100,9 +100,10 @@ class VintedListingApp(ctk.CTk):
             text="Si vous avez plusieurs commentaires, séparez-les par des virgules. Les informations saisies ici priment sur les photos et orientent l'estimation.",
             anchor="w",
             justify="left",
-            wraplength=800,
+            wraplength=0,
         )
         self.comment_helper.grid(row=3, column=0, sticky="ew", padx=12, pady=(2, 6))
+        form_frame.bind("<Configure>", self._update_comment_helper_wraplength)
 
         self.comment_box = ctk.CTkTextbox(form_frame, height=32)
         self._insert_comment_placeholder()
@@ -360,6 +361,14 @@ class VintedListingApp(ctk.CTk):
 
         wraplength = max(width - 12, 100)
         self.price_label.configure(wraplength=wraplength)
+
+    def _update_comment_helper_wraplength(self, event: object) -> None:
+        width = getattr(event, "width", None)
+        if width is None:
+            return
+
+        wraplength = max(width - 24, 100)
+        self.comment_helper.configure(wraplength=wraplength)
 
     def _enable_select_all(self, textbox: ctk.CTkTextbox) -> None:
         def handler(event: object) -> str:

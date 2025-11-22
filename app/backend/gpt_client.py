@@ -43,6 +43,11 @@ class ListingResult:
     price_estimate: Optional[str] = None
 
 
+_FR_SIZE_OVERRIDE_PATTERN = re.compile(
+    r"(?i)\b(?:fr\s*-?\s*(\d{2,3})|(\d{2,3})\s*fr|taille\s*(?:fr\s*)?(\d{2,3}))\b"
+)
+
+
 class ListingGenerator:
     """Generate a Vinted listing from encoded images and user comments."""
 
@@ -196,6 +201,8 @@ class ListingGenerator:
                     "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
                 ) from exc
 
+        fields = self._apply_user_overrides(user_comment, fields)
+
         if template.name == "template-pull-tommy-femme" and not (fields.sku and fields.sku.strip()):
             logger.step("Récupération ciblée du SKU Tommy Hilfiger")
             recovered_sku_raw = self._recover_tommy_sku(encoded_images_list, user_comment)
@@ -241,6 +248,30 @@ class ListingGenerator:
             sku_missing=sku_missing,
             price_estimate=price_estimate,
         )
+
+    def _apply_user_overrides(self, user_comment: str, fields: ListingFields) -> ListingFields:
+        """Force model fields with explicit user instructions."""
+
+        if not user_comment:
+            return fields
+
+        fr_size_override = self._extract_fr_size_override(user_comment)
+        if fr_size_override:
+            logger.info("Taille FR forcée depuis le commentaire: %s", fr_size_override)
+            fields = replace(fields, fr_size=fr_size_override)
+
+        return fields
+
+    @staticmethod
+    def _extract_fr_size_override(user_comment: str) -> Optional[str]:
+        match = _FR_SIZE_OVERRIDE_PATTERN.search(user_comment)
+        if not match:
+            return None
+
+        for group in match.groups():
+            if group:
+                return group.strip()
+        return None
 
     def _recover_tommy_sku(
         self, encoded_images: Sequence[str], user_comment: str
