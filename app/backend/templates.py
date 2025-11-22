@@ -19,7 +19,7 @@ import unicodedata
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from app.backend.defect_catalog import get_defect_descriptions
 from app.backend.listing_fields import ListingFields
@@ -260,18 +260,113 @@ def _join_fibers(parts: List[str]) -> str:
     return f"{', '.join(parts[:-1])} et {parts[-1]}"
 
 
+def _parse_fr_size_value(fr_size: Optional[str]) -> Optional[int]:
+    if not fr_size:
+        return None
+    match = re.search(r"(\d+)", str(fr_size))
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except (TypeError, ValueError):  # pragma: no cover - defensive
+        return None
+
+
+def _detect_stain_severity(defects: str) -> str:
+    normalized = (defects or "").casefold()
+    if not normalized:
+        return "none"
+
+    large_keywords = (
+        "grosse tache",
+        "grosses taches",
+        "grosse tâche",
+        "grosses tâches",
+        "tache blanche",
+        "tâche blanche",
+        "taches blanches",
+        "tâches blanches",
+    )
+    small_keywords = (
+        "petite tache",
+        "petites taches",
+        "petite tâche",
+        "petites tâches",
+        "micro tache",
+        "micro tâche",
+        "micro taches",
+        "micro tâches",
+    )
+
+    if any(keyword in normalized for keyword in large_keywords):
+        return "large"
+    if any(keyword in normalized for keyword in small_keywords):
+        return "small"
+    return "none"
+
+
+def _is_premium_model(model: str) -> bool:
+    return "premium" in (model or "").casefold()
+
+
+def _estimate_price_for_jean_levis(
+    *, model: str, fr_size_display: Optional[str], defects: str
+) -> str:
+    fr_size_value = _parse_fr_size_value(fr_size_display)
+    stain_severity = _detect_stain_severity(defects)
+    is_premium = _is_premium_model(model)
+
+    if is_premium:
+        if stain_severity == "large":
+            price = 14
+        elif stain_severity == "small":
+            price = 19
+        elif fr_size_value is not None and fr_size_value >= 46:
+            price = 23
+        else:
+            price = 20
+    else:
+        if stain_severity == "large":
+            price = 12
+        elif stain_severity == "small":
+            price = 17
+        elif fr_size_value is not None:
+            if fr_size_value >= 50:
+                price = 24
+            elif fr_size_value == 48:
+                price = 22
+            elif fr_size_value == 46:
+                price = 20
+            else:
+                price = 19
+        else:
+            price = 19
+
+    return f"Estimation de prix indicative : {price}€"
+
+
 @dataclass
 class ListingTemplate:
     name: str
     description: str
     prompt: str
-    render_callback: Callable[[ListingFields], Tuple[str, str]]
+    render_callback: Callable[
+        [ListingFields], Union[Tuple[str, str], Tuple[str, str, Optional[str]]]
+    ]
 
-    def render(self, fields: ListingFields) -> Tuple[str, str]:
-        return self.render_callback(fields)
+    def render(self, fields: ListingFields) -> Tuple[str, str, Optional[str]]:
+        result = self.render_callback(fields)
+        if len(result) == 2:
+            title, description = result  # type: ignore[misc]
+            price_estimate = None
+        else:
+            title, description, price_estimate = result  # type: ignore[misc]
+        return title, description, price_estimate
 
 
-def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
+def render_template_jean_levis_femme(
+    fields: ListingFields,
+) -> Tuple[str, str, Optional[str]]:
     fit_title, fit_description, fit_hashtag = normalize_fit_terms(fields.fit_leg)
     waist_measurement_value = fields.waist_measurement_cm
     if (
@@ -558,7 +653,13 @@ def render_template_jean_levis_femme(fields: ListingFields) -> Tuple[str, str]:
         ]
     ).strip()
 
-    return title, description
+    price_estimate = _estimate_price_for_jean_levis(
+        model=model,
+        fr_size_display=fr_display,
+        defects=defects,
+    )
+
+    return title, description, price_estimate
 
 
 @dataclass(frozen=True)
