@@ -358,7 +358,22 @@ def _estimate_price_for_jean_levis(
             else:
                 price = 19
 
-    return f"Estimation de prix indicative : {price}€"
+    severity_label = {
+        "none": "aucun défaut notable",
+        "small": "défauts légers",
+        "large": "défauts marqués",
+    }.get(stain_severity, "défauts non précisés")
+
+    size_label = f"taille FR {fr_size_display}" if fr_size_display else "taille non précisée"
+    premium_label = "modèle premium" if is_premium else "modèle standard"
+    color_label = "couleur blanche" if is_white else None
+
+    criteria = [premium_label, size_label, severity_label]
+    if color_label:
+        criteria.append(color_label)
+
+    criteria_display = ", ".join(criteria)
+    return f"Estimation de prix indicative (critères : {criteria_display}) : {price}€"
 
 
 @dataclass

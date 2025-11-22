@@ -134,18 +134,16 @@ class VintedListingApp(ctk.CTk):
         price_container.grid(row=5, column=0, sticky="nsew", padx=12, pady=4)
         price_container.columnconfigure(0, weight=1)
 
-        self.price_box = ctk.CTkTextbox(price_container, height=28)
-        self.price_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
-        self._enable_select_all(self.price_box)
-
-        self.price_copy_button = ctk.CTkButton(
+        self.price_text = ctk.StringVar()
+        self.price_label = ctk.CTkLabel(
             price_container,
-            text="Copier",
-            width=72,
-            command=lambda: self._copy_to_clipboard(self.price_box),
+            textvariable=self.price_text,
+            anchor="w",
+            justify="left",
+            wraplength=0,
         )
-        self.price_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
-        self._buttons_to_disable.append(self.price_copy_button)
+        self.price_label.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
+        price_container.bind("<Configure>", self._update_price_wraplength)
 
         description_container = ctk.CTkFrame(form_frame)
         description_container.grid(row=6, column=0, sticky="nsew", padx=12, pady=(4, 12))
@@ -239,13 +237,10 @@ class VintedListingApp(ctk.CTk):
         self.title_box.delete("1.0", "end")
         self.title_box.insert("1.0", result.title)
 
-        self.price_box.delete("1.0", "end")
         if result.price_estimate:
-            self.price_box.insert("1.0", result.price_estimate)
+            self.price_text.set(result.price_estimate)
         else:
-            self.price_box.insert(
-                "1.0", "Aucune estimation disponible pour ce template."
-            )
+            self.price_text.set("Aucune estimation disponible pour ce template.")
 
         self.description_box.delete("1.0", "end")
         self.description_box.insert("1.0", result.description)
@@ -258,7 +253,7 @@ class VintedListingApp(ctk.CTk):
         self._image_directories.clear()
         self.preview_frame.update_images([])
         self.title_box.delete("1.0", "end")
-        self.price_box.delete("1.0", "end")
+        self.price_text.set("")
         self.description_box.delete("1.0", "end")
         self._insert_comment_placeholder()
         logger.step("Application réinitialisée")
@@ -340,6 +335,14 @@ class VintedListingApp(ctk.CTk):
 
     def _show_error_popup(self, message: str) -> None:
         messagebox.showerror("Erreur", message)
+
+    def _update_price_wraplength(self, event: object) -> None:
+        width = getattr(event, "width", None)
+        if width is None:
+            return
+
+        wraplength = max(width - 12, 100)
+        self.price_label.configure(wraplength=wraplength)
 
     def _enable_select_all(self, textbox: ctk.CTkTextbox) -> None:
         def handler(event: object) -> str:
