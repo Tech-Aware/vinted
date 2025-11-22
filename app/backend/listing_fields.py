@@ -720,7 +720,7 @@ class ListingFields:
                     \"cotton_pct\": \"pourcentage de coton lisible ; renvoie \"\" si absent\",
                     \"wool_pct\": \"pourcentage de laine lisible ; renvoie \"\" si absent\",
                     \"cashmere_pct\": \"pourcentage de cachemire lisible ; renvoie \"\" si absent\",
-                    \"polyester_pct\": \"pourcentage de polyester lisible ; si aucune autre matière n'est mentionnée dans la boîte tâches/défauts et qu'aucune étiquette n'est exploitable, renseigne 100\",
+                    \"polyester_pct\": \"pourcentage de polyester lisible ; si aucune autre matière n'est mentionnée dans la boîte Commentaire et qu'aucune étiquette n'est exploitable, renseigne 100\",
                     \"polyamide_pct\": \"pourcentage de polyamide lisible ; renvoie \"\" si absent\",
                     \"viscose_pct\": \"pourcentage de viscose lisible ; renvoie \"\" si absent\",
                     \"elastane_pct\": \"pourcentage d'élasthanne lisible ; renvoie \"\" si absent\",
@@ -748,7 +748,7 @@ class ListingFields:
                 - Renseigne systématiquement les mesures à plat lorsqu'elles sont visibles, sinon renvoie la chaîne vide.
                 - Décris précisément zip_style/neckline_style pour refléter full zip / 1/4 zip / boutons et col roulé / col montant / col V / col rond, et repère les logos ou rubans spéciaux via special_logo.
                 - Ne mets la matière dans le titre que lorsque la fibre est intéressante (coton, laine, cachemire, soie) et sans pourcentage.
-                - Sauf commentaire explicite dans la boîte tâches/défauts signalant une matière différente, considère les polaires comme 100% polyester lorsque l'étiquette n'est pas lisible : mets \"polyester_pct\" à \"100\" et laisse les autres fibres vides.
+                - Sauf commentaire explicite dans la boîte Commentaire signalant une matière différente, considère les polaires comme 100% polyester lorsque l'étiquette n'est pas lisible : mets \"polyester_pct\" à \"100\" et laisse les autres fibres vides.
                 - Les champs brand/model/zip_style/feature_notes/technical_features ne doivent contenir que des informations confirmées par les photos.
                 - has_hood = true uniquement si une capuche est clairement visible.
                 - Le SKU doit reprendre exactement le format PTNF-n ou PC-n selon la marque détectée ; renvoie \"\" si l'information est absente.
