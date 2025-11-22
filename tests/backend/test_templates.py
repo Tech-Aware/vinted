@@ -173,6 +173,38 @@ def test_render_jean_levis_marks_estimated_size_without_forbidden_note() -> None
     assert "Taille estimée à partir" not in description
 
 
+def test_render_jean_levis_estimates_price_with_visible_stains() -> None:
+    template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
+    fields = ListingFields(
+        model="501",
+        fr_size="38",
+        us_w="28",
+        us_l="32",
+        fit_leg="straight",
+        rise_class="regular",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="100",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="Femme",
+        color_main="bleu",
+        defects="Tâches visibles sur l'avant",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        fabric_label_cut=False,
+        sku="JLF99",
+    )
+
+    _, _, price_estimate = template.render(fields)
+
+    assert price_estimate is not None
+    assert price_estimate.endswith("17€")
+
+
 def test_render_jean_levis_fabric_label_missing_no_duplicate_messages() -> None:
     template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
     fields = ListingFields(
