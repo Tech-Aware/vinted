@@ -316,37 +316,47 @@ def _is_premium_model(model: str) -> bool:
 
 
 def _estimate_price_for_jean_levis(
-    *, model: str, fr_size_display: Optional[str], defects: str
+    *, model: str, fr_size_display: Optional[str], defects: str, color: str
 ) -> str:
     fr_size_value = _parse_fr_size_value(fr_size_display)
     stain_severity = _detect_stain_severity(defects)
     is_premium = _is_premium_model(model)
+    is_white = "blanc" in (color or "").casefold()
 
     if is_premium:
-        if stain_severity == "large":
+        if stain_severity == "large" or (is_white and stain_severity != "none"):
             price = 14
-        elif stain_severity == "small":
-            price = 19
-        elif fr_size_value is not None and fr_size_value >= 46:
-            price = 23
         else:
-            price = 20
+            if fr_size_value == 46 and stain_severity != "none":
+                price = 21
+            else:
+                base_price = 20 if stain_severity == "none" else 19
+                if fr_size_value == 46 and stain_severity == "none":
+                    price = base_price + 3
+                else:
+                    price = base_price
     else:
-        if stain_severity == "large":
-            price = 12
-        elif stain_severity == "small":
-            price = 17
-        elif fr_size_value is not None:
-            if fr_size_value >= 50:
-                price = 24
-            elif fr_size_value == 48:
-                price = 22
-            elif fr_size_value == 46:
-                price = 20
+        if stain_severity != "none":
+            price = 12 if is_white else 17
+            if fr_size_value:
+                if fr_size_value >= 50:
+                    price = 22
+                elif fr_size_value == 48:
+                    price = 20
+                elif fr_size_value == 46:
+                    price = 19
+        else:
+            if fr_size_value:
+                if fr_size_value >= 50:
+                    price = 24
+                elif fr_size_value == 48:
+                    price = 22
+                elif fr_size_value == 46:
+                    price = 20
+                else:
+                    price = 19
             else:
                 price = 19
-        else:
-            price = 19
 
     return f"Estimation de prix indicative : {price}€"
 
@@ -663,6 +673,7 @@ def render_template_jean_levis_femme(
         model=model,
         fr_size_display=fr_display,
         defects=defects,
+        color=color,
     )
 
     return title, description, price_estimate
