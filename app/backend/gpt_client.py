@@ -144,8 +144,12 @@ class ListingGenerator:
         logger.success("Réponse reçue depuis l'API OpenAI")
         content = self._extract_response_text(response)
         if not content:
-            logger.error("Réponse vide reçue depuis l'API OpenAI")
-            raise ValueError("Réponse du modèle vide, impossible de parser le JSON")
+            friendly_message = (
+                "Aucune réponse textuelle n'a été renvoyée par le modèle. "
+                "Merci de réessayer dans quelques instants."
+            )
+            logger.error(friendly_message)
+            raise ValueError(friendly_message)
         fenced_match = re.search(r"```(?:json)?\s*(.*?)```", content, re.DOTALL)
         if fenced_match:
             content_to_parse = fenced_match.group(1).strip()
