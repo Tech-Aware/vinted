@@ -124,14 +124,11 @@ class ListingGenerator:
             )
         logger.info("%d image(s) intégrée(s) dans le prompt", len(images_list))
         if user_comment:
-            user_content.append({
-                "type": "input_text",
-                "text": (
-                    "Commentaire utilisateur prioritaire (séparé par virgules si plusieurs infos) : "
-                    f"{user_comment}"
-                ),
-            })
-            logger.info("Commentaire utilisateur ajouté au prompt (%d caractère(s))", len(user_comment))
+            logger.info(
+                "Commentaire utilisateur ignoré par le prompt direct (%d caractère(s)),"
+                " application différée via overrides",
+                len(user_comment),
+            )
         else:
             logger.info("Aucun commentaire utilisateur fourni")
         structured_prompt = f"{template.prompt}\n\n{ListingFields.json_instruction(template.name)}"
@@ -255,10 +252,22 @@ class ListingGenerator:
         if not user_comment:
             return fields
 
-        fr_size_override = self._extract_fr_size_override(user_comment)
-        if fr_size_override:
-            logger.info("Taille FR forcée depuis le commentaire: %s", fr_size_override)
-            fields = replace(fields, fr_size=fr_size_override)
+        overrides, leftover_notes = self._extract_overrides_from_comment(user_comment)
+        if leftover_notes:
+            existing_notes = (fields.feature_notes or "").strip()
+            merged_notes = ", ".join(note for note in leftover_notes if note)
+            if merged_notes:
+                combined_notes = ", ".join(
+                    part for part in (existing_notes, merged_notes) if part
+                )
+                overrides["feature_notes"] = combined_notes
+
+        if overrides:
+            logger.info(
+                "Application des overrides depuis le commentaire: %s",
+                ", ".join(sorted(overrides)),
+            )
+            fields = replace(fields, **overrides)
 
         return fields
 
@@ -272,6 +281,73 @@ class ListingGenerator:
             if group:
                 return group.strip()
         return None
+
+    def _extract_overrides_from_comment(
+        self, user_comment: str
+    ) -> tuple[dict, list[str]]:
+        """Parse the free-form comment to override structured fields.
+
+        Returns a tuple of (overrides, leftover_notes). "overrides" contains
+        direct field replacements (e.g. taille, couleur, marque) while
+        "leftover_notes" gathers unclassified pieces of information to append
+        to the feature notes section instead of polluting the title.
+        """
+
+        overrides: dict = {}
+        leftover_notes: list[str] = []
+
+        fr_size_override = self._extract_fr_size_override(user_comment)
+        if fr_size_override:
+            overrides["fr_size"] = fr_size_override
+
+        # Découpe les instructions séparées par des virgules ou retours à la ligne
+        segments = [
+            segment.strip()
+            for segment in re.split(r"[,\n;]+", user_comment)
+            if segment.strip()
+        ]
+
+        for segment in segments:
+            lower = segment.lower()
+            key_value_match = re.match(r"\s*(\w[\w\s]+?)\s*[:\-]\s*(.+)", segment)
+
+            if lower.startswith("taille"):
+                # Already captured by the global regex, but keep the content as note otherwise
+                if fr_size_override:
+                    continue
+            if lower.startswith("couleur") or lower.startswith("coloris"):
+                color_value = segment.split(":", 1)[-1] if ":" in segment else segment
+                color_value = color_value.split("-", 1)[-1].strip()
+                if color_value:
+                    overrides["color_main"] = color_value
+                    continue
+
+            if lower.startswith("marque"):
+                brand_value = segment.split(":", 1)[-1].strip() if ":" in segment else ""
+                if brand_value:
+                    overrides["brand"] = brand_value
+                    continue
+
+            if lower.startswith("modele") or lower.startswith("modèle"):
+                model_value = segment.split(":", 1)[-1].strip() if ":" in segment else ""
+                if model_value:
+                    overrides["model"] = model_value
+                    continue
+
+            if lower.startswith("defaut") or lower.startswith("défaut"):
+                defect_value = segment.split(":", 1)[-1].strip() if ":" in segment else ""
+                if defect_value:
+                    overrides["defects"] = defect_value
+                    continue
+
+            if key_value_match:
+                # Catch-all: clé/valeur non reconnue => note
+                leftover_notes.append(segment)
+                continue
+
+            leftover_notes.append(segment)
+
+        return overrides, leftover_notes
 
     def _recover_tommy_sku(
         self, encoded_images: Sequence[str], user_comment: str
