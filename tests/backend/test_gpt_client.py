@@ -103,6 +103,19 @@ def _build_template(captured: Dict[str, Any]) -> ListingTemplate:
     )
 
 
+def _build_template_with_size_capture(captured: Dict[str, Any]) -> ListingTemplate:
+    def _render(fields):
+        captured["fields"] = fields
+        return (f"TITRE-{fields.fr_size}", "DESC")
+
+    return ListingTemplate(
+        name="template-pull-tommy-femme",
+        description="",
+        prompt="PROMPT",
+        render_callback=_render,
+    )
+
+
 @pytest.mark.parametrize(
     "sku_reply,expected",
     [
@@ -176,3 +189,47 @@ def test_listing_fields_allows_missing_measurements_for_levis() -> None:
     assert fields.shoulder_measurement_cm is None
     assert fields.waist_flat_measurement_cm is None
     assert fields.hem_flat_measurement_cm is None
+
+
+def test_comment_overrides_fr_size(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    payload = _base_fields_payload(fr_size="40", sku="PTF1")
+    main_response = _listing_response(payload)
+    fake_client = FakeClient([main_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {}
+    template = _build_template_with_size_capture(captured)
+
+    result = generator.generate_listing(
+        ["data:image/png;base64,AAA"], "taille FR38, coupe droite", template
+    )
+
+    assert result.title == "TITRE-38"
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.fr_size == "38"
+
+
+def test_comment_without_explicit_size_keeps_model_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    payload = _base_fields_payload(fr_size="40", sku="PTF1")
+    main_response = _listing_response(payload)
+    fake_client = FakeClient([main_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {}
+    template = _build_template_with_size_capture(captured)
+
+    result = generator.generate_listing(
+        ["data:image/png;base64,AAA"], "Coupe droite sans précision de taille", template
+    )
+
+    assert result.title == "TITRE-40"
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.fr_size == "40"
