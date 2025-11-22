@@ -1678,7 +1678,7 @@ class ListingTemplateRegistry:
                     - Coupe = {{fit_leg}} (insère la hauteur de taille {{rise_class}} dans la description uniquement, jamais dans le titre)
                     - Matière = {{cotton_pct}}% coton (+ {{polyester_pct}}% polyester si présent, + {{polyamide_pct}}% polyamide si présent, + {{elastane_pct}}% élasthanne si présent)
                     - Genre = {{gender}}  (valeurs attendues : femme, homme, mix)
-                    - Tâches et défauts = Ce qui doit impérativement apparaître dans l'annonce si identifié sur photos ou fournit en commentaire {{defects}}
+                    - Commentaire (prioritaire) = informations utilisateur (taille, coupe, défauts, préférences) à appliquer en priorité dans l'estimation de prix, le titre et la description, même si elles ne sont pas visibles sur les photos {{defects}}
                     - SKU = {{sku}} (utilise JLF + numéro (1 à 3 chiffres) ;
                       reprends exactement le numéro présent sur l’étiquette blanche visible sur le jean)
 
@@ -1722,6 +1722,7 @@ class ListingTemplateRegistry:
                     - SKU = {{sku}} (utilise PTF + numéro (1 à 3 chiffres) lorsque l'étiquette blanche est lisible)
                     - {{matiere_principale}} = synthèse des matières dominantes (ex : 100% coton, laine torsadée, cachemire)
                     - {{made_in_europe}} = écris « Made in Europe » uniquement si l'étiquette indique un pays européen, sinon laisse vide
+                    - Commentaire (prioritaire) = applique en priorité toute information saisie par l'utilisateur (taille, matière, défaut, coupe) pour remplir les champs, calculer l'estimation de prix et rédiger l'annonce, même si le détail n'est pas visible sur les photos
 
                     Règles :
                     - Pour le coton, si le pourcentage est inférieur à 60 %, écris simplement « coton ».
@@ -1776,9 +1777,10 @@ class ListingTemplateRegistry:
                     - SKU = {{sku}} (PTNF-n pour The North Face, PC-n pour Columbia, n ∈ [1;999])
 
                     Règles :
+                    - Le bloc Commentaire est prioritaire : si l'utilisateur indique taille, coupe, matière ou défaut, applique ces informations avant toute déduction des photos pour remplir les champs, calculer l'estimation et rédiger l'annonce.
                     - Les mensurations à plat sont obligatoires dès qu’une photo claire les affiche.
                     - Dans le titre, combine un maximum de détails : {{zip_style}} (full zip / 1/4 zip / boutons…) + {{neckline_style}} (col roulé / col montant / col V / col rond) et signale toute information {{special_logo}} visible (ex : ruban rose).
-                    - Sauf commentaire explicite dans la boîte tâches/défauts mentionnant une autre fibre, considère les polaires comme 100% polyester quand l’étiquette n’est pas lisible : renseigne {{polyester_pct}} = "100" et laisse les autres champs matière vides.
+                    - Sauf commentaire explicite dans la boîte Commentaire mentionnant une autre fibre, considère les polaires comme 100% polyester quand l’étiquette n’est pas lisible : renseigne {{polyester_pct}} = "100" et laisse les autres champs matière vides.
                     - Ne mentionne la matière dans le titre que pour les fibres intéressantes (coton, laine, cachemire, soie) et jamais avec un pourcentage.
                     - Le SKU doit respecter exactement le format PTNF-n ou PC-n ; renvoie la chaîne vide si l’information manque.
                     - Signale toute étiquette coupée via {{fabric_label_cut}} et rappelle si les étiquettes taille/composition sont absentes.

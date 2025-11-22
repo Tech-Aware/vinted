@@ -8,7 +8,7 @@ sous Windows que sous Chromebook (via l'environnement Linux).
 ## Fonctionnalités
 
 - Sélection de plusieurs photos avec prévisualisation vignette.
-- Zone de saisie des tâches et défauts détectés par l'utilisateur.
+- Zone de saisie « Commentaire » (prioritaire) avec rappel de séparer plusieurs informations par des virgules.
 - Génération automatique d'un titre et d'une description structurée grâce à
   l'API OpenAI Vision (GPT-4o).
 - Résultats affichés dans deux zones éditables prêtes au copier/coller.

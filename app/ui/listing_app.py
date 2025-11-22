@@ -31,7 +31,7 @@ from app.ui.image_preview import ImagePreview
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
-COMMENT_PLACEHOLDER = "Décrivez tâches et défauts..."
+COMMENT_PLACEHOLDER = "Commentaire prioritaire : séparez vos infos par des virgules (ex : 38FR, évasé, tâche)"
 
 
 logger = get_logger(__name__)
@@ -76,7 +76,7 @@ class VintedListingApp(ctk.CTk):
         form_frame = ctk.CTkFrame(self)
         form_frame.grid(row=1, column=0, padx=16, pady=(8, 16), sticky="nsew")
         form_frame.columnconfigure(0, weight=1)
-        form_frame.rowconfigure(6, weight=1)
+        form_frame.rowconfigure(8, weight=1)
 
         self.template_var = ctk.StringVar(value=self.template_registry.default_template)
         template_label = ctk.CTkLabel(form_frame, text="Modèle d'annonce")
@@ -87,14 +87,31 @@ class VintedListingApp(ctk.CTk):
         self.template_combo.grid(row=1, column=0, sticky="ew", padx=12)
         self._template_combo_default_state = self.template_combo.cget("state") or "normal"
 
-        self.comment_box = ctk.CTkTextbox(form_frame, height=28)
+        self.comment_label = ctk.CTkLabel(
+            form_frame,
+            text="Commentaire (prioritaire)",
+            anchor="w",
+            justify="left",
+        )
+        self.comment_label.grid(row=2, column=0, sticky="w", padx=12, pady=(12, 0))
+
+        self.comment_helper = ctk.CTkLabel(
+            form_frame,
+            text="Si vous avez plusieurs commentaires, séparez-les par des virgules. Les informations saisies ici priment sur les photos et orientent l'estimation.",
+            anchor="w",
+            justify="left",
+            wraplength=800,
+        )
+        self.comment_helper.grid(row=3, column=0, sticky="ew", padx=12, pady=(2, 6))
+
+        self.comment_box = ctk.CTkTextbox(form_frame, height=32)
         self._insert_comment_placeholder()
-        self.comment_box.grid(row=2, column=0, sticky="ew", padx=12, pady=(12, 4))
+        self.comment_box.grid(row=4, column=0, sticky="ew", padx=12, pady=(0, 6))
         self.comment_box.bind("<FocusIn>", self._on_comment_focus_in)
         self.comment_box.bind("<FocusOut>", self._on_comment_focus_out)
 
         button_frame = ctk.CTkFrame(form_frame)
-        button_frame.grid(row=3, column=0, sticky="ew", padx=12, pady=(4, 4))
+        button_frame.grid(row=5, column=0, sticky="ew", padx=12, pady=(4, 4))
         button_frame.columnconfigure((0, 1, 2), weight=1)
 
         self.select_button = ctk.CTkButton(button_frame, text="Ajouter des photos", command=self.select_images)
@@ -113,7 +130,7 @@ class VintedListingApp(ctk.CTk):
         ]
 
         title_container = ctk.CTkFrame(form_frame)
-        title_container.grid(row=4, column=0, sticky="nsew", padx=12, pady=(12, 4))
+        title_container.grid(row=6, column=0, sticky="nsew", padx=12, pady=(12, 4))
         title_container.columnconfigure(0, weight=1)
         title_container.rowconfigure(0, weight=1)
 
@@ -131,7 +148,7 @@ class VintedListingApp(ctk.CTk):
         self._buttons_to_disable.append(self.title_copy_button)
 
         price_container = ctk.CTkFrame(form_frame)
-        price_container.grid(row=5, column=0, sticky="nsew", padx=12, pady=4)
+        price_container.grid(row=7, column=0, sticky="nsew", padx=12, pady=4)
         price_container.columnconfigure(0, weight=1)
 
         self.price_text = ctk.StringVar()
@@ -146,7 +163,7 @@ class VintedListingApp(ctk.CTk):
         price_container.bind("<Configure>", self._update_price_wraplength)
 
         description_container = ctk.CTkFrame(form_frame)
-        description_container.grid(row=6, column=0, sticky="nsew", padx=12, pady=(4, 12))
+        description_container.grid(row=8, column=0, sticky="nsew", padx=12, pady=(4, 12))
         description_container.columnconfigure(0, weight=1)
         description_container.rowconfigure(0, weight=1)
 

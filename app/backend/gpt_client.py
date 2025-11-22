@@ -102,7 +102,8 @@ class ListingGenerator:
                             "identifie uniquement les caractéristiques visibles ou confirmées (taille, couleur, défauts) "
                             "et produis un titre et une description suivant le template donné. Ne fais aucune supposition "
                             "ni estimation : laisse un champ vide lorsqu'une information n'est pas prouvée par les photos ou "
-                            "les commentaires."
+                            "les commentaires. Les informations saisies dans la boîte Commentaire priment sur tout le reste "
+                            "pour remplir les champs, calculer l'estimation de prix et rédiger l'annonce."
                         ),
                     }
                 ],
@@ -120,7 +121,10 @@ class ListingGenerator:
         if user_comment:
             user_content.append({
                 "type": "input_text",
-                "text": f"Commentaires utilisateur (tâches/défauts): {user_comment}",
+                "text": (
+                    "Commentaire utilisateur prioritaire (séparé par virgules si plusieurs infos) : "
+                    f"{user_comment}"
+                ),
             })
             logger.info("Commentaire utilisateur ajouté au prompt (%d caractère(s))", len(user_comment))
         else:
