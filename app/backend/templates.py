@@ -342,7 +342,11 @@ def _estimate_price_for_jean_levis(
         else:
             price = 19
 
-    return f"Estimation de prix indicative : {price}€"
+    criteria_hint = "modèle, taille FR (quand fournie) et défauts constatés"
+    if fr_size_display:
+        criteria_hint = f"modèle, taille FR {fr_size_display} et défauts constatés"
+
+    return f"Estimation indicative basée sur le {criteria_hint} : {price}€"
 
 
 @dataclass
