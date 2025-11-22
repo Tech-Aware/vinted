@@ -52,7 +52,7 @@ class ListingGenerator:
         model: Optional[str] = None,
         api_key: Optional[str] = None,
     ) -> None:
-        self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-5-mini")
+        self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self._client: Optional[OpenAI] = None
         logger.step(
