@@ -35,7 +35,7 @@ class TopSizeEstimate:
 
 _ELASTANE_NOTE = "Mesure FR étendue par la présence d'élasthane dans la composition"
 _WAIST_MEASUREMENT_NOTE = (
-    "Taille estimée à partir du tour de taille mesuré visuellement sur les photos"
+    "Taille estimée à partir de la largeur de taille mesurée visuellement sur les photos"
 )
 _CM_PER_INCH = 2.54
 
@@ -45,16 +45,12 @@ _WAIST_MEASUREMENT_OVERRIDE_THRESHOLD_CM = 4
 def _compute_fr_from_waist_measurement(
     measurement_cm: float, *, ensure_even_fr: bool
 ) -> Optional[Tuple[int, int, float]]:
-    """Convert a raw waist measurement to FR/US size equivalents."""
+    """Convert a raw waist measurement (flat width) to FR/US size equivalents."""
 
     if measurement_cm <= 0:
         return None
 
-    circumference_cm = measurement_cm * 2 if measurement_cm < 60 else measurement_cm
-    if circumference_cm <= 0:
-        return None
-
-    waist_inch = circumference_cm / _CM_PER_INCH
+    waist_inch = measurement_cm / _CM_PER_INCH
     if waist_inch <= 0:
         return None
 
@@ -62,7 +58,7 @@ def _compute_fr_from_waist_measurement(
     if us_numeric <= 0:
         return None
 
-    fr_float = waist_inch + 10
+    fr_float = measurement_cm
     fr_numeric = int(round(fr_float))
 
     if ensure_even_fr and fr_numeric % 2:
@@ -78,7 +74,7 @@ def _compute_fr_from_waist_measurement(
     if fr_numeric <= 0:
         return None
 
-    return fr_numeric, us_numeric, circumference_cm
+    return fr_numeric, us_numeric, measurement_cm
 
 _SIZE_CHART_BUST_CM = (
     (84.0, "FR 34 (XS)"),
@@ -252,13 +248,13 @@ def normalize_sizes(
     measurement_note: Optional[str] = None
     measurement_sizes: Optional[NormalizedSizes] = None
     if measurement_estimate is not None:
-        measurement_fr_numeric, _measurement_us_numeric, measurement_circumference = (
+        measurement_fr_numeric, _measurement_us_numeric, measurement_flat_width = (
             measurement_estimate
         )
         measurement_value = measurement_fr_numeric
         measurement_note = _WAIST_MEASUREMENT_NOTE
         measurement_note = (
-            f"{measurement_note} (~{int(round(measurement_circumference))} cm)."
+            f"{measurement_note} (~{int(round(measurement_flat_width))} cm à plat)."
         )
         measurement_sizes = NormalizedSizes(
             fr_size=str(measurement_fr_numeric), us_size=None, note=measurement_note
@@ -267,7 +263,7 @@ def normalize_sizes(
     def _adjust_even(value: int) -> int:
         if not ensure_even_fr or value % 2 == 0:
             return value
-        if measurement_value is not None:
+        if measurement_value is not None and fr_value is None:
             delta = measurement_value - value
             if abs(delta) <= _WAIST_MEASUREMENT_OVERRIDE_THRESHOLD_CM:
                 if delta < 0:

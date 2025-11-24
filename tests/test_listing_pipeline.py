@@ -579,10 +579,10 @@ def test_normalize_sizes_rounds_down_when_measurement_is_smaller() -> None:
         ensure_even_fr=True,
         waist_measurement_cm=30,
     )
-    assert computed.fr_size == "34"
+    assert computed.fr_size == "30"
     assert computed.us_size is None
     assert computed.note is not None
-    assert "~60 cm" in computed.note
+    assert "~30 cm" in computed.note
 
 
 def test_normalize_sizes_rounds_up_when_measurement_is_larger() -> None:
@@ -596,7 +596,7 @@ def test_normalize_sizes_rounds_up_when_measurement_is_larger() -> None:
     assert computed.fr_size == "48"
     assert computed.us_size is None
     assert computed.note is not None
-    assert "~96 cm" in computed.note
+    assert "~48 cm" in computed.note
 
 
 def test_normalize_sizes_falls_back_to_waist_measurement() -> None:
@@ -605,12 +605,13 @@ def test_normalize_sizes_falls_back_to_waist_measurement() -> None:
         None,
         False,
         ensure_even_fr=True,
-        waist_measurement_cm=44,
+        waist_measurement_cm=40,
     )
-    assert computed.fr_size == "44"
+    assert computed.fr_size == "40"
     assert computed.us_size is None
     assert computed.note is not None
-    assert "~88 cm" in computed.note
+    assert "~40 cm" in computed.note
+    assert "à plat" in computed.note
 
 
 def test_normalize_sizes_converts_small_flat_measurement() -> None:
@@ -621,10 +622,10 @@ def test_normalize_sizes_converts_small_flat_measurement() -> None:
         ensure_even_fr=True,
         waist_measurement_cm=33,
     )
-    assert computed.fr_size == "36"
+    assert computed.fr_size == "32"
     assert computed.us_size is None
     assert computed.note is not None
-    assert "~66 cm" in computed.note
+    assert "~33 cm" in computed.note
 
 
 def test_normalize_sizes_prefers_measurement_when_conflict() -> None:
@@ -635,10 +636,40 @@ def test_normalize_sizes_prefers_measurement_when_conflict() -> None:
         ensure_even_fr=True,
         waist_measurement_cm=33,
     )
-    assert computed.fr_size == "36"
+    assert computed.fr_size == "32"
     assert computed.us_size is None
     assert computed.note is not None
-    assert "~66 cm" in computed.note
+    assert "~33 cm" in computed.note
+
+
+def test_normalize_sizes_keeps_flat_measurement_without_labels() -> None:
+    computed: NormalizedSizes = normalize_sizes(
+        None,
+        None,
+        False,
+        ensure_even_fr=True,
+        waist_measurement_cm=40,
+    )
+
+    assert computed.fr_size == "40"
+    assert computed.us_size is None
+    assert computed.note is not None
+    assert "~40 cm" in computed.note
+    assert "à plat" in computed.note
+
+
+def test_normalize_sizes_respects_labels_with_flat_measurement() -> None:
+    computed: NormalizedSizes = normalize_sizes(
+        "31",
+        "42",
+        False,
+        ensure_even_fr=True,
+        waist_measurement_cm=40,
+    )
+
+    assert computed.fr_size == "42"
+    assert computed.us_size == "31"
+    assert computed.note is None
 
 
 def test_normalize_sizes_prefers_measurement_when_gap_is_smaller() -> None:
@@ -683,7 +714,7 @@ def test_template_render_injects_normalized_terms(template_registry: ListingTemp
         }
     )
 
-    title, description = template.render(fields)
+    title, description, _price = template.render(fields)
     assert "Bootcut/Évasé" in title
     assert "bootcut/évasé" in description
     assert "haute" not in title.lower()
@@ -728,11 +759,11 @@ def test_render_template_prefers_measurement_when_conflict(
         }
     )
 
-    title, description = render_template_jean_levis_femme(fields)
+    title, description, _price = render_template_jean_levis_femme(fields)
 
-    assert "FR36" in title
+    assert "FR32" in title
     assert "W31" not in title
-    assert "Taille 36 FR" in description
+    assert "Taille 32 FR" in description
     assert "Taille 31 US" not in description
     assert "(voir photos)" in description
     assert "Taille estimée à partir" not in description
@@ -769,7 +800,7 @@ def test_template_render_translates_main_color_to_french(
         }
     )
 
-    title, description = template.render(fields)
+    title, description, _price = template.render(fields)
 
     assert "noir" in title
     assert "Coloris noir" in description
@@ -807,7 +838,7 @@ def test_template_render_handles_viscose_composition(
         }
     )
 
-    title, description = template.render(fields)
+    title, description, _price = template.render(fields)
     assert fields.has_viscose is True
     assert "30% viscose" not in title
     assert "60% coton" in title
@@ -848,7 +879,7 @@ def test_template_render_mentions_wool_cashmere_nylon(
         }
     )
 
-    _title, description = template.render(fields)
+    _title, description, _price = template.render(fields)
     assert (
         "Composition : 70% coton, 20% laine, 5% cachemire et 5% nylon." in description
     )
@@ -883,7 +914,7 @@ def test_template_render_combines_related_defects(template_registry: ListingTemp
         }
     )
 
-    _title, description = template.render(fields)
+    _title, description, _price = template.render(fields)
     assert (
         "Très bon état : Quelques trous discrets et effets déchirés (voir photos)"
         in description
@@ -929,7 +960,7 @@ def test_template_pull_tommy_mentions_nylon_and_acrylic(
         template_name="template-pull-tommy-femme",
     )
 
-    _title, description = template.render(fields)
+    _title, description, _price = template.render(fields)
     assert (
         "Composition : 65% coton, 25% laine, 5% cachemire, 5% acrylique et 5% nylon." in description
     )
@@ -965,13 +996,13 @@ def test_template_render_mentions_missing_labels_individually(
     size_hidden = ListingFields.from_dict(
         {**base_payload, "size_label_visible": False, "fabric_label_visible": True}
     )
-    _title, size_description = template.render(size_hidden)
+    _title, size_description, _price = template.render(size_hidden)
     assert SIZE_LABEL_CUT_MESSAGE in size_description
 
     fabric_hidden = ListingFields.from_dict(
         {**base_payload, "size_label_visible": True, "fabric_label_visible": False}
     )
-    _title, fabric_description = template.render(fabric_hidden)
+    _title, fabric_description, _price = template.render(fabric_hidden)
     assert COMPOSITION_LABEL_CUT_MESSAGE in fabric_description
 
 
@@ -1007,7 +1038,7 @@ def test_template_render_uses_waist_measurement_when_label_hidden(
         }
     )
 
-    title, description = template.render(fields)
+    title, description, _price = template.render(fields)
 
     assert "FR44" in title
     assert "Taille 44 FR" in description
@@ -1046,7 +1077,7 @@ def test_template_render_mentions_polyester(template_registry: ListingTemplateRe
     )
 
     assert fields.has_polyester is True
-    _title, description = template.render(fields)
+    _title, description, _price = template.render(fields)
     assert "Composition : 60% coton, 35% polyester et 5% élasthanne." in description
 
 
@@ -1081,7 +1112,7 @@ def test_template_render_skips_composition_when_label_missing(
         }
     )
 
-    title, description = template.render(fields)
+    title, description, _price = template.render(fields)
     assert "coton" not in title.lower()
     assert description.count(COMPOSITION_LABEL_CUT_MESSAGE) == 1
     assert COMBINED_LABEL_CUT_MESSAGE not in description
@@ -1154,7 +1185,7 @@ def test_template_render_omits_model_when_missing(
     }
 
     fields = ListingFields.from_dict(payload)
-    title, description = template.render(fields)
+    title, description, _price = template.render(fields)
 
     assert "  " not in title
     assert not title.startswith("Jean Levi’s  ")
@@ -1197,7 +1228,7 @@ def test_template_render_avoids_defaulting_missing_fields(
         }
     )
 
-    title, description = template.render(fields)
+    title, description, _price = template.render(fields)
     assert "femme" not in title.lower()
     assert "bleu" not in title.lower()
     assert "femme" not in description.lower()
@@ -1359,7 +1390,7 @@ def test_template_render_falls_back_to_free_text(template_registry: ListingTempl
         }
     )
 
-    _title, description = template.render(fields)
+    _title, description, _price = template.render(fields)
     assert "usure légère sur la poche arrière" in description
 
 
@@ -1394,7 +1425,7 @@ def test_template_render_ignores_positive_defect_phrase(
         }
     )
 
-    _title, description = template.render(fields)
+    _title, description, _price = template.render(fields)
     third_paragraph = description.split("\n\n")[2].split("\n")[0]
     assert third_paragraph == "Très bon état"
 
@@ -1430,7 +1461,7 @@ def test_template_render_mentions_catalog_defect_without_duplication(
         }
     )
 
-    _title, description = template.render(fields)
+    _title, description, _price = template.render(fields)
     third_paragraph = description.split("\n\n")[2].split("\n")[0]
     assert third_paragraph == "Très bon état : entrejambe légèrement délavée (voir photos)"
     assert "Très bon état général" not in third_paragraph
