@@ -17,6 +17,7 @@ limitations under the License.
 import json
 import os
 import re
+import unicodedata
 from dataclasses import dataclass, replace
 from typing import Iterable, List, Optional, Sequence
 
@@ -46,6 +47,10 @@ class ListingResult:
 _FR_SIZE_OVERRIDE_PATTERN = re.compile(
     r"(?i)\b(?:fr\s*-?\s*(\d{2,3})|(\d{2,3})\s*fr|taille\s*(?:fr\s*)?(\d{2,3}))\b"
 )
+
+def _normalize_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value)
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch)).casefold()
 
 
 class ListingGenerator:
@@ -309,6 +314,7 @@ class ListingGenerator:
 
         for segment in segments:
             lower = segment.lower()
+            normalized = _normalize_text(segment)
             key_value_match = re.match(r"\s*(\w[\w\s]+?)\s*[:\-]\s*(.+)", segment)
 
             if lower.startswith("taille"):
@@ -339,6 +345,24 @@ class ListingGenerator:
                 if defect_value:
                     overrides["defects"] = defect_value
                     continue
+
+            if "defects" not in overrides and any(
+                keyword in normalized
+                for keyword in (
+                    "defaut",
+                    "defauts",
+                    "tache",
+                    "taches",
+                    "tachee",
+                    "tachees",
+                    "taché",
+                    "tachés",
+                    "tachée",
+                    "tachées",
+                )
+            ):
+                overrides["defects"] = segment
+                continue
 
             if key_value_match:
                 # Catch-all: clé/valeur non reconnue => note
