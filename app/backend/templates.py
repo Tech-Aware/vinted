@@ -125,8 +125,10 @@ def _is_waist_measurement_note(note: Optional[str]) -> bool:
     if not note:
         return False
     normalized = note.strip().casefold()
-    return normalized.startswith("taille estimée à partir du tour de taille") or normalized.startswith(
-        "taille estimée à partir d'un tour de taille"
+    return (
+        normalized.startswith("taille estimée à partir du tour de taille")
+        or normalized.startswith("taille estimée à partir d'un tour de taille")
+        or normalized.startswith("taille estimée à partir de la largeur de taille")
     )
 
 
