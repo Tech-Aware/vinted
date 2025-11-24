@@ -262,10 +262,17 @@ class ListingGenerator:
             existing_notes = (fields.feature_notes or "").strip()
             merged_notes = ", ".join(note for note in leftover_notes if note)
             if merged_notes:
-                combined_notes = ", ".join(
-                    part for part in (existing_notes, merged_notes) if part
-                )
-                overrides["feature_notes"] = combined_notes
+                deduped_notes: list[str] = []
+                seen = set()
+                for part in re.split(r"[,;\n]+", ", ".join((existing_notes, merged_notes))):
+                    cleaned = part.strip()
+                    folded = cleaned.casefold()
+                    if cleaned and folded not in seen:
+                        seen.add(folded)
+                        deduped_notes.append(cleaned)
+
+                if deduped_notes:
+                    overrides["feature_notes"] = ", ".join(deduped_notes)
 
         if overrides:
             logger.info(
