@@ -255,9 +255,12 @@ class ListingGenerator:
         """Force model fields with explicit user instructions."""
 
         if not user_comment:
-            return fields
+            # Sans commentaire, on nettoie uniquement les tailles inventées
+            return self._strip_inferred_sizes(fields, size_overridden=False)
 
-        overrides, leftover_notes = self._extract_overrides_from_comment(user_comment)
+        overrides, leftover_notes, size_overridden = self._extract_overrides_from_comment(
+            user_comment
+        )
         if leftover_notes:
             existing_notes = (fields.feature_notes or "").strip()
             merged_notes = ", ".join(note for note in leftover_notes if note)
@@ -280,8 +283,12 @@ class ListingGenerator:
                 ", ".join(sorted(overrides)),
             )
             fields = replace(fields, **overrides)
+            if size_overridden:
+                # Lorsque l'utilisateur impose une taille FR, on neutralise W/L
+                # pour éviter qu'une conversion automatique ne remplace sa valeur.
+                fields = replace(fields, us_w="", us_l="")
 
-        return fields
+        return self._strip_inferred_sizes(fields, size_overridden=size_overridden)
 
     @staticmethod
     def _extract_fr_size_override(user_comment: str) -> Optional[str]:
@@ -296,7 +303,7 @@ class ListingGenerator:
 
     def _extract_overrides_from_comment(
         self, user_comment: str
-    ) -> tuple[dict, list[str]]:
+    ) -> tuple[dict, list[str], bool]:
         """Parse the free-form comment to override structured fields.
 
         Returns a tuple of (overrides, leftover_notes). "overrides" contains
@@ -308,9 +315,12 @@ class ListingGenerator:
         overrides: dict = {}
         leftover_notes: list[str] = []
 
+        size_overridden = False
+
         fr_size_override = self._extract_fr_size_override(user_comment)
         if fr_size_override:
             overrides["fr_size"] = fr_size_override
+            size_overridden = True
 
         # Découpe les instructions séparées par des virgules ou retours à la ligne
         segments = [
@@ -378,7 +388,31 @@ class ListingGenerator:
 
             leftover_notes.append(segment)
 
-        return overrides, leftover_notes
+        return overrides, leftover_notes, size_overridden
+
+    @staticmethod
+    def _strip_inferred_sizes(
+        fields: ListingFields, *, size_overridden: bool
+    ) -> ListingFields:
+        """Remove size labels hallucinated without a visible tag.
+
+        The vision model sometimes renvoie des tailles même lorsque
+        ``size_label_visible`` est ``False``. Pour éviter des erreurs
+        dans le rendu et respecter la consigne « ne rien inventer »,
+        on purge les tailles générées si l'utilisateur n'a pas fourni
+        d'override explicite.
+        """
+
+        if size_overridden or fields.size_label_visible:
+            return fields
+
+        if (fields.fr_size or fields.us_w or fields.us_l) and not size_overridden:
+            logger.info(
+                "Suppression des tailles retournées sans étiquette visible (FR/US/WL)",
+            )
+            return replace(fields, fr_size="", us_w="", us_l="")
+
+        return fields
 
     def _recover_tommy_sku(
         self, encoded_images: Sequence[str], user_comment: str

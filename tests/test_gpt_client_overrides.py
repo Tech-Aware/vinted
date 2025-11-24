@@ -44,3 +44,37 @@ def test_apply_user_overrides_propagates_fr_size_to_render() -> None:
     assert "40 FR" in description
     assert price_estimate is not None
     assert "FR 40" in price_estimate
+
+
+def test_apply_user_overrides_strips_sizes_when_label_missing() -> None:
+    generator = ListingGenerator(model="fake", api_key="test")
+
+    fields = ListingFields(
+        model="511",
+        fr_size="38",
+        us_w="29",
+        us_l="32",
+        fit_leg="slim",
+        rise_class="mid",
+        rise_measurement_cm=None,
+        waist_measurement_cm=72.0,
+        cotton_pct="99",
+        polyester_pct="1",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="Homme",
+        color_main="bleu foncé",
+        defects="",
+        defect_tags=(),
+        size_label_visible=False,
+        fabric_label_visible=False,
+        sku="JLF5",
+    )
+
+    sanitized_fields = generator._apply_user_overrides("", fields)
+
+    assert sanitized_fields.fr_size == ""
+    assert sanitized_fields.us_w == ""
+    assert sanitized_fields.us_l == ""
+    assert sanitized_fields.waist_measurement_cm == 72.0
