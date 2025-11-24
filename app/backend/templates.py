@@ -302,6 +302,10 @@ def _detect_stain_severity(defects: str) -> str:
         "micro tâche",
         "micro taches",
         "micro tâches",
+        "tache",
+        "taches",
+        "taché",
+        "tachée",
     )
 
     if any(keyword in normalized for keyword in large_keywords):
