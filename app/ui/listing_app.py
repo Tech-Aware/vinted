@@ -147,37 +147,46 @@ class VintedListingApp(ctk.CTk):
         title_container.rowconfigure(0, weight=1)
 
         self.title_box = ctk.CTkTextbox(title_container, height=56)
-        self.title_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
+        self.title_box.grid(row=0, column=0, sticky="nsew", padx=0, pady=4)
         self._enable_select_all(self.title_box)
 
         self.title_copy_button = ctk.CTkButton(
             title_container,
-            text="Copier",
-            width=72,
+            text="📋",
+            width=32,
+            height=28,
+            corner_radius=6,
+            fg_color=("gray75", "gray25"),
+            hover_color=("gray65", "gray35"),
             command=lambda: self._copy_to_clipboard(self.title_box),
         )
-        self.title_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
+        self.title_copy_button.place(relx=1.0, rely=0.0, x=-10, y=10, anchor="ne")
         self._buttons_to_disable.append(self.title_copy_button)
 
         description_container = ctk.CTkFrame(form_frame)
         description_container.grid(row=4, column=0, sticky="nsew", padx=12, pady=(4, 12))
         description_container.columnconfigure(0, weight=1)
+        description_container.columnconfigure(1, weight=0)
         description_container.rowconfigure(0, weight=1)
         description_container.rowconfigure(1, weight=0)
 
         self.price_text = ctk.StringVar(value="Estimation à venir")
 
         self.description_box = ctk.CTkTextbox(description_container, height=220)
-        self.description_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
+        self.description_box.grid(row=0, column=0, columnspan=2, sticky="nsew", padx=0, pady=4)
         self._enable_select_all(self.description_box)
 
         self.description_copy_button = ctk.CTkButton(
             description_container,
-            text="Copier",
-            width=72,
+            text="📋",
+            width=32,
+            height=28,
+            corner_radius=6,
+            fg_color=("gray75", "gray25"),
+            hover_color=("gray65", "gray35"),
             command=lambda: self._copy_to_clipboard(self.description_box),
         )
-        self.description_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
+        self.description_copy_button.place(relx=1.0, rely=0.0, x=-10, y=10, anchor="ne")
         self._buttons_to_disable.append(self.description_copy_button)
 
         self.price_chip = ctk.CTkLabel(
