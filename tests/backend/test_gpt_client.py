@@ -233,3 +233,25 @@ def test_comment_without_explicit_size_keeps_model_value(monkeypatch: pytest.Mon
     fields = captured.get("fields")
     assert fields is not None
     assert fields.fr_size == "40"
+
+
+def test_comment_with_defect_information_overrides_defects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    payload = _base_fields_payload(defects="", sku="PTF1")
+    main_response = _listing_response(payload)
+    fake_client = FakeClient([main_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {}
+    template = _build_template(captured)
+
+    comment = "Tache visible sur la manche"
+    generator.generate_listing(["data:image/png;base64,AAA"], comment, template)
+
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.defects == comment
