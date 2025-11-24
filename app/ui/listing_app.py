@@ -77,11 +77,26 @@ class VintedListingApp(ctk.CTk):
 
     def _build_listing_tab(self, parent: ctk.CTkFrame) -> None:
         parent.columnconfigure(0, weight=1)
-        parent.rowconfigure(0, weight=1)
+        parent.rowconfigure(0, weight=0)
         parent.rowconfigure(1, weight=1)
+        parent.rowconfigure(2, weight=1)
+
+        template_frame = ctk.CTkFrame(parent)
+        template_frame.grid(row=0, column=0, padx=16, pady=(8, 0), sticky="ew")
+        template_frame.columnconfigure(0, weight=1)
+
+        self.template_var = ctk.StringVar(value=self.template_registry.default_template)
+        self.template_combo = ctk.CTkComboBox(
+            template_frame,
+            values=self.template_registry.available_templates,
+            variable=self.template_var,
+            width=260,
+        )
+        self.template_combo.grid(row=0, column=0, sticky="w", padx=12, pady=8)
+        self._template_combo_default_state = self.template_combo.cget("state") or "normal"
 
         content_frame = ctk.CTkFrame(parent)
-        content_frame.grid(row=0, column=0, padx=16, pady=(8, 8), sticky="nsew")
+        content_frame.grid(row=1, column=0, padx=16, pady=(8, 8), sticky="nsew")
         content_frame.columnconfigure(0, weight=1)
         content_frame.rowconfigure(0, weight=1)
 
@@ -89,18 +104,9 @@ class VintedListingApp(ctk.CTk):
         self.preview_frame.grid(row=0, column=0, padx=12, pady=12, sticky="nsew")
 
         form_frame = ctk.CTkFrame(parent)
-        form_frame.grid(row=1, column=0, padx=16, pady=(8, 8), sticky="nsew")
+        form_frame.grid(row=2, column=0, padx=16, pady=(8, 8), sticky="nsew")
         form_frame.columnconfigure(0, weight=1)
-        form_frame.rowconfigure(8, weight=1)
-
-        self.template_var = ctk.StringVar(value=self.template_registry.default_template)
-        template_label = ctk.CTkLabel(form_frame, text="Modèle d'annonce")
-        template_label.grid(row=0, column=0, sticky="w", padx=12, pady=(12, 4))
-        self.template_combo = ctk.CTkComboBox(
-            form_frame, values=self.template_registry.available_templates, variable=self.template_var
-        )
-        self.template_combo.grid(row=1, column=0, sticky="ew", padx=12)
-        self._template_combo_default_state = self.template_combo.cget("state") or "normal"
+        form_frame.rowconfigure(4, weight=1)
 
         self.comment_label = ctk.CTkLabel(
             form_frame,
@@ -108,26 +114,16 @@ class VintedListingApp(ctk.CTk):
             anchor="w",
             justify="left",
         )
-        self.comment_label.grid(row=2, column=0, sticky="w", padx=12, pady=(12, 0))
-
-        self.comment_helper = ctk.CTkLabel(
-            form_frame,
-            text="Si vous avez plusieurs commentaires, séparez-les par des virgules. Les informations saisies ici priment sur les photos et orientent l'estimation.",
-            anchor="w",
-            justify="left",
-            wraplength=0,
-        )
-        self.comment_helper.grid(row=3, column=0, sticky="ew", padx=12, pady=(2, 6))
-        form_frame.bind("<Configure>", self._update_comment_helper_wraplength)
+        self.comment_label.grid(row=0, column=0, sticky="w", padx=12, pady=(12, 0))
 
         self.comment_box = ctk.CTkTextbox(form_frame, height=32)
         self._insert_comment_placeholder()
-        self.comment_box.grid(row=4, column=0, sticky="ew", padx=12, pady=(0, 6))
+        self.comment_box.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 6))
         self.comment_box.bind("<FocusIn>", self._on_comment_focus_in)
         self.comment_box.bind("<FocusOut>", self._on_comment_focus_out)
 
         button_frame = ctk.CTkFrame(form_frame)
-        button_frame.grid(row=5, column=0, sticky="ew", padx=12, pady=(4, 4))
+        button_frame.grid(row=2, column=0, sticky="ew", padx=12, pady=(4, 4))
         button_frame.columnconfigure((0, 1, 2), weight=1)
 
         self.select_button = ctk.CTkButton(button_frame, text="Ajouter des photos", command=self.select_images)
@@ -146,55 +142,64 @@ class VintedListingApp(ctk.CTk):
         ]
 
         title_container = ctk.CTkFrame(form_frame)
-        title_container.grid(row=6, column=0, sticky="nsew", padx=12, pady=(12, 4))
+        title_container.grid(row=3, column=0, sticky="nsew", padx=12, pady=(12, 4))
         title_container.columnconfigure(0, weight=1)
         title_container.rowconfigure(0, weight=1)
 
-        self.title_box = ctk.CTkTextbox(title_container, height=40)
-        self.title_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
+        self.title_box = ctk.CTkTextbox(title_container, height=56)
+        self.title_box.grid(row=0, column=0, sticky="nsew", padx=0, pady=4)
         self._enable_select_all(self.title_box)
 
         self.title_copy_button = ctk.CTkButton(
             title_container,
-            text="Copier",
-            width=72,
+            text="📋",
+            width=32,
+            height=28,
+            corner_radius=6,
+            fg_color=("gray75", "gray25"),
+            hover_color=("gray65", "gray35"),
             command=lambda: self._copy_to_clipboard(self.title_box),
         )
-        self.title_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
+        self.title_copy_button.place(relx=1.0, rely=0.0, x=-10, y=10, anchor="ne")
         self._buttons_to_disable.append(self.title_copy_button)
 
-        price_container = ctk.CTkFrame(form_frame)
-        price_container.grid(row=7, column=0, sticky="nsew", padx=12, pady=4)
-        price_container.columnconfigure(0, weight=1)
-
-        self.price_text = ctk.StringVar()
-        self.price_label = ctk.CTkLabel(
-            price_container,
-            textvariable=self.price_text,
-            anchor="w",
-            justify="left",
-            wraplength=0,
-        )
-        self.price_label.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
-        price_container.bind("<Configure>", self._update_price_wraplength)
-
         description_container = ctk.CTkFrame(form_frame)
-        description_container.grid(row=8, column=0, sticky="nsew", padx=12, pady=(4, 12))
+        description_container.grid(row=4, column=0, sticky="nsew", padx=12, pady=(4, 12))
         description_container.columnconfigure(0, weight=1)
+        description_container.columnconfigure(1, weight=0)
         description_container.rowconfigure(0, weight=1)
+        description_container.rowconfigure(1, weight=0)
+
+        self.price_text = ctk.StringVar(value="Estimation à venir")
 
         self.description_box = ctk.CTkTextbox(description_container, height=220)
-        self.description_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
+        self.description_box.grid(row=0, column=0, columnspan=2, sticky="nsew", padx=0, pady=4)
         self._enable_select_all(self.description_box)
 
         self.description_copy_button = ctk.CTkButton(
             description_container,
-            text="Copier",
-            width=72,
+            text="📋",
+            width=32,
+            height=28,
+            corner_radius=6,
+            fg_color=("gray75", "gray25"),
+            hover_color=("gray65", "gray35"),
             command=lambda: self._copy_to_clipboard(self.description_box),
         )
-        self.description_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
+        self.description_copy_button.place(relx=1.0, rely=0.0, x=-10, y=10, anchor="ne")
         self._buttons_to_disable.append(self.description_copy_button)
+
+        self.price_chip = ctk.CTkLabel(
+            description_container,
+            textvariable=self.price_text,
+            anchor="center",
+            fg_color=("gray80", "gray25"),
+            corner_radius=12,
+            padx=10,
+            pady=6,
+            font=ctk.CTkFont(size=12, weight="bold"),
+        )
+        self.price_chip.grid(row=1, column=1, padx=(8, 0), pady=(0, 8), sticky="se")
 
     def _build_customer_responses_tab(self, parent: ctk.CTkFrame) -> None:
         parent.columnconfigure(0, weight=1)
@@ -310,7 +315,7 @@ class VintedListingApp(ctk.CTk):
         if result.price_estimate:
             self.price_text.set(result.price_estimate)
         else:
-            self.price_text.set("Aucune estimation disponible pour ce template.")
+            self.price_text.set("Estimation indisponible")
 
         self.description_box.delete("1.0", "end")
         self.description_box.insert("1.0", result.description)
@@ -323,7 +328,7 @@ class VintedListingApp(ctk.CTk):
         self._image_directories.clear()
         self.preview_frame.update_images([])
         self.title_box.delete("1.0", "end")
-        self.price_text.set("")
+        self.price_text.set("Estimation à venir")
         self.description_box.delete("1.0", "end")
         self._insert_comment_placeholder()
         logger.step("Application réinitialisée")
@@ -405,22 +410,6 @@ class VintedListingApp(ctk.CTk):
 
     def _show_error_popup(self, message: str) -> None:
         messagebox.showerror("Erreur", message)
-
-    def _update_price_wraplength(self, event: object) -> None:
-        width = getattr(event, "width", None)
-        if width is None:
-            return
-
-        wraplength = max(width - 12, 100)
-        self.price_label.configure(wraplength=wraplength)
-
-    def _update_comment_helper_wraplength(self, event: object) -> None:
-        width = getattr(event, "width", None)
-        if width is None:
-            return
-
-        wraplength = max(width - 24, 100)
-        self.comment_helper.configure(wraplength=wraplength)
 
     def _enable_select_all(self, textbox: ctk.CTkTextbox) -> None:
         def handler(event: object) -> str:
