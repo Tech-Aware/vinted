@@ -410,7 +410,7 @@ class ListingGenerator:
 
         prompt_lines = [
             "Analyse uniquement les photos ci-dessus.",
-            "Repère un SKU polaire au format PTNF-n (1 à 3 chiffres) pour The North Face ou PC-n pour Columbia.",
+            "Repère un SKU polaire au format PTNFn (1 à 3 chiffres) pour The North Face ou PCn pour Columbia.",
             "Si tu lis clairement ce code, réponds uniquement avec ce SKU exact.",
             "Si aucun code n'est lisible, réponds avec une chaîne vide sans autre texte.",
         ]
