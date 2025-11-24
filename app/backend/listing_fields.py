@@ -312,7 +312,7 @@ class ListingFields:
             if template_normalized == "template-pull-tommy-femme":
                 allowed_patterns.append(r"^PTF\d{1,3}$")
             elif template_normalized == "template-polaire-outdoor":
-                allowed_patterns.extend([r"^PTNF-\d{1,3}$", r"^PC-\d{1,3}$"])
+                allowed_patterns.extend([r"^PTNF\d{1,3}$", r"^PC\d{1,3}$"])
             else:
                 allowed_patterns.append(r"^JLF\d{1,3}$")
 
@@ -323,7 +323,7 @@ class ListingFields:
                     )
                 if template_normalized == "template-polaire-outdoor":
                     raise ValueError(
-                        "SKU invalide: utilise PTNF-n pour The North Face ou PC-n pour Columbia (1 à 3 chiffres)."
+                        "SKU invalide: utilise PTNFn pour The North Face ou PCn pour Columbia (1 à 3 chiffres)."
                     )
                 raise ValueError(
                     "SKU invalide: utilise le préfixe Levi's autorisé (JLF) suivi de 1 à 3 chiffres."
@@ -331,13 +331,13 @@ class ListingFields:
 
             if template_normalized == "template-polaire-outdoor" and brand:
                 normalized_brand = _normalize_text(brand)
-                if "north face" in normalized_brand and not sku.startswith("PTNF-"):
+                if "north face" in normalized_brand and not sku.startswith("PTNF"):
                     raise ValueError(
-                        "SKU invalide: les articles The North Face doivent utiliser le préfixe PTNF-."
+                        "SKU invalide: les articles The North Face doivent utiliser le préfixe PTNF."
                     )
-                if "columbia" in normalized_brand and not sku.startswith("PC-"):
+                if "columbia" in normalized_brand and not sku.startswith("PC"):
                     raise ValueError(
-                        "SKU invalide: les articles Columbia doivent utiliser le préfixe PC-."
+                        "SKU invalide: les articles Columbia doivent utiliser le préfixe PC."
                     )
 
         return cls(
@@ -411,7 +411,7 @@ class ListingFields:
             digits = digits[:3]
 
         if prefix and digits:
-            return f"{prefix}-{digits}"
+            return f"{prefix}{digits}"
 
         return cleaned
 
@@ -740,7 +740,7 @@ class ListingFields:
                     \"fabric_label_visible\": \"true/false : true uniquement si l'étiquette de composition est parfaitement lisible\",
                     \"fabric_label_cut\": \"true/false : true si l'étiquette matière a été coupée volontairement ; false sinon\",
                     \"non_size_labels_visible\": \"true/false : true si d'autres étiquettes (marque, made in, instructions) sont visibles\",
-                    \"sku\": \"SKU polaire : PTNF-n (1 à 3 chiffres) pour The North Face, PC-n pour Columbia ; renvoie \"\" si non lisible et ne jamais inventer\"
+                    \"sku\": \"SKU polaire : PTNFn (1 à 3 chiffres) pour The North Face, PCn pour Columbia ; renvoie \"\" si non lisible et ne jamais inventer\"
                   }}
                 }}
                 N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
@@ -751,7 +751,7 @@ class ListingFields:
                 - Sauf commentaire explicite dans la boîte Commentaire signalant une matière différente, considère les polaires comme 100% polyester lorsque l'étiquette n'est pas lisible : mets \"polyester_pct\" à \"100\" et laisse les autres fibres vides.
                 - Les champs brand/model/zip_style/feature_notes/technical_features ne doivent contenir que des informations confirmées par les photos.
                 - has_hood = true uniquement si une capuche est clairement visible.
-                - Le SKU doit reprendre exactement le format PTNF-n ou PC-n selon la marque détectée ; renvoie \"\" si l'information est absente.
+                - Le SKU doit reprendre exactement le format PTNFn ou PCn selon la marque détectée ; renvoie \"\" si l'information est absente.
                 - Rappelle les mentions d'étiquettes coupées via fabric_label_visible/fabric_label_cut.
                 """
             ).strip()
