@@ -63,18 +63,33 @@ class VintedListingApp(ctk.CTk):
 
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
-        self.rowconfigure(1, weight=1)
 
-        content_frame = ctk.CTkFrame(self)
-        content_frame.grid(row=0, column=0, padx=16, pady=(16, 8), sticky="nsew")
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.grid(row=0, column=0, padx=16, pady=16, sticky="nsew")
+        self.listing_tab = self.tabview.add("Annonces")
+        self.customer_responses_tab = self.tabview.add("Réponses aux clients")
+
+        self._build_listing_tab(self.listing_tab)
+        self._build_customer_responses_tab(self.customer_responses_tab)
+
+        self._loading_after_id: Optional[str] = None
+        self._loading_step = 0
+
+    def _build_listing_tab(self, parent: ctk.CTkFrame) -> None:
+        parent.columnconfigure(0, weight=1)
+        parent.rowconfigure(0, weight=1)
+        parent.rowconfigure(1, weight=1)
+
+        content_frame = ctk.CTkFrame(parent)
+        content_frame.grid(row=0, column=0, padx=16, pady=(8, 8), sticky="nsew")
         content_frame.columnconfigure(0, weight=1)
         content_frame.rowconfigure(0, weight=1)
 
         self.preview_frame = ImagePreview(content_frame, on_remove=self._remove_image)
         self.preview_frame.grid(row=0, column=0, padx=12, pady=12, sticky="nsew")
 
-        form_frame = ctk.CTkFrame(self)
-        form_frame.grid(row=1, column=0, padx=16, pady=(8, 16), sticky="nsew")
+        form_frame = ctk.CTkFrame(parent)
+        form_frame.grid(row=1, column=0, padx=16, pady=(8, 8), sticky="nsew")
         form_frame.columnconfigure(0, weight=1)
         form_frame.rowconfigure(8, weight=1)
 
@@ -181,8 +196,45 @@ class VintedListingApp(ctk.CTk):
         self.description_copy_button.grid(row=0, column=1, padx=(8, 0), pady=4, sticky="ns")
         self._buttons_to_disable.append(self.description_copy_button)
 
-        self._loading_after_id: Optional[str] = None
-        self._loading_step = 0
+    def _build_customer_responses_tab(self, parent: ctk.CTkFrame) -> None:
+        parent.columnconfigure(0, weight=1)
+        parent.rowconfigure(0, weight=1)
+
+        placeholder = ctk.CTkFrame(parent)
+        placeholder.grid(row=0, column=0, padx=24, pady=24, sticky="nsew")
+        placeholder.columnconfigure(0, weight=1)
+
+        title = ctk.CTkLabel(
+            placeholder,
+            text="Réponses aux clients",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            anchor="w",
+        )
+        title.grid(row=0, column=0, sticky="w", padx=12, pady=(8, 4))
+
+        description = ctk.CTkLabel(
+            placeholder,
+            text=(
+                "Préparez des réponses personnalisées aux messages clients. Collez la demande, "
+                "ajoutez vos consignes et obtenez une réponse prête à envoyer."
+            ),
+            justify="left",
+            anchor="w",
+            wraplength=720,
+        )
+        description.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
+
+        coming_soon = ctk.CTkLabel(
+            placeholder,
+            text=(
+                "Cette section dédiée est en cours de préparation : la génération automatisée des "
+                "réponses clients sera bientôt disponible."
+            ),
+            anchor="w",
+            justify="left",
+            wraplength=720,
+        )
+        coming_soon.grid(row=2, column=0, sticky="ew", padx=12, pady=(4, 8))
 
     def select_images(self) -> None:
         logger.step("Ouverture de la boîte de dialogue de sélection d'images")
