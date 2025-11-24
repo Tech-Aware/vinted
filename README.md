@@ -77,6 +77,27 @@ l'appel à `openai`. L'initialisation de la librairie est paresseuse afin de
 permettre l'ouverture de l'interface même sans clé configurée. Toute erreur
 renvoyée par l'API est affichée dans la barre de statut de l'application.
 
+### Overrides utilisateur et nettoyage des tailles
+
+Pour limiter les incohérences de tailles générées par le modèle vision, le
+`ListingGenerator` applique deux garde-fous importants avant le rendu du titre
+et de la description :
+
+- **Overrides explicites** : lorsqu'un commentaire contient une taille FR
+  (ex. « taille FR40 »), cette valeur est injectée dans les champs structurés
+  et neutralise les tailles US W/L pour éviter toute conversion automatique.
+  Les autres éléments clés du commentaire (couleur, marque, défauts) sont
+  propagés de la même manière.
+- **Purge des tailles halluciné es** : si aucune étiquette n'est visible sur les
+  photos (`size_label_visible=False`) et qu'aucun override n'est fourni, les
+  tailles FR ou US renvoyées par le modèle sont supprimées pour respecter la
+  consigne « ne rien inventer ». Les mesures objectives (tour de taille en cm,
+  etc.) restent intactes.
+
+Deux tests d'intégration (`tests/test_gpt_client_overrides.py`) couvrent ces
+cas : propagation d'une taille FR saisie manuellement et suppression des tailles
+inventées lorsqu'aucune étiquette n'est lisible.
+
 ## Déploiement sur Chromebook
 
 1. Activez Linux (Crostini) et installez un interpréteur Python récent (3.8 ou
