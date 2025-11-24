@@ -77,11 +77,26 @@ class VintedListingApp(ctk.CTk):
 
     def _build_listing_tab(self, parent: ctk.CTkFrame) -> None:
         parent.columnconfigure(0, weight=1)
-        parent.rowconfigure(0, weight=1)
+        parent.rowconfigure(0, weight=0)
         parent.rowconfigure(1, weight=1)
+        parent.rowconfigure(2, weight=1)
+
+        template_frame = ctk.CTkFrame(parent)
+        template_frame.grid(row=0, column=0, padx=16, pady=(8, 0), sticky="ew")
+        template_frame.columnconfigure(0, weight=1)
+
+        self.template_var = ctk.StringVar(value=self.template_registry.default_template)
+        self.template_combo = ctk.CTkComboBox(
+            template_frame,
+            values=self.template_registry.available_templates,
+            variable=self.template_var,
+            width=260,
+        )
+        self.template_combo.grid(row=0, column=0, sticky="w", padx=12, pady=8)
+        self._template_combo_default_state = self.template_combo.cget("state") or "normal"
 
         content_frame = ctk.CTkFrame(parent)
-        content_frame.grid(row=0, column=0, padx=16, pady=(8, 8), sticky="nsew")
+        content_frame.grid(row=1, column=0, padx=16, pady=(8, 8), sticky="nsew")
         content_frame.columnconfigure(0, weight=1)
         content_frame.rowconfigure(0, weight=1)
 
@@ -89,21 +104,9 @@ class VintedListingApp(ctk.CTk):
         self.preview_frame.grid(row=0, column=0, padx=12, pady=12, sticky="nsew")
 
         form_frame = ctk.CTkFrame(parent)
-        form_frame.grid(row=1, column=0, padx=16, pady=(8, 8), sticky="nsew")
+        form_frame.grid(row=2, column=0, padx=16, pady=(8, 8), sticky="nsew")
         form_frame.columnconfigure(0, weight=1)
-        form_frame.rowconfigure(6, weight=1)
-
-        self.template_var = ctk.StringVar(value=self.template_registry.default_template)
-        template_label = ctk.CTkLabel(form_frame, text="Modèle d'annonce")
-        template_label.grid(row=0, column=0, sticky="w", padx=12, pady=(12, 4))
-        self.template_combo = ctk.CTkComboBox(
-            form_frame,
-            values=self.template_registry.available_templates,
-            variable=self.template_var,
-            width=260,
-        )
-        self.template_combo.grid(row=1, column=0, sticky="w", padx=12)
-        self._template_combo_default_state = self.template_combo.cget("state") or "normal"
+        form_frame.rowconfigure(4, weight=1)
 
         self.comment_label = ctk.CTkLabel(
             form_frame,
@@ -111,16 +114,16 @@ class VintedListingApp(ctk.CTk):
             anchor="w",
             justify="left",
         )
-        self.comment_label.grid(row=2, column=0, sticky="w", padx=12, pady=(12, 0))
+        self.comment_label.grid(row=0, column=0, sticky="w", padx=12, pady=(12, 0))
 
         self.comment_box = ctk.CTkTextbox(form_frame, height=32)
         self._insert_comment_placeholder()
-        self.comment_box.grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 6))
+        self.comment_box.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 6))
         self.comment_box.bind("<FocusIn>", self._on_comment_focus_in)
         self.comment_box.bind("<FocusOut>", self._on_comment_focus_out)
 
         button_frame = ctk.CTkFrame(form_frame)
-        button_frame.grid(row=4, column=0, sticky="ew", padx=12, pady=(4, 4))
+        button_frame.grid(row=2, column=0, sticky="ew", padx=12, pady=(4, 4))
         button_frame.columnconfigure((0, 1, 2), weight=1)
 
         self.select_button = ctk.CTkButton(button_frame, text="Ajouter des photos", command=self.select_images)
@@ -139,7 +142,7 @@ class VintedListingApp(ctk.CTk):
         ]
 
         title_container = ctk.CTkFrame(form_frame)
-        title_container.grid(row=5, column=0, sticky="nsew", padx=12, pady=(12, 4))
+        title_container.grid(row=3, column=0, sticky="nsew", padx=12, pady=(12, 4))
         title_container.columnconfigure(0, weight=1)
         title_container.rowconfigure(0, weight=1)
 
@@ -157,7 +160,7 @@ class VintedListingApp(ctk.CTk):
         self._buttons_to_disable.append(self.title_copy_button)
 
         description_container = ctk.CTkFrame(form_frame)
-        description_container.grid(row=6, column=0, sticky="nsew", padx=12, pady=(4, 12))
+        description_container.grid(row=4, column=0, sticky="nsew", padx=12, pady=(4, 12))
         description_container.columnconfigure(0, weight=1)
         description_container.rowconfigure(0, weight=1)
         description_container.rowconfigure(1, weight=0)
