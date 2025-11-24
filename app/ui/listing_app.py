@@ -146,7 +146,7 @@ class VintedListingApp(ctk.CTk):
         title_container.columnconfigure(0, weight=1)
         title_container.rowconfigure(0, weight=1)
 
-        self.title_box = ctk.CTkTextbox(title_container, height=56)
+        self.title_box = ctk.CTkTextbox(title_container, height=48)
         self.title_box.grid(row=0, column=0, sticky="nsew", padx=0, pady=4)
         self._enable_select_all(self.title_box)
 
@@ -199,7 +199,9 @@ class VintedListingApp(ctk.CTk):
             pady=6,
             font=ctk.CTkFont(size=12, weight="bold"),
         )
-        self.price_chip.grid(row=1, column=1, padx=(8, 0), pady=(0, 8), sticky="se")
+        self.price_chip.grid(row=1, column=0, columnspan=2, padx=(0, 0), pady=(4, 8), sticky="w")
+        description_container.bind("<Configure>", self._update_price_chip_wraplength)
+        self.after_idle(self._update_price_chip_wraplength)
 
     def _build_customer_responses_tab(self, parent: ctk.CTkFrame) -> None:
         parent.columnconfigure(0, weight=1)
@@ -448,3 +450,12 @@ class VintedListingApp(ctk.CTk):
         self.clipboard_clear()
         self.clipboard_append(content)
         logger.info("Contenu copié dans le presse-papiers")
+
+    def _update_price_chip_wraplength(self, event: Optional[object] = None) -> None:
+        try:
+            container_width = int(getattr(event, "width", self.price_chip.winfo_width()))
+        except Exception:
+            return
+
+        usable_width = max(container_width - 24, 120)
+        self.price_chip.configure(wraplength=usable_width)
