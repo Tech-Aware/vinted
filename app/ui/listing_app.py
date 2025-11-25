@@ -639,18 +639,9 @@ class VintedListingApp(ctk.CTk):
             self.reply_message_type_radios.append(radio)
 
     def _get_visible_reply_scenarios(self) -> List[ScenarioConfig]:
-        selected_article = self.reply_article_var.get()
         selected_message_type = self.reply_message_type_var.get()
 
         scenarios = list(SCENARIOS.values())
-        if selected_article:
-            scenarios = [
-                scenario
-                for scenario in scenarios
-                if scenario.allowed_articles is None
-                or selected_article in scenario.allowed_articles
-            ]
-
         if selected_message_type:
             scenarios = [
                 scenario

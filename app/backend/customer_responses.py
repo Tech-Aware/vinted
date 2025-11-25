@@ -114,7 +114,6 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "12€ est trop bas au vu de la qualité ; proposer 17€ comme compromis.",
             "Mentionner le reste du dressing.",
         ),
-        allowed_articles=("jean_levis",),
     ),
     "acceptation_tnf": ScenarioConfig(
         id="acceptation_tnf",
@@ -127,7 +126,6 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Promettre un envoi rapide et partage du suivi.",
             "Style sobre, 2–3 phrases, peu ou pas d'émojis.",
         ),
-        allowed_articles=("polaire_tnf", "jacket"),
     ),
     "urgence_adidas": ScenarioConfig(
         id="urgence_adidas",
@@ -141,7 +139,6 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Glisser l'info expédition rapide.",
             "Ton dynamique sans agressivité, 2–3 phrases.",
         ),
-        allowed_articles=("autre",),
     ),
     "remerciement_levi_515": ScenarioConfig(
         id="remerciement_levi_515",
@@ -154,7 +151,6 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Indiquer préparation rapide et partage du suivi.",
             "Invitation légère à consulter le dressing.",
         ),
-        allowed_articles=("jean_levis",),
     ),
     "contre_offre_20_12_17": ScenarioConfig(
         id="contre_offre_20_12_17",
@@ -167,7 +163,6 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Valoriser l'état de l'article.",
             "12€ trop bas ; proposer 17€ comme geste commercial.",
         ),
-        allowed_articles=("jean_levis",),
     ),
     "correspondance_46_w34": ScenarioConfig(
         id="correspondance_46_w34",
@@ -180,7 +175,6 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Préciser que les mesures sont en photo et conseiller une comparaison avec un jean personnel.",
             "2–3 phrases, ton neutre.",
         ),
-        allowed_articles=("jean_levis",),
     ),
     "relance_favoris": ScenarioConfig(
         id="relance_favoris",
@@ -240,7 +234,6 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Expliquer poliment que le prix est ferme à 15€ pour un modèle premium.",
             "Ton ferme mais respectueux.",
         ),
-        allowed_articles=("jean_levis",),
     ),
     "remerciement_acceptation_offre": ScenarioConfig(
         id="remerciement_acceptation_offre",
