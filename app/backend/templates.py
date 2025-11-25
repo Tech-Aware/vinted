@@ -65,6 +65,24 @@ def _normalize_apparel_fr_size(value: Optional[str]) -> str:
     return f"{count}XL"
 
 
+def _normalize_us_waist_label(value: Optional[str]) -> str:
+    """Normalize US waist label strings (e.g. "W33", "33/32") to a numeric token."""
+
+    cleaned = _clean(value)
+    if not cleaned:
+        return ""
+
+    match = re.search(r"(?i)w\s*([0-9]{2,3})", cleaned)
+    if match:
+        return match.group(1)
+
+    match = re.search(r"([0-9]{2,3})", cleaned)
+    if match:
+        return match.group(1)
+
+    return cleaned
+
+
 _SIZE_TOKEN_SPLIT = re.compile(r"[^A-Z0-9]+")
 
 
@@ -420,30 +438,34 @@ def render_template_jean_levis_femme(
     size_note: Optional[str] = None
     size_estimated = False
 
-    if fields.size_label_visible:
-        normalized_sizes: NormalizedSizes = normalize_sizes(
+    fr_candidate = _clean(fields.fr_size)
+    us_candidate_raw = _clean(fields.us_w)
+    us_candidate = _normalize_us_waist_label(us_candidate_raw)
+
+    normalized_sizes: Optional[NormalizedSizes] = None
+    if fields.size_label_visible or fr_candidate or us_candidate:
+        normalized_sizes = normalize_sizes(
             fields.us_w,
             fields.fr_size,
             fields.has_elastane,
             ensure_even_fr=True,
             waist_measurement_cm=waist_measurement_value,
         )
-        fr_display = _clean(fields.fr_size) or normalized_sizes.fr_size
-        us_display = _clean(fields.us_w) or normalized_sizes.us_size
+
+    fr_display = fr_candidate or (normalized_sizes.fr_size if normalized_sizes else "")
+    us_display = (normalized_sizes.us_size if normalized_sizes and normalized_sizes.us_size else None)
+    if not us_display:
+        us_display = us_candidate
+
+    if normalized_sizes and fields.size_label_visible:
         size_note = normalized_sizes.note
         if _is_waist_measurement_note(size_note):
             size_estimated = True
             size_note = None
-    else:
-        fr_candidate = _clean(fields.fr_size)
-        us_candidate = _clean(fields.us_w)
-        if not fr_candidate and not us_candidate and measurement_fr:
-            fr_display = measurement_fr
-            us_display = None
-            size_estimated = True
-        else:
-            fr_display = fr_candidate
-            us_display = None
+
+    if not fr_display and measurement_fr:
+        fr_display = measurement_fr
+        size_estimated = True
 
     size_label_missing = not fields.size_label_visible
     composition_label_unavailable = (not fields.fabric_label_visible) or fields.fabric_label_cut
@@ -659,9 +681,9 @@ def render_template_jean_levis_femme(
     title_parts: List[str] = [title_intro]
     if fr_display:
         title_parts.append(f"FR{fr_display}")
-    if fields.size_label_visible and us_display:
+    if us_display:
         title_parts.append(f"W{us_display}")
-    if fields.size_label_visible and fields.us_l:
+    if fields.us_l:
         title_parts.append(f"L{fields.us_l}")
     if fit_title_text:
         title_parts.extend(["coupe", fit_title_text])
