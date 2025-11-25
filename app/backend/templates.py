@@ -428,8 +428,8 @@ def render_template_jean_levis_femme(
             ensure_even_fr=True,
             waist_measurement_cm=waist_measurement_value,
         )
-        fr_display = normalized_sizes.fr_size or _clean(fields.fr_size)
-        us_display = normalized_sizes.us_size
+        fr_display = _clean(fields.fr_size) or normalized_sizes.fr_size
+        us_display = _clean(fields.us_w) or normalized_sizes.us_size
         size_note = normalized_sizes.note
         if _is_waist_measurement_note(size_note):
             size_estimated = True
