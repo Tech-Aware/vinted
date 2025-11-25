@@ -301,9 +301,6 @@ class VintedListingApp(ctk.CTk):
         self.reply_scenario_frame.grid(row=0, column=2, sticky="nsew", padx=(8, 0), pady=8)
         self.reply_scenario_frame.columnconfigure(0, weight=1)
 
-        self._render_message_types()
-        self._render_reply_scenarios()
-
         context_frame = ctk.CTkFrame(container)
         context_frame.grid(row=3, column=0, sticky="nsew", padx=12, pady=(4, 8))
         context_frame.columnconfigure(0, weight=1)
@@ -393,7 +390,31 @@ class VintedListingApp(ctk.CTk):
         )
         copy_button.grid(row=2, column=0, sticky="e", padx=8, pady=(0, 8))
 
+        self.reply_context_frame = context_frame
+        self.reply_actions_frame = actions_frame
+        self.reply_output_frame = output_frame
+        self.reply_frames_positions = {
+            self.reply_message_type_frame: dict(
+                row=0, column=1, sticky="nsew", padx=(8, 8), pady=8
+            ),
+            self.reply_scenario_frame: dict(
+                row=0, column=2, sticky="nsew", padx=(8, 0), pady=8
+            ),
+            self.reply_context_frame: dict(
+                row=3, column=0, sticky="nsew", padx=12, pady=(4, 8)
+            ),
+            self.reply_actions_frame: dict(
+                row=4, column=0, sticky="ew", padx=12, pady=(4, 8)
+            ),
+            self.reply_output_frame: dict(
+                row=5, column=0, sticky="nsew", padx=12, pady=(4, 8)
+            ),
+        }
+
+        self._render_message_types()
+        self._render_reply_scenarios()
         self._refresh_extra_fields()
+        self._update_reply_visibility()
 
     def select_images(self) -> None:
         logger.step("Ouverture de la boîte de dialogue de sélection d'images")
@@ -454,26 +475,8 @@ class VintedListingApp(ctk.CTk):
         logger.step("Thread d'analyse lancé")
 
     def display_result(self, result: ListingResult) -> None:
-        self.reply_message_type_frame.grid_remove()
-        self.reply_scenario_frame.grid_remove()
-        context_frame.grid_remove()
-        actions_frame.grid_remove()
-        output_frame.grid_remove()
-
-        self.reply_context_frame = context_frame
-        self.reply_actions_frame = actions_frame
-        self.reply_output_frame = output_frame
-        self.reply_frames_positions = {
-            self.reply_message_type_frame: dict(row=0, column=1, sticky="nsew", padx=(8, 8), pady=8),
-            self.reply_scenario_frame: dict(row=0, column=2, sticky="nsew", padx=(8, 0), pady=8),
-            self.reply_context_frame: dict(row=3, column=0, sticky="nsew", padx=12, pady=(4, 8)),
-            self.reply_actions_frame: dict(row=4, column=0, sticky="ew", padx=12, pady=(4, 8)),
-            self.reply_output_frame: dict(row=5, column=0, sticky="nsew", padx=12, pady=(4, 8)),
-        }
-
         self._stop_loading_state()
         self.reply_status_var.set("Sélectionnez un type d'article pour commencer.")
-        self._update_reply_visibility()
         sku_missing = getattr(result, "sku_missing", False)
         placeholder_in_title = "SKU/nc" in (result.title or "")
 
