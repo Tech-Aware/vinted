@@ -228,11 +228,12 @@ class VintedListingApp(ctk.CTk):
         parent.columnconfigure(0, weight=1)
         parent.rowconfigure(0, weight=1)
 
-        container = ctk.CTkFrame(parent)
+        container = ctk.CTkScrollableFrame(parent)
         container.grid(row=0, column=0, padx=16, pady=16, sticky="nsew")
-        container.columnconfigure(0, weight=1)
-        container.rowconfigure(3, weight=1)
-        container.rowconfigure(5, weight=1)
+        container.grid_columnconfigure(0, weight=1)
+        container.grid_rowconfigure(3, weight=1)
+        container.grid_rowconfigure(5, weight=1)
+        self.reply_tab_container = container
 
         title = ctk.CTkLabel(
             container,
@@ -253,12 +254,14 @@ class VintedListingApp(ctk.CTk):
             wraplength=820,
         )
         description.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
+        self.reply_description_label = description
 
         selection_frame = ctk.CTkFrame(container)
         selection_frame.grid(row=2, column=0, sticky="nsew", padx=12, pady=(4, 8))
         selection_frame.columnconfigure(0, weight=1)
         selection_frame.columnconfigure(1, weight=1)
         selection_frame.columnconfigure(2, weight=2)
+        selection_frame.rowconfigure(0, weight=1)
 
         article_frame = ctk.CTkFrame(selection_frame)
         article_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=8)
@@ -394,6 +397,7 @@ class VintedListingApp(ctk.CTk):
         self._render_reply_scenarios()
         self._refresh_extra_fields()
         self._update_reply_visibility()
+        parent.bind("<Configure>", self._on_reply_tab_resize)
 
     def select_images(self) -> None:
         logger.step("Ouverture de la boîte de dialogue de sélection d'images")
@@ -603,6 +607,20 @@ class VintedListingApp(ctk.CTk):
         self.clipboard_clear()
         self.clipboard_append(content)
         logger.info("Contenu copié dans le presse-papiers")
+
+    def _on_reply_tab_resize(self, event: Optional[object] = None) -> None:
+        """Ensure reply tab texts wrap within the available width."""
+
+        try:
+            available_width = max(int(getattr(event, "width", 0)) - 64, 360)
+        except Exception:
+            return
+
+        try:
+            if hasattr(self, "reply_description_label"):
+                self.reply_description_label.configure(wraplength=available_width)
+        except Exception:
+            pass
 
     def _render_message_types(self) -> None:
         for radio in self.reply_message_type_radios:
