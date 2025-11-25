@@ -46,6 +46,7 @@ class ScenarioConfig:
 
 @dataclass
 class CustomerReplyPayload:
+    client_name: str
     article_type: str
     scenario_id: str
     client_message: str = ""
@@ -159,6 +160,20 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Expliquer que la proposition est trop basse au regard de la qualité.",
             "Proposer un montant révisé (contre-offre) clair et valoriser l'article.",
             "Mentionner l'envoi rapide et encourager à valider ou regarder le dressing.",
+        ),
+        allowed_articles=None,
+    ),
+    "negocier_reservation": ScenarioConfig(
+        id="negocier_reservation",
+        label="Négocier une demande de réservation",
+        message_type_id="negocier",
+        requires_client_message=False,
+        extra_fields=[],
+        rules=(
+            "Remercier pour l'intérêt et la demande de réservation.",
+            "Expliquer que la réservation n'est pas possible sans engagement immédiat.",
+            "Proposer une alternative (achat direct, lot ou délai court) sans mentionner de prix.",
+            "Ton courtois, ferme mais encourageant, en invitant à valider rapidement.",
         ),
         allowed_articles=None,
     ),
@@ -317,7 +332,11 @@ class CustomerReplyGenerator:
 
     def _build_prompt(self, payload: CustomerReplyPayload, scenario: ScenarioConfig) -> str:
         article_label = get_article_label(payload.article_type)
-        context_lines = [f"Scénario: {scenario.label}", f"Article: {article_label}"]
+        context_lines = [
+            f"Client: {payload.client_name}",
+            f"Scénario: {scenario.label}",
+            f"Article: {article_label}",
+        ]
         if payload.client_message:
             context_lines.append(f"Message client: {payload.client_message.strip()}")
 

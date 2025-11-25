@@ -75,6 +75,7 @@ class VintedListingApp(ctk.CTk):
         self.reply_article_var = ctk.StringVar(value="")
         self.reply_message_type_var = ctk.StringVar(value="")
         self.reply_scenario_var = ctk.StringVar(value="")
+        self.reply_client_name_var = ctk.StringVar(value="")
         self.reply_status_var = ctk.StringVar(value="")
         self.reply_field_vars: Dict[str, ctk.StringVar] = {}
         self.reply_message_type_radios: List[ctk.CTkRadioButton] = []
@@ -261,10 +262,31 @@ class VintedListingApp(ctk.CTk):
         selection_frame.columnconfigure(0, weight=1)
         selection_frame.columnconfigure(1, weight=1)
         selection_frame.columnconfigure(2, weight=2)
-        selection_frame.rowconfigure(0, weight=1)
+        selection_frame.rowconfigure(0, weight=0)
+        selection_frame.rowconfigure(1, weight=1)
+
+        identity_frame = ctk.CTkFrame(selection_frame)
+        identity_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=8, pady=8)
+        identity_frame.columnconfigure(1, weight=1)
+
+        client_label = ctk.CTkLabel(
+            identity_frame,
+            text="Nom du client",
+            font=ctk.CTkFont(weight="bold"),
+            anchor="w",
+        )
+        client_label.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
+
+        client_entry = ctk.CTkEntry(
+            identity_frame,
+            textvariable=self.reply_client_name_var,
+            placeholder_text="Saisissez le prénom ou pseudo du client",
+        )
+        client_entry.grid(row=1, column=0, columnspan=2, sticky="ew", padx=8, pady=(0, 10))
+        client_entry.bind("<KeyRelease>", lambda *_: self._update_reply_visibility())
 
         article_frame = ctk.CTkFrame(selection_frame)
-        article_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=8)
+        article_frame.grid(row=1, column=0, sticky="nsew", padx=(0, 8), pady=8)
         article_frame.columnconfigure(0, weight=1)
 
         article_title = ctk.CTkLabel(
@@ -285,9 +307,10 @@ class VintedListingApp(ctk.CTk):
             )
             radio.grid(row=index, column=0, sticky="w", padx=12, pady=4)
 
+        self.reply_article_frame = article_frame
         self.reply_message_type_frame = ctk.CTkFrame(selection_frame)
         self.reply_message_type_frame.grid(
-            row=0, column=1, sticky="nsew", padx=(8, 8), pady=8
+            row=1, column=1, sticky="nsew", padx=(8, 8), pady=8
         )
         self.reply_message_type_frame.columnconfigure(0, weight=1)
 
@@ -302,7 +325,7 @@ class VintedListingApp(ctk.CTk):
         self.reply_scenario_frame = ctk.CTkScrollableFrame(
             selection_frame, label_text="Scénario de réponse"
         )
-        self.reply_scenario_frame.grid(row=0, column=2, sticky="nsew", padx=(8, 0), pady=8)
+        self.reply_scenario_frame.grid(row=1, column=2, sticky="nsew", padx=(8, 0), pady=8)
         self.reply_scenario_frame.columnconfigure(0, weight=1)
 
         self.reply_extra_container = ctk.CTkFrame(self.reply_scenario_frame)
@@ -394,11 +417,14 @@ class VintedListingApp(ctk.CTk):
         self.reply_actions_frame = actions_frame
         self.reply_output_frame = output_frame
         self.reply_frames_positions = {
+            self.reply_article_frame: dict(
+                row=1, column=0, sticky="nsew", padx=(0, 8), pady=8
+            ),
             self.reply_message_type_frame: dict(
-                row=0, column=1, sticky="nsew", padx=(8, 8), pady=8
+                row=1, column=1, sticky="nsew", padx=(8, 8), pady=8
             ),
             self.reply_scenario_frame: dict(
-                row=0, column=2, sticky="nsew", padx=(8, 0), pady=8
+                row=1, column=2, sticky="nsew", padx=(8, 0), pady=8
             ),
             self.reply_actions_frame: dict(
                 row=3, column=0, sticky="ew", padx=12, pady=(4, 8)
@@ -766,6 +792,8 @@ class VintedListingApp(ctk.CTk):
         self.reply_status_var.set("")
 
     def _update_reply_visibility(self) -> None:
+        client_name = self.reply_client_name_var.get().strip()
+        has_client = bool(client_name)
         has_article = bool(self.reply_article_var.get())
         has_message_type = bool(self.reply_message_type_var.get())
         has_scenario = bool(self.reply_scenario_var.get())
@@ -782,17 +810,27 @@ class VintedListingApp(ctk.CTk):
                 return
             frame.grid_remove()
 
-        if has_article:
+        if has_client:
+            show_frame(self.reply_article_frame)
+            if not has_article:
+                self.reply_status_var.set("Sélectionnez un type d'article.")
+        else:
+            hide_frame(self.reply_article_frame)
+            self.reply_status_var.set("Renseignez le nom du client pour poursuivre.")
+
+        if has_client and has_article:
             show_frame(self.reply_message_type_frame)
+            if not has_message_type:
+                self.reply_status_var.set("Choisissez un type de message.")
         else:
             hide_frame(self.reply_message_type_frame)
 
-        if has_article and has_message_type:
+        if has_client and has_article and has_message_type:
             show_frame(self.reply_scenario_frame)
         else:
             hide_frame(self.reply_scenario_frame)
 
-        if has_scenario:
+        if has_client and has_scenario:
             show_frame(self.reply_actions_frame)
             show_frame(self.reply_output_frame)
         else:
@@ -810,6 +848,7 @@ class VintedListingApp(ctk.CTk):
             return None
 
     def _build_reply_payload(self) -> Optional[CustomerReplyPayload]:
+        client_name = self.reply_client_name_var.get().strip()
         article_type = self.reply_article_var.get()
         message_type = self.reply_message_type_var.get()
         scenario_id = self.reply_scenario_var.get()
@@ -818,6 +857,9 @@ class VintedListingApp(ctk.CTk):
             self.reply_message_type_var.get(), ()
         )
 
+        if not client_name:
+            self._show_error_popup("Renseignez le nom du client.")
+            return None
         if not article_type:
             self._show_error_popup("Sélectionnez un type d'article.")
             return None
@@ -855,6 +897,7 @@ class VintedListingApp(ctk.CTk):
             return None
 
         payload = CustomerReplyPayload(
+            client_name=client_name,
             article_type=article_type,
             scenario_id=scenario_id,
             client_message="",
