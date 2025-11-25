@@ -49,12 +49,9 @@ class CustomerReplyPayload:
     article_type: str
     scenario_id: str
     client_message: str = ""
-    prix_initial: Optional[float] = None
-    prix_propose_client: Optional[float] = None
-    prix_min_accepte: Optional[float] = None
-    delai_envoi_habituel: str = ""
-    taille_fr: str = ""
-    equivalence_w: str = ""
+    offre_client: Optional[float] = None
+    contre_offre: Optional[float] = None
+    prix_ferme: Optional[float] = None
 
 
 ARTICLE_TYPES: Sequence[ArticleType] = (
@@ -68,12 +65,9 @@ ARTICLE_TYPES: Sequence[ArticleType] = (
 
 
 EXTRA_FIELD_LABELS: Dict[str, str] = {
-    "prix_initial": "Prix initial",
-    "prix_propose_client": "Offre du client",
-    "prix_min_accepte": "Prix minimum accepté",
-    "delai_envoi_habituel": "Délai d'envoi habituel",
-    "taille_fr": "Taille FR",
-    "equivalence_w": "Équivalence W",
+    "offre_client": "Offre du client",
+    "contre_offre": "Votre proposition",
+    "prix_ferme": "Prix ferme",
 }
 
 
@@ -84,9 +78,7 @@ MESSAGE_TYPES: Sequence[MessageType] = (
     MessageType("informer", "Informer"),
 )
 
-MESSAGE_TYPE_EXTRA_FIELDS: Dict[str, Sequence[str]] = {
-    "negocier": ("prix_initial", "prix_propose_client", "prix_min_accepte"),
-}
+MESSAGE_TYPE_EXTRA_FIELDS: Dict[str, Sequence[str]] = {}
 
 
 SCENARIOS: Dict[str, ScenarioConfig] = {
@@ -95,7 +87,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         label="Remercier pour un achat",
         message_type_id="remercier",
         requires_client_message=False,
-        extra_fields=["delai_envoi_habituel"],
+        extra_fields=[],
         rules=(
             "Remercier clairement pour l'achat.",
             "Mentionner la préparation rapide et l'envoi du suivi.",
@@ -159,12 +151,12 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         id="negocier_plus_haut",
         label="Négocier un prix plus haut",
         message_type_id="negocier",
-        requires_client_message=True,
-        extra_fields=["prix_initial", "prix_propose_client", "prix_min_accepte"],
+        requires_client_message=False,
+        extra_fields=["offre_client", "contre_offre"],
         rules=(
             "Remercier pour l'intérêt ou l'offre.",
             "Expliquer que la proposition est trop basse au regard de la qualité.",
-            "Proposer un montant proche du prix minimum accepté.",
+            "Proposer un montant révisé (contre-offre) clair.",
         ),
         allowed_articles=None,
     ),
@@ -172,8 +164,8 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         id="negocier_prix_ferme",
         label="Prix ferme (pas de négociation)",
         message_type_id="negocier",
-        requires_client_message=True,
-        extra_fields=["prix_initial", "prix_min_accepte"],
+        requires_client_message=False,
+        extra_fields=["offre_client", "prix_ferme"],
         rules=(
             "Remercier pour l'intérêt.",
             "Indiquer que le prix est ferme en justifiant brièvement (état, modèle).",
@@ -186,7 +178,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         label="Préparation du colis (paiement validé)",
         message_type_id="informer",
         requires_client_message=False,
-        extra_fields=["delai_envoi_habituel"],
+        extra_fields=[],
         rules=(
             "Confirmer la validation du paiement et la préparation en cours.",
             "Partager le délai ou la promesse d'envoi.",
@@ -320,27 +312,16 @@ class CustomerReplyGenerator:
             context_lines.append(f"Message client: {payload.client_message.strip()}")
 
         price_details = []
-        if payload.prix_initial is not None:
-            price_details.append(f"Prix initial: {payload.prix_initial}€")
-        if payload.prix_propose_client is not None:
-            price_details.append(f"Offre client: {payload.prix_propose_client}€")
-        if payload.prix_min_accepte is not None:
-            price_details.append(f"Objectif / prix mini: {payload.prix_min_accepte}€")
+        if payload.offre_client is not None:
+            price_details.append(f"Offre client: {payload.offre_client}€")
+        if payload.contre_offre is not None:
+            price_details.append(f"Votre proposition: {payload.contre_offre}€")
+        if payload.prix_ferme is not None:
+            price_details.append(f"Prix ferme: {payload.prix_ferme}€")
         if price_details:
             context_lines.append(" / ".join(price_details))
 
-        if payload.delai_envoi_habituel:
-            context_lines.append(f"Délai d'envoi habituel: {payload.delai_envoi_habituel}")
-        if payload.taille_fr:
-            context_lines.append(f"Taille FR renseignée: {payload.taille_fr}")
-        if payload.equivalence_w:
-            context_lines.append(f"Équivalence W fournie: {payload.equivalence_w}")
-
         rules = list(scenario.rules)
-        if scenario.message_type_id == "negocier":
-            rules.append(
-                "Si l'offre du client atteint ou dépasse le prix minimum accepté, accepte directement."
-            )
 
         prompt = dedent(
             """

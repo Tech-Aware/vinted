@@ -305,29 +305,13 @@ class VintedListingApp(ctk.CTk):
         context_frame = ctk.CTkFrame(container)
         context_frame.grid(row=3, column=0, sticky="nsew", padx=12, pady=(4, 8))
         context_frame.columnconfigure(0, weight=1)
-        context_frame.columnconfigure(1, weight=1)
         context_frame.rowconfigure(0, weight=1)
 
-        left_context = ctk.CTkFrame(context_frame)
-        left_context.grid(row=0, column=0, sticky="nsew", padx=(0, 6), pady=6)
-        left_context.columnconfigure(0, weight=1)
-        left_context.rowconfigure(1, weight=1)
-
-        message_label = ctk.CTkLabel(
-            left_context,
-            text="Message du client (copier-coller)",
-            anchor="w",
-        )
-        message_label.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
-
-        self.reply_message_box = ctk.CTkTextbox(left_context, height=140)
-        self.reply_message_box.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
-
         extra_frame = ctk.CTkFrame(context_frame)
-        extra_frame.grid(row=0, column=1, sticky="nsew", padx=(6, 0), pady=6)
+        extra_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 0), pady=6)
         extra_frame.columnconfigure(0, weight=1)
 
-        extra_title = ctk.CTkLabel(extra_frame, text="Champs complémentaires", anchor="w")
+        extra_title = ctk.CTkLabel(extra_frame, text="Données de négociation", anchor="w")
         extra_title.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
 
         self.reply_extra_field_frames: Dict[str, ctk.CTkFrame] = {}
@@ -340,12 +324,6 @@ class VintedListingApp(ctk.CTk):
             label.grid(row=0, column=0, sticky="w")
 
             entry_var = ctk.StringVar()
-            if field_key == "delai_envoi_habituel":
-                entry_var.set("24-48h")
-            elif field_key == "equivalence_w":
-                entry_var.set("W34")
-            elif field_key == "taille_fr":
-                entry_var.set("46")
             self.reply_field_vars[field_key] = entry_var
 
             entry = ctk.CTkEntry(field_container, textvariable=entry_var)
@@ -694,7 +672,6 @@ class VintedListingApp(ctk.CTk):
     def _on_reply_article_change(self) -> None:
         self.reply_message_type_var.set("")
         self.reply_scenario_var.set("")
-        self.reply_message_box.delete("1.0", "end")
         self.reply_status_var.set("Sélectionnez un type de message.")
         self._render_reply_scenarios()
         self._refresh_extra_fields()
@@ -702,7 +679,6 @@ class VintedListingApp(ctk.CTk):
 
     def _on_reply_message_type_change(self) -> None:
         self.reply_scenario_var.set("")
-        self.reply_message_box.delete("1.0", "end")
         self.reply_status_var.set("Sélectionnez un scénario adapté.")
         self._render_reply_scenarios()
         self._refresh_extra_fields()
@@ -736,10 +712,7 @@ class VintedListingApp(ctk.CTk):
                 continue
             frame.grid(row=row_index, column=0, sticky="ew", padx=8, pady=4)
 
-        if scenario.requires_client_message:
-            self.reply_status_var.set("Le message client est requis pour ce scénario.")
-        else:
-            self.reply_status_var.set("")
+        self.reply_status_var.set("")
 
     def _update_reply_visibility(self) -> None:
         has_article = bool(self.reply_article_var.get())
@@ -806,15 +779,9 @@ class VintedListingApp(ctk.CTk):
             self._show_error_popup("Sélectionnez un scénario de réponse.")
             return None
 
-        client_message = self.reply_message_box.get("1.0", "end").strip()
-        if scenario.requires_client_message and not client_message:
-            self._show_error_popup("Ajoutez le message client pour ce scénario.")
-            return None
-
         missing_fields: List[str] = []
-        numeric_fields = {"prix_initial", "prix_propose_client", "prix_min_accepte"}
+        numeric_fields = {"offre_client", "contre_offre", "prix_ferme"}
         numeric_values: Dict[str, Optional[float]] = {}
-        text_values: Dict[str, str] = {}
 
         required_fields = list(dict.fromkeys((*message_type_extras, *scenario.extra_fields)))
 
@@ -831,8 +798,6 @@ class VintedListingApp(ctk.CTk):
                     )
                     return None
                 numeric_values[field_key] = parsed
-            else:
-                text_values[field_key] = raw_value
 
         if missing_fields:
             self._show_error_popup(
@@ -843,17 +808,10 @@ class VintedListingApp(ctk.CTk):
         payload = CustomerReplyPayload(
             article_type=article_type,
             scenario_id=scenario_id,
-            client_message=client_message,
-            prix_initial=numeric_values.get("prix_initial"),
-            prix_propose_client=numeric_values.get("prix_propose_client"),
-            prix_min_accepte=numeric_values.get("prix_min_accepte"),
-            delai_envoi_habituel=text_values.get(
-                "delai_envoi_habituel", self.reply_field_vars.get("delai_envoi_habituel", ctk.StringVar()).get()
-            ),
-            taille_fr=text_values.get("taille_fr", self.reply_field_vars.get("taille_fr", ctk.StringVar()).get()),
-            equivalence_w=text_values.get(
-                "equivalence_w", self.reply_field_vars.get("equivalence_w", ctk.StringVar()).get()
-            ),
+            client_message="",
+            offre_client=numeric_values.get("offre_client"),
+            contre_offre=numeric_values.get("contre_offre"),
+            prix_ferme=numeric_values.get("prix_ferme"),
         )
         return payload
 
