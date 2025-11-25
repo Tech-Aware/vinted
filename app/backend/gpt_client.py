@@ -21,6 +21,8 @@ import unicodedata
 from dataclasses import dataclass, replace
 from typing import Iterable, List, Optional, Sequence
 
+import httpx
+
 try:
     from openai import OpenAI
 except ImportError:  # pragma: no cover - optional dependency
@@ -93,7 +95,12 @@ class ListingGenerator:
                 raise RuntimeError(
                     "Clé API OpenAI manquante. Définissez la variable d'environnement OPENAI_API_KEY."
                 )
-            self._client = OpenAI(api_key=api_key)
+            # httpx>=0.28 renomme l'argument "proxies" en "proxy". Le client OpenAI
+            # tente d'instancier httpx avec "proxies" par défaut, ce qui provoque
+            # une erreur de type. On fournit donc explicitement un http_client
+            # compatible pour éviter l'incompatibilité de signature.
+            http_client = httpx.Client(trust_env=True)
+            self._client = OpenAI(api_key=api_key, http_client=http_client)
             logger.success("Client OpenAI initialisé")
         return self._client
 
@@ -159,12 +166,7 @@ class ListingGenerator:
         encoded_images_list = list(encoded_images)
         try:
             messages = self._build_messages(encoded_images_list, user_comment, template)
-            response = self.client.responses.create(
-                model=self.model,
-                input=messages,
-                max_output_tokens=700,
-                temperature=self.temperature,
-            )
+            response = self._create_response(messages, max_tokens=700)
         except Exception:
             logger.exception("Échec de l'appel à l'API OpenAI")
             raise
@@ -462,12 +464,7 @@ class ListingGenerator:
         ]
 
         try:
-            response = self.client.responses.create(
-                model=self.model,
-                input=messages,
-                max_output_tokens=50,
-                temperature=0.0,
-            )
+            response = self._create_response(messages, max_tokens=50)
         except Exception:
             logger.exception("Échec de la récupération ciblée du SKU Tommy Hilfiger")
             raise
@@ -512,17 +509,53 @@ class ListingGenerator:
         ]
 
         try:
-            response = self.client.responses.create(
-                model=self.model,
-                input=messages,
-                max_output_tokens=50,
-                temperature=0.0,
-            )
+            response = self._create_response(messages, max_tokens=50)
         except Exception:
             logger.exception("Échec de la récupération ciblée du SKU polaire")
             raise
 
         return self._extract_response_text(response)
+
+    def _create_response(self, messages: Sequence[dict], *, max_tokens: int):
+        """Call OpenAI using either the new responses API or chat completions."""
+
+        client = self.client
+        if hasattr(client, "responses"):
+            return client.responses.create(
+                model=self.model,
+                input=messages,
+                max_output_tokens=max_tokens,
+                temperature=self.temperature,
+            )
+
+        chat_messages = self._convert_to_chat_messages(messages)
+        return client.chat.completions.create(
+            model=self.model,
+            messages=chat_messages,
+            max_tokens=max_tokens,
+            temperature=self.temperature,
+        )
+
+    def _convert_to_chat_messages(self, messages: Sequence[dict]) -> List[dict]:
+        chat_messages: List[dict] = []
+        for message in messages:
+            content_parts = []
+            for part in message.get("content", []):
+                part_type = part.get("type")
+                if part_type in {"input_text", "text"}:
+                    content_parts.append({"type": "text", "text": part.get("text", "")})
+                elif part_type in {"input_image", "image_url"}:
+                    url = part.get("image_url")
+                    if isinstance(url, dict):
+                        url_value = url.get("url") or url.get("uri")
+                    else:
+                        url_value = url
+                    if url_value:
+                        content_parts.append({"type": "image_url", "image_url": {"url": url_value}})
+            if not content_parts:
+                content_parts.append({"type": "text", "text": ""})
+            chat_messages.append({"role": message.get("role", "user"), "content": content_parts})
+        return chat_messages
 
     def _extract_response_text(self, response: object) -> str:
         """Extract textual content from the OpenAI response payload."""
@@ -534,7 +567,7 @@ class ListingGenerator:
             if text:
                 parts.append(text)
 
-        # First try the pydantic representation when available
+        # First try the pydantic representation when available (responses API)
         if hasattr(response, "model_dump"):
             try:
                 dumped = response.model_dump()  # type: ignore[attr-defined]
@@ -553,6 +586,17 @@ class ListingGenerator:
                                     _append_if_text(item.get("text"))
                 if not parts:
                     _append_if_text(dumped.get("output_text"))
+
+        # Fallback for chat.completions format
+        if not parts and hasattr(response, "choices"):
+            choices = getattr(response, "choices", [])
+            if isinstance(choices, Sequence):
+                for choice in choices:
+                    message = getattr(choice, "message", None)
+                    if message and hasattr(message, "content"):
+                        _append_if_text(message.content)
+                    if hasattr(choice, "text"):
+                        _append_if_text(getattr(choice, "text"))
 
         if not parts:
             output = getattr(response, "output", None)
