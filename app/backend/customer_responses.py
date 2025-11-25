@@ -160,6 +160,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Remercier pour l'intérêt ou l'offre.",
             "Expliquer que la proposition est trop basse au regard de la qualité.",
             "Proposer un montant révisé (contre-offre) clair et valoriser l'article.",
+            "Utiliser exactement la contre-offre fournie (montant inchangé).",
             "Mentionner l'envoi rapide et encourager à valider ou regarder le dressing.",
         ),
         allowed_articles=None,
@@ -196,6 +197,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Remercier pour l'intérêt.",
             "Indiquer que le prix est ferme en justifiant brièvement (état, modèle).",
+            "Reprendre exactement le prix ferme saisi (sans le modifier).",
             "Rester courtois et concis, en rappelant l'envoi rapide et le dressing.",
         ),
         allowed_articles=None,
@@ -361,6 +363,14 @@ class CustomerReplyGenerator:
             context_lines.append(" / ".join(price_details))
 
         rules = list(scenario.rules)
+        rules.extend(
+            self._build_personalization_rules(
+                payload=payload,
+                scenario=scenario,
+                article_label=article_label,
+                has_price_details=bool(price_details),
+            )
+        )
         rules.extend(STYLE_RULES)
 
         examples_block = ""
@@ -387,6 +397,40 @@ class CustomerReplyGenerator:
 
         logger.info("Prompt de réponse client construit (%d caractères)", len(prompt))
         return prompt.strip()
+
+    def _build_personalization_rules(
+        self,
+        *,
+        payload: CustomerReplyPayload,
+        scenario: ScenarioConfig,
+        article_label: str,
+        has_price_details: bool,
+    ) -> Sequence[str]:
+        """Add anti-redondancy cues so replies feel fresher and more contextual."""
+
+        rules = [
+            "Varier l'accroche et la conclusion pour éviter les formules toutes faites.",
+            f"Citer l'article ({article_label}) pour ancrer la réponse et éviter les messages génériques.",
+            "Ne pas répéter deux fois la même formule (remerciements ou invitation) dans le message.",
+            "Ajouter un mini détail concret (état général, style ou saison) sans inventer de faits précis.",
+        ]
+
+        if has_price_details:
+            rules.append(
+                "Expliquer en une phrase pourquoi le prix proposé est cohérent (qualité, état, demande)."
+            )
+
+        if payload.client_message.strip():
+            rules.append(
+                "Réagir brièvement au message du client pour montrer que sa demande a été comprise."
+            )
+
+        if scenario.message_type_id == "negocier":
+            rules.append(
+                "Utiliser des tournures variées (pas toujours 'merci pour l'offre') pour dynamiser la négociation."
+            )
+
+        return rules
 
     def _create_response(self, messages: Sequence[dict], *, max_tokens: int):
         """Call the OpenAI client using the available API surface."""
