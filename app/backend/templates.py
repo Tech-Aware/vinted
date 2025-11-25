@@ -555,6 +555,11 @@ def render_template_jean_levis_femme(
         fit_hashtag_source.lower().replace(" ", "") if fit_hashtag_source else ""
     )
 
+    rise_normalized = rise.casefold()
+    rise_is_low = "basse" in rise_normalized if rise_normalized else False
+    rise_is_high = "haute" in rise_normalized if rise_normalized else False
+    has_stretch = fields.has_elastane and bool(elastane_value)
+
     title_intro = "Jean Levi’s"
     if model:
         title_intro = f"{title_intro} {model}"
@@ -569,6 +574,10 @@ def render_template_jean_levis_femme(
         title_parts.append(f"L{fields.us_l}")
     if fit_title_text:
         title_parts.extend(["coupe", fit_title_text])
+    if rise_is_low:
+        title_parts.append("taille basse")
+    if has_stretch:
+        title_parts.append("stretch")
     if cotton_title_segment:
         title_parts.append(cotton_title_segment)
     if gender_value:
@@ -598,6 +607,17 @@ def render_template_jean_levis_femme(
         f"{size_sentence_core}, pour une silhouette ajustée et confortable."
     )
 
+    stretch_segment = "denim stretch" if has_stretch else "denim"
+    rise_display = rise if rise else "taille flatteuse"
+    intro_sentence_parts = [
+        f"Coupe flatteuse en {rise_display}" if rise_display else None,
+        f"{stretch_segment} Levi’s {model}".strip(),
+        "— parfait look Y2K.",
+    ]
+    intro_sentence = " ".join(part for part in intro_sentence_parts if part).replace(
+        "  ", " "
+    )
+
     if model and gender_value:
         first_sentence = f"Jean Levi’s modèle {model} pour {gender_value}."
     elif model:
@@ -607,9 +627,15 @@ def render_template_jean_levis_femme(
     else:
         first_sentence = "Jean Levi’s."
 
+    cta_sentence = (
+        "Disponible immédiatement — envoi rapide 🚚 / Ajoutez aux favoris si vous hésitez encore ✨"
+    )
+
     first_paragraph_lines = [
+        intro_sentence,
         first_sentence,
         size_sentence,
+        cta_sentence,
     ]
     if size_note:
         first_paragraph_lines.append(size_note)
@@ -629,9 +655,11 @@ def render_template_jean_levis_femme(
 
     third_paragraph_lines: List[str] = []
     if defects:
-        third_paragraph_lines.append(f"Très bon état : {defects} (voir photos)")
+        third_paragraph_lines.append(
+            f"Bon état général. Légères traces d’usage discrètes : {defects} (voir photos)."
+        )
     else:
-        third_paragraph_lines.append("Très bon état")
+        third_paragraph_lines.append("Très bon état général.")
 
     label_notice: Optional[str] = None
     if size_label_missing and not composition_label_unavailable:
@@ -666,12 +694,18 @@ def render_template_jean_levis_femme(
 
     hashtags_tokens: List[str] = []
     for token in [
+        f"#levis{model}" if model else "",
         "#levis",
         "#jeanlevis",
         "#jeandenim",
-        f"#levis{gender_value.lower().replace(' ', '')}" if gender_value else "",
         f"#{fit_hashtag_text}jean" if fit_hashtag_text else "",
-        f"#{rise.lower().replace(' ', '')}" if rise else "",
+        "#lowrise" if rise_is_low else "",
+        "#taillebasse" if rise_is_low else "",
+        "#highwaist" if rise_is_high else "",
+        f"#stretch" if has_stretch else "",
+        "#y2k",
+        f"#w{us_display.lower()}" if us_display else "",
+        f"#fr{fr_display.lower()}" if fr_display else "",
         f"#jean{color.lower().replace(' ', '')}" if color else "",
         f"#durin31fr{fr_tag}",
     ]:
