@@ -495,13 +495,16 @@ class ListingFields:
         if measurement is None:
             return ""
 
-        if 18 <= measurement <= 22:
+        measurement_rounded = round(measurement)
+        if measurement_rounded < 18:
+            return ""
+        if measurement_rounded <= 22:
             return "basse"
-        if 23 <= measurement <= 27:
+        if measurement_rounded <= 27:
             return "moyenne"
-        if 28 <= measurement <= 33:
+        if measurement_rounded <= 33:
             return "haute"
-        if measurement >= 34:
+        if measurement_rounded >= 34:
             return "très haute"
         return ""
 
