@@ -65,6 +65,24 @@ def _normalize_apparel_fr_size(value: Optional[str]) -> str:
     return f"{count}XL"
 
 
+def _normalize_us_waist_label(value: Optional[str]) -> str:
+    """Normalize US waist label strings (e.g. "W33", "33/32") to a numeric token."""
+
+    cleaned = _clean(value)
+    if not cleaned:
+        return ""
+
+    match = re.search(r"(?i)w\s*([0-9]{2,3})", cleaned)
+    if match:
+        return match.group(1)
+
+    match = re.search(r"([0-9]{2,3})", cleaned)
+    if match:
+        return match.group(1)
+
+    return cleaned
+
+
 _SIZE_TOKEN_SPLIT = re.compile(r"[^A-Z0-9]+")
 
 
