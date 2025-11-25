@@ -91,6 +91,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Remercier clairement pour l'achat.",
             "Mentionner la préparation rapide et l'envoi du suivi.",
+            "Glisser une invitation légère à visiter le dressing.",
             "Ton chaleureux mais concis (2–3 phrases).",
         ),
         allowed_articles=None,
@@ -130,7 +131,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Mettre en avant la disponibilité actuelle et l'envoi rapide.",
             "Créer un léger sentiment d'urgence sans être agressif.",
-            "Conclure par une invitation à passer commande.",
+            "Conclure par une invitation à passer commande et à regarder le dressing.",
         ),
         allowed_articles=None,
     ),
@@ -143,7 +144,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Proposer de regrouper plusieurs articles pour un envoi unique.",
             "Suggérer un avantage tarifaire ou frais de port optimisé.",
-            "Ton convivial et orienté solution.",
+            "Ton convivial et orienté solution, en invitant à explorer le dressing.",
         ),
         allowed_articles=None,
     ),
@@ -156,7 +157,8 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Remercier pour l'intérêt ou l'offre.",
             "Expliquer que la proposition est trop basse au regard de la qualité.",
-            "Proposer un montant révisé (contre-offre) clair.",
+            "Proposer un montant révisé (contre-offre) clair et valoriser l'article.",
+            "Mentionner l'envoi rapide et encourager à valider ou regarder le dressing.",
         ),
         allowed_articles=None,
     ),
@@ -169,7 +171,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Remercier pour l'intérêt.",
             "Indiquer que le prix est ferme en justifiant brièvement (état, modèle).",
-            "Rester courtois et concis.",
+            "Rester courtois et concis, en rappelant l'envoi rapide et le dressing.",
         ),
         allowed_articles=None,
     ),
@@ -182,7 +184,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Confirmer la validation du paiement et la préparation en cours.",
             "Partager le délai ou la promesse d'envoi.",
-            "Ton rassurant, 2 phrases max.",
+            "Ton rassurant, 2 phrases max, avec un clin d'œil convivial.",
         ),
         allowed_articles=None,
     ),
@@ -195,7 +197,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Indiquer que le colis vient d'être déposé ou scanné.",
             "Préciser que le suivi est partagé/à jour.",
-            "Rester bref et pro.",
+            "Rester bref et pro, en gardant un ton chaleureux.",
         ),
         allowed_articles=None,
     ),
@@ -213,6 +215,13 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         allowed_articles=None,
     ),
 }
+
+STYLE_RULES: Sequence[str] = (
+    "Réponds en français avec un ton courtois, professionnel, fun, avenant et convivial.",
+    "Inclure au moins deux émojis ou smileys répartis dans la réponse.",
+    "Rédiger 2 à 6 phrases maximum, sans puces ni listes.",
+    "Ne rien promettre d'irréaliste ; tu peux mentionner un envoi rapide si pertinent.",
+)
 
 
 def get_article_label(article_type: str) -> str:
@@ -278,9 +287,10 @@ class CustomerReplyGenerator:
                     {
                         "type": "input_text",
                         "text": (
-                            "Tu es un vendeur professionnel Vinted (Durin31). Tu réponds en français, "
-                            "de façon concise (2 à 4 phrases), chaleureuse et orientée client. "
-                            "Tu ne promets rien que tu ne puisses tenir. Réponds directement sans puces."
+                            "Tu es un vendeur professionnel Vinted (Durin31). Tu réponds en français avec "
+                            "un ton courtois, professionnel, fun, avenant et convivial. Ta réponse doit "
+                            "contenir au moins deux émojis, rester concise (2 à 6 phrases), sans puces ni "
+                            "numéros, et orientée client. Tu ne promets rien que tu ne puisses tenir."
                         ),
                     }
                 ],
@@ -322,6 +332,7 @@ class CustomerReplyGenerator:
             context_lines.append(" / ".join(price_details))
 
         rules = list(scenario.rules)
+        rules.extend(STYLE_RULES)
 
         prompt = dedent(
             """

@@ -59,6 +59,9 @@ Seules les négociations affichent des champs :
 - « Offre du client » + « Prix ferme » pour refuser de négocier.
 Le bouton « Générer la réponse » n'est affiché qu'en dernier.
 Vous obtenez un texte prêt à coller dans Vinted et copiable en un clic.
+Chaque réponse est rédigée en français avec un ton courtois, professionnel,
+fun et convivial, en intégrant au moins deux émojis/smileys et en restant
+concise (2 à 6 phrases).
 
 Cliquez sur « Analyser » pour envoyer les photos et commentaires à GPT. Les
 données transitent en base64 dans la requête OpenAI. Une fois la réponse
