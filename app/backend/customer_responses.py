@@ -88,6 +88,10 @@ MESSAGE_TYPES: Sequence[MessageType] = (
     MessageType("traduction", "Traduction express"),
 )
 
+MESSAGE_TYPE_EXTRA_FIELDS: Dict[str, Sequence[str]] = {
+    "negociation": ("prix_initial", "prix_propose_client", "prix_min_accepte"),
+}
+
 
 SCENARIOS: Dict[str, ScenarioConfig] = {
     "reservation_incitation": ScenarioConfig(
@@ -102,6 +106,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "2 à 3 phrases maximum.",
             "Clore par une invitation légère à visiter le dressing.",
         ),
+        allowed_articles=None,
     ),
     "contre_offre_19_12_17": ScenarioConfig(
         id="contre_offre_19_12_17",
@@ -114,6 +119,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "12€ est trop bas au vu de la qualité ; proposer 17€ comme compromis.",
             "Mentionner le reste du dressing.",
         ),
+        allowed_articles=("jean_levis",),
     ),
     "acceptation_tnf": ScenarioConfig(
         id="acceptation_tnf",
@@ -126,6 +132,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Promettre un envoi rapide et partage du suivi.",
             "Style sobre, 2–3 phrases, peu ou pas d'émojis.",
         ),
+        allowed_articles=("jacket", "polaire_tnf"),
     ),
     "urgence_adidas": ScenarioConfig(
         id="urgence_adidas",
@@ -139,6 +146,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Glisser l'info expédition rapide.",
             "Ton dynamique sans agressivité, 2–3 phrases.",
         ),
+        allowed_articles=("jacket",),
     ),
     "remerciement_levi_515": ScenarioConfig(
         id="remerciement_levi_515",
@@ -151,6 +159,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Indiquer préparation rapide et partage du suivi.",
             "Invitation légère à consulter le dressing.",
         ),
+        allowed_articles=("jean_levis",),
     ),
     "contre_offre_20_12_17": ScenarioConfig(
         id="contre_offre_20_12_17",
@@ -163,6 +172,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Valoriser l'état de l'article.",
             "12€ trop bas ; proposer 17€ comme geste commercial.",
         ),
+        allowed_articles=("jean_levis",),
     ),
     "correspondance_46_w34": ScenarioConfig(
         id="correspondance_46_w34",
@@ -175,6 +185,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Préciser que les mesures sont en photo et conseiller une comparaison avec un jean personnel.",
             "2–3 phrases, ton neutre.",
         ),
+        allowed_articles=("jean_levis",),
     ),
     "relance_favoris": ScenarioConfig(
         id="relance_favoris",
@@ -188,6 +199,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Inciter discrètement à finaliser (envoi rapide possible).",
             "Ton doux, 2–3 phrases.",
         ),
+        allowed_articles=None,
     ),
     "remerciement_paiement_attente": ScenarioConfig(
         id="remerciement_paiement_attente",
@@ -200,6 +212,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Indiquer expédition dès validation du paiement.",
             "Proposer de répondre aux questions.",
         ),
+        allowed_articles=None,
     ),
     "notification_arrivee_colis": ScenarioConfig(
         id="notification_arrivee_colis",
@@ -212,6 +225,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Demander confirmation et proposer aide en cas de souci.",
             "Si tout est ok, proposer de laisser un avis.",
         ),
+        allowed_articles=None,
     ),
     "traduction_it_avec_plaisir": ScenarioConfig(
         id="traduction_it_avec_plaisir",
@@ -222,6 +236,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Répondre uniquement par 'Con piacere'.",
         ),
+        allowed_articles=None,
     ),
     "refus_prix_ferme_15": ScenarioConfig(
         id="refus_prix_ferme_15",
@@ -234,6 +249,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Expliquer poliment que le prix est ferme à 15€ pour un modèle premium.",
             "Ton ferme mais respectueux.",
         ),
+        allowed_articles=("jean_levis",),
     ),
     "remerciement_acceptation_offre": ScenarioConfig(
         id="remerciement_acceptation_offre",
@@ -246,6 +262,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Promettre un envoi rapide et partage du suivi.",
             "Clore par une phrase de disponibilité.",
         ),
+        allowed_articles=None,
     ),
 }
 

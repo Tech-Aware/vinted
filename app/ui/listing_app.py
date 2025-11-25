@@ -25,6 +25,7 @@ import customtkinter as ctk
 from app.backend.customer_responses import (
     ARTICLE_TYPES,
     EXTRA_FIELD_LABELS,
+    MESSAGE_TYPE_EXTRA_FIELDS,
     MESSAGE_TYPES,
     SCENARIOS,
     CustomerReplyGenerator,
@@ -643,6 +644,7 @@ class VintedListingApp(ctk.CTk):
 
     def _get_visible_reply_scenarios(self) -> List[ScenarioConfig]:
         selected_message_type = self.reply_message_type_var.get()
+        selected_article = self.reply_article_var.get()
 
         scenarios = list(SCENARIOS.values())
         if selected_message_type:
@@ -650,6 +652,13 @@ class VintedListingApp(ctk.CTk):
                 scenario
                 for scenario in scenarios
                 if scenario.message_type_id == selected_message_type
+            ]
+        if selected_article:
+            scenarios = [
+                scenario
+                for scenario in scenarios
+                if scenario.allowed_articles is None
+                or selected_article in scenario.allowed_articles
             ]
 
         return scenarios
@@ -706,6 +715,9 @@ class VintedListingApp(ctk.CTk):
     def _refresh_extra_fields(self) -> None:
         scenario_id = self.reply_scenario_var.get()
         scenario = SCENARIOS.get(scenario_id)
+        message_type_extras = MESSAGE_TYPE_EXTRA_FIELDS.get(
+            self.reply_message_type_var.get(), ()
+        )
 
         for frame in self.reply_extra_field_frames.values():
             frame.grid_forget()
@@ -716,7 +728,9 @@ class VintedListingApp(ctk.CTk):
             )
             return
 
-        for row_index, field_key in enumerate(scenario.extra_fields, start=1):
+        merged_fields = list(dict.fromkeys((*message_type_extras, *scenario.extra_fields)))
+
+        for row_index, field_key in enumerate(merged_fields, start=1):
             frame = self.reply_extra_field_frames.get(field_key)
             if frame is None:
                 continue
@@ -778,6 +792,9 @@ class VintedListingApp(ctk.CTk):
         message_type = self.reply_message_type_var.get()
         scenario_id = self.reply_scenario_var.get()
         scenario = SCENARIOS.get(scenario_id)
+        message_type_extras = MESSAGE_TYPE_EXTRA_FIELDS.get(
+            self.reply_message_type_var.get(), ()
+        )
 
         if not article_type:
             self._show_error_popup("Sélectionnez un type d'article.")
@@ -799,7 +816,9 @@ class VintedListingApp(ctk.CTk):
         numeric_values: Dict[str, Optional[float]] = {}
         text_values: Dict[str, str] = {}
 
-        for field_key in scenario.extra_fields:
+        required_fields = list(dict.fromkeys((*message_type_extras, *scenario.extra_fields)))
+
+        for field_key in required_fields:
             raw_value = self.reply_field_vars.get(field_key, ctk.StringVar()).get().strip()
             if not raw_value:
                 missing_fields.append(EXTRA_FIELD_LABELS.get(field_key, field_key))
