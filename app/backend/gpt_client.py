@@ -163,7 +163,12 @@ class ListingGenerator:
         return messages
 
     def generate_listing(
-        self, encoded_images: Iterable[str], user_comment: str, template: ListingTemplate
+        self,
+        encoded_images: Iterable[str],
+        user_comment: str,
+        template: ListingTemplate,
+        fr_size_override: str,
+        us_size_override: Optional[str] = None,
     ) -> ListingResult:
         logger.step("Début de la génération d'annonce")
         encoded_images_list = list(encoded_images)
@@ -218,7 +223,12 @@ class ListingGenerator:
                     "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
                 ) from exc
 
-        fields = self._apply_user_overrides(user_comment, fields)
+        fields = self._apply_user_overrides(
+            user_comment,
+            fields,
+            fr_size_override=fr_size_override,
+            us_size_override=us_size_override,
+        )
 
         if template.name == "template-pull-tommy-femme" and not (fields.sku and fields.sku.strip()):
             logger.step("Récupération ciblée du SKU Tommy Hilfiger")
@@ -266,20 +276,53 @@ class ListingGenerator:
             price_estimate=price_estimate,
         )
 
-    def _apply_user_overrides(self, user_comment: str, fields: ListingFields) -> ListingFields:
+    def _apply_user_overrides(
+        self,
+        user_comment: str,
+        fields: ListingFields,
+        *,
+        fr_size_override: Optional[str] = None,
+        us_size_override: Optional[str] = None,
+    ) -> ListingFields:
         """Force model fields with explicit user instructions."""
 
         size_overridden = False
+        us_size_mentioned = False
+        explicit_overrides: dict = {}
+
+        if fr_size_override:
+            explicit_overrides["fr_size"] = fr_size_override.strip()
+            explicit_overrides["size_label_visible"] = True
+            size_overridden = True
+
+        if us_size_override:
+            explicit_overrides["us_w"] = us_size_override.strip()
+            us_size_mentioned = True
+
         if not user_comment:
-            # Sans commentaire, on nettoie uniquement les tailles inventées
-            return self._strip_inferred_sizes(fields, size_overridden=False)
+            if explicit_overrides:
+                fields = replace(fields, **explicit_overrides)
+                if size_overridden and not us_size_mentioned:
+                    fields = replace(fields, us_w="", us_l="")
+                if size_overridden:
+                    fields = replace(
+                        fields,
+                        waist_measurement_cm=None,
+                        waist_flat_measurement_cm=None,
+                    )
+            return self._strip_inferred_sizes(fields, size_overridden=size_overridden)
 
         (
             overrides,
             leftover_notes,
-            size_overridden,
-            us_size_mentioned,
+            comment_size_overridden,
+            comment_us_size_mentioned,
         ) = self._extract_overrides_from_comment(user_comment)
+        size_overridden = size_overridden or comment_size_overridden
+        us_size_mentioned = us_size_mentioned or comment_us_size_mentioned
+
+        overrides = {**overrides, **explicit_overrides}
+
         if leftover_notes:
             existing_notes = (fields.feature_notes or "").strip()
             merged_notes = ", ".join(note for note in leftover_notes if note)
