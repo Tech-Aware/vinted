@@ -305,37 +305,35 @@ class VintedListingApp(ctk.CTk):
         self.reply_scenario_frame.grid(row=0, column=2, sticky="nsew", padx=(8, 0), pady=8)
         self.reply_scenario_frame.columnconfigure(0, weight=1)
 
-        context_frame = ctk.CTkFrame(container)
-        context_frame.grid(row=3, column=0, sticky="nsew", padx=12, pady=(4, 8))
-        context_frame.columnconfigure(0, weight=1)
-        context_frame.rowconfigure(0, weight=1)
+        self.reply_extra_container = ctk.CTkFrame(self.reply_scenario_frame)
+        self.reply_extra_container.columnconfigure(0, weight=1)
 
-        extra_frame = ctk.CTkFrame(context_frame)
-        extra_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 0), pady=6)
-        extra_frame.columnconfigure(0, weight=1)
-
-        extra_title = ctk.CTkLabel(extra_frame, text="Données de négociation", anchor="w")
-        extra_title.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
+        price_title = ctk.CTkLabel(
+            self.reply_extra_container,
+            text="Montants de négociation",
+            anchor="w",
+            font=ctk.CTkFont(weight="bold"),
+        )
+        price_title.grid(row=0, column=0, sticky="w", padx=6, pady=(8, 4))
 
         self.reply_extra_field_frames: Dict[str, ctk.CTkFrame] = {}
         for index, (field_key, field_label) in enumerate(EXTRA_FIELD_LABELS.items(), start=1):
-            field_container = ctk.CTkFrame(extra_frame)
-            field_container.grid(row=index, column=0, sticky="ew", padx=8, pady=4)
+            field_container = ctk.CTkFrame(self.reply_extra_container)
             field_container.columnconfigure(0, weight=1)
 
             label = ctk.CTkLabel(field_container, text=field_label, anchor="w")
-            label.grid(row=0, column=0, sticky="w")
+            label.grid(row=0, column=0, sticky="w", padx=6, pady=(2, 0))
 
             entry_var = ctk.StringVar()
             self.reply_field_vars[field_key] = entry_var
 
-            entry = ctk.CTkEntry(field_container, textvariable=entry_var)
-            entry.grid(row=1, column=0, sticky="ew", pady=(2, 4))
+            entry = ctk.CTkEntry(field_container, textvariable=entry_var, width=140)
+            entry.grid(row=1, column=0, sticky="ew", padx=6, pady=(2, 6))
 
             self.reply_extra_field_frames[field_key] = field_container
 
         actions_frame = ctk.CTkFrame(container)
-        actions_frame.grid(row=4, column=0, sticky="ew", padx=12, pady=(4, 8))
+        actions_frame.grid(row=3, column=0, sticky="ew", padx=12, pady=(4, 8))
         actions_frame.columnconfigure(0, weight=0)
         actions_frame.columnconfigure(1, weight=1)
 
@@ -350,7 +348,7 @@ class VintedListingApp(ctk.CTk):
         status_label.grid(row=0, column=1, sticky="w", padx=8, pady=6)
 
         output_frame = ctk.CTkFrame(container)
-        output_frame.grid(row=5, column=0, sticky="nsew", padx=12, pady=(4, 8))
+        output_frame.grid(row=4, column=0, sticky="nsew", padx=12, pady=(4, 8))
         output_frame.columnconfigure(0, weight=1)
 
         output_header = ctk.CTkLabel(
@@ -372,7 +370,7 @@ class VintedListingApp(ctk.CTk):
         )
         copy_button.grid(row=2, column=0, sticky="e", padx=8, pady=(0, 8))
 
-        self.reply_context_frame = context_frame
+        self.reply_context_frame = None
         self.reply_actions_frame = actions_frame
         self.reply_output_frame = output_frame
         self.reply_frames_positions = {
@@ -382,14 +380,11 @@ class VintedListingApp(ctk.CTk):
             self.reply_scenario_frame: dict(
                 row=0, column=2, sticky="nsew", padx=(8, 0), pady=8
             ),
-            self.reply_context_frame: dict(
-                row=3, column=0, sticky="nsew", padx=12, pady=(4, 8)
-            ),
             self.reply_actions_frame: dict(
-                row=4, column=0, sticky="ew", padx=12, pady=(4, 8)
+                row=3, column=0, sticky="ew", padx=12, pady=(4, 8)
             ),
             self.reply_output_frame: dict(
-                row=5, column=0, sticky="nsew", padx=12, pady=(4, 8)
+                row=4, column=0, sticky="nsew", padx=12, pady=(4, 8)
             ),
         }
 
@@ -685,6 +680,9 @@ class VintedListingApp(ctk.CTk):
             radio.grid(row=index, column=0, sticky="w", padx=8, pady=4)
             self.reply_scenario_radios.append(radio)
 
+        self.reply_extra_container.grid_remove()
+        self.reply_extra_container_row = len(visible_scenarios) + 1
+
         self._update_reply_visibility()
 
     def _on_reply_article_change(self) -> None:
@@ -716,6 +714,8 @@ class VintedListingApp(ctk.CTk):
         for frame in self.reply_extra_field_frames.values():
             frame.grid_forget()
 
+        self.reply_extra_container.grid_remove()
+
         if not scenario:
             self.reply_status_var.set(
                 "Sélectionnez un article, un type de message puis un scénario compatible."
@@ -728,7 +728,16 @@ class VintedListingApp(ctk.CTk):
             frame = self.reply_extra_field_frames.get(field_key)
             if frame is None:
                 continue
-            frame.grid(row=row_index, column=0, sticky="ew", padx=8, pady=4)
+            frame.grid(row=row_index, column=0, sticky="ew", padx=6, pady=2)
+
+        if merged_fields:
+            self.reply_extra_container.grid(
+                row=getattr(self, "reply_extra_container_row", 1),
+                column=0,
+                sticky="ew",
+                padx=8,
+                pady=(8, 8),
+            )
 
         self.reply_status_var.set("")
 
@@ -760,11 +769,9 @@ class VintedListingApp(ctk.CTk):
             hide_frame(self.reply_scenario_frame)
 
         if has_scenario:
-            show_frame(self.reply_context_frame)
             show_frame(self.reply_actions_frame)
             show_frame(self.reply_output_frame)
         else:
-            hide_frame(self.reply_context_frame)
             hide_frame(self.reply_actions_frame)
             hide_frame(self.reply_output_frame)
 
