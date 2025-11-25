@@ -47,6 +47,9 @@ class ListingResult:
 _FR_SIZE_OVERRIDE_PATTERN = re.compile(
     r"(?i)\b(?:fr\s*-?\s*(\d{2,3})|(\d{2,3})\s*fr|taille\s*(?:fr\s*)?(\d{2,3}))\b"
 )
+_US_SIZE_PATTERN = re.compile(
+    r"(?i)\b(?:us\s*(?:w\s*)?(\d{1,2})(?:\s*[x/]*\s*l?\s*(\d{1,2}))?|w\s*(\d{1,2})\s*l\s*(\d{1,2}))\b"
+)
 
 def _normalize_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value)
@@ -258,9 +261,12 @@ class ListingGenerator:
             # Sans commentaire, on nettoie uniquement les tailles inventées
             return self._strip_inferred_sizes(fields, size_overridden=False)
 
-        overrides, leftover_notes, size_overridden = self._extract_overrides_from_comment(
-            user_comment
-        )
+        (
+            overrides,
+            leftover_notes,
+            size_overridden,
+            us_size_mentioned,
+        ) = self._extract_overrides_from_comment(user_comment)
         if leftover_notes:
             existing_notes = (fields.feature_notes or "").strip()
             merged_notes = ", ".join(note for note in leftover_notes if note)
@@ -283,7 +289,7 @@ class ListingGenerator:
                 ", ".join(sorted(overrides)),
             )
             fields = replace(fields, **overrides)
-            if size_overridden:
+            if size_overridden and not us_size_mentioned:
                 # Lorsque l'utilisateur impose une taille FR, on neutralise W/L
                 # pour éviter qu'une conversion automatique ne remplace sa valeur.
                 fields = replace(fields, us_w="", us_l="")
@@ -303,19 +309,21 @@ class ListingGenerator:
 
     def _extract_overrides_from_comment(
         self, user_comment: str
-    ) -> tuple[dict, list[str], bool]:
+    ) -> tuple[dict, list[str], bool, bool]:
         """Parse the free-form comment to override structured fields.
 
-        Returns a tuple of (overrides, leftover_notes). "overrides" contains
-        direct field replacements (e.g. taille, couleur, marque) while
-        "leftover_notes" gathers unclassified pieces of information to append
-        to the feature notes section instead of polluting the title.
+        Returns a tuple of (overrides, leftover_notes, size_overridden,
+        us_size_mentioned). "overrides" contains direct field replacements
+        (e.g. taille, couleur, marque) while "leftover_notes" gathers
+        unclassified pieces of information to append to the feature notes
+        section instead of polluting the title.
         """
 
         overrides: dict = {}
         leftover_notes: list[str] = []
 
         size_overridden = False
+        us_size_mentioned = bool(_US_SIZE_PATTERN.search(user_comment))
 
         fr_size_override = self._extract_fr_size_override(user_comment)
         if fr_size_override:
@@ -388,7 +396,7 @@ class ListingGenerator:
 
             leftover_notes.append(segment)
 
-        return overrides, leftover_notes, size_overridden
+        return overrides, leftover_notes, size_overridden, us_size_mentioned
 
     @staticmethod
     def _strip_inferred_sizes(

@@ -46,6 +46,48 @@ def test_apply_user_overrides_propagates_fr_size_to_render() -> None:
     assert "FR 40" in price_estimate
 
 
+def test_apply_user_overrides_preserves_us_size_when_explicit() -> None:
+    generator = ListingGenerator(model="fake", api_key="test")
+    template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
+
+    fields = ListingFields(
+        model="501",
+        fr_size="38",
+        us_w="30",
+        us_l="32",
+        fit_leg="straight",
+        rise_class="regular",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="100",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="Femme",
+        color_main="bleu",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="JLF123",
+    )
+
+    comment = "Taille FR40 (us w30 l32), merci !"
+
+    overridden_fields = generator._apply_user_overrides(comment, fields)
+
+    assert overridden_fields.fr_size == "40"
+    assert overridden_fields.us_w == "30"
+    assert overridden_fields.us_l == "32"
+
+    title, description, _ = template.render(overridden_fields)
+
+    assert "W30" in title
+    assert "L32" in title
+    assert "30 US (équivalent 40 FR)" in description
+
+
 def test_apply_user_overrides_strips_sizes_when_label_missing() -> None:
     generator = ListingGenerator(model="fake", api_key="test")
 
