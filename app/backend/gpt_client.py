@@ -269,6 +269,7 @@ class ListingGenerator:
     def _apply_user_overrides(self, user_comment: str, fields: ListingFields) -> ListingFields:
         """Force model fields with explicit user instructions."""
 
+        size_overridden = False
         if not user_comment:
             # Sans commentaire, on nettoie uniquement les tailles inventées
             return self._strip_inferred_sizes(fields, size_overridden=False)
@@ -306,7 +307,7 @@ class ListingGenerator:
                 # pour éviter qu'une conversion automatique ne remplace sa valeur.
                 fields = replace(fields, us_w="", us_l="")
 
-        return fields
+        return self._strip_inferred_sizes(fields, size_overridden=size_overridden)
 
     @staticmethod
     def _extract_fr_size_override(user_comment: str) -> Optional[str]:
