@@ -42,6 +42,7 @@ class ScenarioConfig:
     extra_fields: Sequence[str]
     rules: Sequence[str]
     allowed_articles: Optional[Sequence[str]] = None
+    examples: Sequence[str] = ()
 
 
 @dataclass
@@ -176,7 +177,16 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Ton courtois, ferme mais encourageant, en invitant à valider rapidement.",
         ),
         allowed_articles=None,
-    ),
+            examples=(
+                dedent(
+                    """
+                    Bonjour,
+                    Malheureusement Vinted ne prend pas en charge les réservations sur cet article. Le mieux que je puisse faire est de vous proposer une réduction.
+                Si malgré tout ce jean vous intéresse et qu'il est toujours disponible jeudi, alors il est à vous.
+                    """
+                ).strip(),
+            ),
+        ),
     "negocier_prix_ferme": ScenarioConfig(
         id="negocier_prix_ferme",
         label="Prix ferme (pas de négociation)",
@@ -353,6 +363,10 @@ class CustomerReplyGenerator:
         rules = list(scenario.rules)
         rules.extend(STYLE_RULES)
 
+        examples_block = ""
+        if scenario.examples:
+            examples_block = "\n\nExemples de réponse:\n- " + "\n- ".join(scenario.examples)
+
         prompt = dedent(
             """
             Contexte client et article:
@@ -361,9 +375,15 @@ class CustomerReplyGenerator:
             Règles spécifiques:
             - {rules}
 
+            {examples}
+
             Rédige la réponse finale en suivant le ton Durin31.
             """
-        ).format(context="\n".join(context_lines), rules="\n- ".join(rules))
+        ).format(
+            context="\n".join(context_lines),
+            rules="\n- ".join(rules),
+            examples=examples_block.strip(),
+        )
 
         logger.info("Prompt de réponse client construit (%d caractères)", len(prompt))
         return prompt.strip()
