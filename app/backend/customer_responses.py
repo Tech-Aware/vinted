@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import Dict, List, Optional, Sequence
 
+import httpx
+
 try:
     from openai import OpenAI
 except ImportError:  # pragma: no cover - optional dependency
@@ -256,7 +258,11 @@ class CustomerReplyGenerator:
                 raise RuntimeError(
                     "Clé API OpenAI manquante. Définissez la variable d'environnement OPENAI_API_KEY."
                 )
-            self._client = OpenAI(api_key=api_key)
+            # httpx>=0.28 ne supporte plus l'argument "proxies" attendu par la
+            # construction par défaut du client OpenAI. On injecte donc un
+            # http_client explicitement compatible pour éviter l'erreur de type.
+            http_client = httpx.Client(trust_env=True)
+            self._client = OpenAI(api_key=api_key, http_client=http_client)
             logger.success("Client OpenAI initialisé pour les réponses clients")
         return self._client
 

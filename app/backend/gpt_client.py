@@ -21,6 +21,8 @@ import unicodedata
 from dataclasses import dataclass, replace
 from typing import Iterable, List, Optional, Sequence
 
+import httpx
+
 try:
     from openai import OpenAI
 except ImportError:  # pragma: no cover - optional dependency
@@ -89,7 +91,12 @@ class ListingGenerator:
                 raise RuntimeError(
                     "Clé API OpenAI manquante. Définissez la variable d'environnement OPENAI_API_KEY."
                 )
-            self._client = OpenAI(api_key=api_key)
+            # httpx>=0.28 renomme l'argument "proxies" en "proxy". Le client OpenAI
+            # tente d'instancier httpx avec "proxies" par défaut, ce qui provoque
+            # une erreur de type. On fournit donc explicitement un http_client
+            # compatible pour éviter l'incompatibilité de signature.
+            http_client = httpx.Client(trust_env=True)
+            self._client = OpenAI(api_key=api_key, http_client=http_client)
             logger.success("Client OpenAI initialisé")
         return self._client
 
