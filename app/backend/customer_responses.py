@@ -219,7 +219,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
 STYLE_RULES: Sequence[str] = (
     "Réponds en français avec un ton courtois, professionnel, fun, avenant et convivial.",
     "Inclure au moins deux émojis ou smileys répartis dans la réponse.",
-    "Rédiger 2 à 6 phrases maximum, sans puces ni listes.",
+    "Rédiger entre 1 et 4 phrases maximum, sans puces ni listes.",
     "Ne rien promettre d'irréaliste ; tu peux mentionner un envoi rapide si pertinent.",
 )
 
@@ -289,7 +289,7 @@ class CustomerReplyGenerator:
                         "text": (
                             "Tu es un vendeur professionnel Vinted (Durin31). Tu réponds en français avec "
                             "un ton courtois, professionnel, fun, avenant et convivial. Ta réponse doit "
-                            "contenir au moins deux émojis, rester concise (2 à 6 phrases), sans puces ni "
+                            "contenir au moins deux émojis, rester concise (1 à 4 phrases), sans puces ni "
                             "numéros, et orientée client. Tu ne promets rien que tu ne puisses tenir."
                         ),
                     }
