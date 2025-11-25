@@ -439,7 +439,8 @@ def render_template_jean_levis_femme(
     size_estimated = False
 
     fr_candidate = _clean(fields.fr_size)
-    us_candidate = _clean(fields.us_w)
+    us_candidate_raw = _clean(fields.us_w)
+    us_candidate = _normalize_us_waist_label(us_candidate_raw)
 
     normalized_sizes: Optional[NormalizedSizes] = None
     if fields.size_label_visible or fr_candidate or us_candidate:
@@ -452,7 +453,13 @@ def render_template_jean_levis_femme(
         )
 
     fr_display = fr_candidate or (normalized_sizes.fr_size if normalized_sizes else "")
-    us_display = us_candidate or (normalized_sizes.us_size if normalized_sizes else None)
+    us_display = (
+        normalized_sizes.us_size if normalized_sizes and normalized_sizes.us_size else None
+    )
+    if not us_display:
+        us_display = us_candidate
+    us_display_label = f"W{us_display}" if us_display else ""
+    us_length_label = f"L{fields.us_l}" if fields.us_l else ""
 
     if normalized_sizes and fields.size_label_visible:
         size_note = normalized_sizes.note
@@ -678,10 +685,10 @@ def render_template_jean_levis_femme(
     title_parts: List[str] = [title_intro]
     if fr_display:
         title_parts.append(f"FR{fr_display}")
-    if us_display:
-        title_parts.append(f"W{us_display}")
-    if fields.us_l:
-        title_parts.append(f"L{fields.us_l}")
+    if us_display_label:
+        title_parts.append(us_display_label)
+    if us_length_label:
+        title_parts.append(us_length_label)
     if fit_title_text:
         title_parts.extend(["coupe", fit_title_text])
     if rise_is_low:
@@ -698,10 +705,15 @@ def render_template_jean_levis_femme(
     title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
 
     size_fragments: List[str] = []
-    if us_display and fr_display:
-        size_fragments.append(f"Taille {us_display} US (équivalent {fr_display} FR)")
-    elif us_display:
-        size_fragments.append(f"Taille {us_display} US")
+    us_sentence_label = " ".join(
+        part for part in (us_display_label, us_length_label) if part
+    ).strip()
+    if us_sentence_label and fr_display:
+        size_fragments.append(
+            f"Taille {us_sentence_label} US (équivalent {fr_display} FR)"
+        )
+    elif us_sentence_label:
+        size_fragments.append(f"Taille {us_sentence_label} US")
     elif fr_display:
         size_fragments.append(f"Taille {fr_display} FR")
     else:
@@ -815,6 +827,7 @@ def render_template_jean_levis_femme(
         f"#stretch" if has_stretch else "",
         "#y2k" if has_y2k_vibe else "",
         f"#w{us_display.lower()}" if us_display else "",
+        f"#l{fields.us_l.lower()}" if fields.us_l else "",
         f"#fr{fr_display.lower()}" if fr_display else "",
         f"#jean{color.lower().replace(' ', '')}" if color else "",
         f"#durin31fr{fr_tag}",
