@@ -75,6 +75,7 @@ class VintedListingApp(ctk.CTk):
         self.reply_article_var = ctk.StringVar(value="")
         self.reply_message_type_var = ctk.StringVar(value="")
         self.reply_scenario_var = ctk.StringVar(value="")
+        self.reply_include_client_name_var = ctk.StringVar(value="non")
         self.reply_client_name_var = ctk.StringVar(value="")
         self.reply_status_var = ctk.StringVar(value="")
         self.reply_field_vars: Dict[str, ctk.StringVar] = {}
@@ -291,21 +292,51 @@ class VintedListingApp(ctk.CTk):
         identity_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=8, pady=8)
         identity_frame.columnconfigure(1, weight=1)
 
+        client_choice_label = ctk.CTkLabel(
+            identity_frame,
+            text="Ajouter le nom du client ?",
+            font=ctk.CTkFont(weight="bold"),
+            anchor="w",
+        )
+        client_choice_label.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
+
+        client_choice_frame = ctk.CTkFrame(identity_frame)
+        client_choice_frame.grid(row=1, column=0, sticky="w", padx=8, pady=(0, 4))
+
+        include_name_radio = ctk.CTkRadioButton(
+            client_choice_frame,
+            text="Oui",
+            value="oui",
+            variable=self.reply_include_client_name_var,
+            command=self._on_client_name_toggle,
+        )
+        include_name_radio.grid(row=0, column=0, padx=(0, 8), pady=2)
+
+        exclude_name_radio = ctk.CTkRadioButton(
+            client_choice_frame,
+            text="Non",
+            value="non",
+            variable=self.reply_include_client_name_var,
+            command=self._on_client_name_toggle,
+        )
+        exclude_name_radio.grid(row=0, column=1, padx=(0, 8), pady=2)
+
         client_label = ctk.CTkLabel(
             identity_frame,
             text="Nom du client",
             font=ctk.CTkFont(weight="bold"),
             anchor="w",
         )
-        client_label.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
+        client_label.grid(row=2, column=0, sticky="w", padx=8, pady=(6, 4))
 
         client_entry = ctk.CTkEntry(
             identity_frame,
             textvariable=self.reply_client_name_var,
             placeholder_text="Saisissez le prénom ou pseudo du client",
         )
-        client_entry.grid(row=1, column=0, columnspan=2, sticky="ew", padx=8, pady=(0, 10))
+        client_entry.grid(row=3, column=0, columnspan=2, sticky="ew", padx=8, pady=(0, 10))
         client_entry.bind("<KeyRelease>", lambda *_: self._update_reply_visibility())
+        self.reply_client_entry = client_entry
 
         article_frame = ctk.CTkFrame(selection_frame)
         article_frame.grid(row=1, column=0, sticky="nsew", padx=(0, 8), pady=8)
@@ -581,6 +612,7 @@ class VintedListingApp(ctk.CTk):
 
     def reset_reply(self) -> None:
         self._set_reply_loading_state(False)
+        self.reply_include_client_name_var.set("non")
         self.reply_client_name_var.set("")
         self.reply_article_var.set("")
         self.reply_message_type_var.set("")
@@ -590,7 +622,7 @@ class VintedListingApp(ctk.CTk):
         self.reply_output_box.delete("1.0", "end")
         self.reply_inline_price_row.grid_remove()
         self.reply_extra_container.grid_remove()
-        self.reply_status_var.set("Renseignez le nom du client pour poursuivre.")
+        self.reply_status_var.set("Choisissez si vous souhaitez ajouter le nom du client.")
         self._update_reply_visibility()
 
     def _remove_image(self, path: Path) -> None:
@@ -837,9 +869,18 @@ class VintedListingApp(ctk.CTk):
 
         self.reply_status_var.set("")
 
+    def _on_client_name_toggle(self) -> None:
+        """Show or hide the client name field based on the user's choice."""
+
+        include_client_name = self.reply_include_client_name_var.get() == "oui"
+        if not include_client_name:
+            self.reply_client_name_var.set("")
+        self._update_reply_visibility()
+
     def _update_reply_visibility(self) -> None:
         client_name = self.reply_client_name_var.get().strip()
-        has_client = bool(client_name)
+        include_client_name = self.reply_include_client_name_var.get() == "oui"
+        has_client = bool(client_name) or not include_client_name
         has_article = bool(self.reply_article_var.get())
         has_message_type = bool(self.reply_message_type_var.get())
         has_scenario = bool(self.reply_scenario_var.get())
@@ -856,13 +897,21 @@ class VintedListingApp(ctk.CTk):
                 return
             frame.grid_remove()
 
+        if include_client_name:
+            self.reply_client_entry.grid()
+        else:
+            self.reply_client_entry.grid_remove()
+
         if has_client:
             show_frame(self.reply_article_frame)
             if not has_article:
                 self.reply_status_var.set("Sélectionnez un type d'article.")
         else:
             hide_frame(self.reply_article_frame)
-            self.reply_status_var.set("Renseignez le nom du client pour poursuivre.")
+            if include_client_name:
+                self.reply_status_var.set("Renseignez le nom du client pour poursuivre.")
+            else:
+                self.reply_status_var.set("Sélectionnez un type d'article pour commencer.")
 
         if has_client and has_article:
             show_frame(self.reply_message_type_frame)
@@ -894,6 +943,7 @@ class VintedListingApp(ctk.CTk):
             return None
 
     def _build_reply_payload(self) -> Optional[CustomerReplyPayload]:
+        include_client_name = self.reply_include_client_name_var.get() == "oui"
         client_name = self.reply_client_name_var.get().strip()
         article_type = self.reply_article_var.get()
         message_type = self.reply_message_type_var.get()
@@ -903,7 +953,7 @@ class VintedListingApp(ctk.CTk):
             self.reply_message_type_var.get(), ()
         )
 
-        if not client_name:
+        if include_client_name and not client_name:
             self._show_error_popup("Renseignez le nom du client.")
             return None
         if not article_type:
@@ -943,7 +993,7 @@ class VintedListingApp(ctk.CTk):
             return None
 
         payload = CustomerReplyPayload(
-            client_name=client_name,
+            client_name=client_name or "Client",
             article_type=article_type,
             scenario_id=scenario_id,
             client_message="",

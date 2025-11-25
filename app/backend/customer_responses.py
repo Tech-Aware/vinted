@@ -160,6 +160,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Remercier pour l'intérêt ou l'offre.",
             "Expliquer que la proposition est trop basse au regard de la qualité.",
             "Proposer un montant révisé (contre-offre) clair et valoriser l'article.",
+            "Utiliser exactement la contre-offre fournie (montant inchangé).",
             "Mentionner l'envoi rapide et encourager à valider ou regarder le dressing.",
         ),
         allowed_articles=None,
@@ -196,6 +197,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Remercier pour l'intérêt.",
             "Indiquer que le prix est ferme en justifiant brièvement (état, modèle).",
+            "Reprendre exactement le prix ferme saisi (sans le modifier).",
             "Rester courtois et concis, en rappelant l'envoi rapide et le dressing.",
         ),
         allowed_articles=None,
