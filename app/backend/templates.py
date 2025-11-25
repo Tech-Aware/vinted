@@ -731,21 +731,36 @@ def render_template_jean_levis_femme(
 
     stretch_segment = "denim stretch" if has_stretch else "denim"
     rise_display = rise if rise else "taille flatteuse"
-    intro_sentence_parts = [
-        f"Coupe flatteuse en {rise_display}" if rise_display else None,
-        f"{stretch_segment} Levi’s {model}".strip(),
-        "— parfait look Y2K." if has_y2k_vibe else None,
-    ]
+    intro_sentence_parts = []
+    combined_intro = bool(gender_value and rise_display)
+    if combined_intro:
+        intro_sentence_parts.append(
+            f"Jean Levi’s pour {gender_value} en {rise_display}"
+        )
+    else:
+        intro_sentence_parts.append(
+            f"Coupe flatteuse en {rise_display}" if rise_display else None
+        )
+    intro_sentence_parts.extend(
+        [
+            f"{stretch_segment} Levi’s {model}".strip(),
+            "— parfait look Y2K." if has_y2k_vibe else None,
+        ]
+    )
     intro_sentence = " ".join(part for part in intro_sentence_parts if part).replace(
         "  ", " "
     )
 
     if model and gender_value:
-        first_sentence = f"Jean Levi’s modèle {model} pour {gender_value}."
+        first_sentence = (
+            f"Jean Levi’s modèle {model}."
+            if combined_intro
+            else f"Jean Levi’s modèle {model} pour {gender_value}."
+        )
     elif model:
         first_sentence = f"Jean Levi’s modèle {model}."
     elif gender_value:
-        first_sentence = f"Jean Levi’s pour {gender_value}."
+        first_sentence = "Jean Levi’s." if combined_intro else f"Jean Levi’s pour {gender_value}."
     else:
         first_sentence = "Jean Levi’s."
 

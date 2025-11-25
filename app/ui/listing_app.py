@@ -41,7 +41,7 @@ from app.ui.image_preview import ImagePreview
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
-COMMENT_PLACEHOLDER = "Commentaire prioritaire : séparez vos infos par des virgules (ex : 38FR, évasé, tâche)"
+DEFECTS_PLACEHOLDER = "Défauts visibles (ex : trace, trou, usure)"
 
 
 logger = get_logger(__name__)
@@ -128,24 +128,10 @@ class VintedListingApp(ctk.CTk):
         form_frame = ctk.CTkFrame(parent)
         form_frame.grid(row=2, column=0, padx=16, pady=(8, 8), sticky="nsew")
         form_frame.columnconfigure(0, weight=1)
-        form_frame.rowconfigure(5, weight=1)
-
-        self.comment_label = ctk.CTkLabel(
-            form_frame,
-            text="Commentaire (prioritaire)",
-            anchor="w",
-            justify="left",
-        )
-        self.comment_label.grid(row=0, column=0, sticky="w", padx=12, pady=(12, 0))
-
-        self.comment_box = ctk.CTkTextbox(form_frame, height=32)
-        self._insert_comment_placeholder()
-        self.comment_box.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 6))
-        self.comment_box.bind("<FocusIn>", self._on_comment_focus_in)
-        self.comment_box.bind("<FocusOut>", self._on_comment_focus_out)
+        form_frame.rowconfigure(3, weight=1)
 
         button_frame = ctk.CTkFrame(form_frame)
-        button_frame.grid(row=2, column=0, sticky="ew", padx=12, pady=(4, 4))
+        button_frame.grid(row=0, column=0, sticky="ew", padx=12, pady=(12, 4))
         button_frame.columnconfigure((0, 1, 2), weight=1)
 
         self.select_button = ctk.CTkButton(button_frame, text="Ajouter des photos", command=self.select_images)
@@ -164,9 +150,10 @@ class VintedListingApp(ctk.CTk):
         ]
 
         size_frame = ctk.CTkFrame(form_frame)
-        size_frame.grid(row=3, column=0, sticky="ew", padx=12, pady=(8, 4))
-        for col_index in range(4):
+        size_frame.grid(row=1, column=0, sticky="ew", padx=12, pady=(8, 4))
+        for col_index in range(6):
             size_frame.columnconfigure(col_index, weight=0)
+        size_frame.columnconfigure(5, weight=1)
 
         self.size_label = ctk.CTkLabel(size_frame, text="Taille FR (cm)", anchor="w")
         self.size_label.grid(row=0, column=0, padx=(0, 8), pady=(0, 0), sticky="w")
@@ -188,8 +175,18 @@ class VintedListingApp(ctk.CTk):
         )
         self.us_size_entry.grid(row=0, column=3, sticky="w")
 
+        self.defects_label = ctk.CTkLabel(size_frame, text="Défauts", anchor="w")
+        self.defects_label.grid(row=0, column=4, padx=(12, 8), pady=(0, 0), sticky="w")
+
+        self.defects_entry = ctk.CTkEntry(
+            size_frame,
+            width=260,
+            placeholder_text=DEFECTS_PLACEHOLDER,
+        )
+        self.defects_entry.grid(row=0, column=5, sticky="ew")
+
         title_container = ctk.CTkFrame(form_frame)
-        title_container.grid(row=4, column=0, sticky="nsew", padx=12, pady=(12, 4))
+        title_container.grid(row=2, column=0, sticky="nsew", padx=12, pady=(12, 4))
         title_container.columnconfigure(0, weight=1)
         title_container.rowconfigure(0, weight=1)
 
@@ -211,7 +208,7 @@ class VintedListingApp(ctk.CTk):
         self._buttons_to_disable.append(self.title_copy_button)
 
         description_container = ctk.CTkFrame(form_frame)
-        description_container.grid(row=5, column=0, sticky="nsew", padx=12, pady=(4, 12))
+        description_container.grid(row=3, column=0, sticky="nsew", padx=12, pady=(4, 12))
         description_container.columnconfigure(0, weight=1)
         description_container.columnconfigure(1, weight=0)
         description_container.rowconfigure(0, weight=1)
@@ -507,7 +504,7 @@ class VintedListingApp(ctk.CTk):
             return
 
         us_size_value = (self.us_size_entry.get() or "").strip()
-        comment = self._normalize_comment(self.comment_box.get("1.0", "end"))
+        defects = self._normalize_defects(self.defects_entry.get())
         template_name = self.template_var.get()
         logger.step("Récupération du template: %s", template_name)
         try:
@@ -518,9 +515,9 @@ class VintedListingApp(ctk.CTk):
             return
         logger.success("Template '%s' récupéré", template_name)
         logger.info(
-            "Lancement de l'analyse (%d image(s), %d caractère(s) de commentaire)",
+            "Lancement de l'analyse (%d image(s), %d caractère(s) de défauts saisis)",
             len(self.selected_images),
-            len(comment),
+            len(defects),
         )
 
         self._start_loading_state()
@@ -531,7 +528,7 @@ class VintedListingApp(ctk.CTk):
                 encoded_images = encode_images_to_base64(self.selected_images)
                 result = self.generator.generate_listing(
                     encoded_images,
-                    comment,
+                    defects,
                     template,
                     fr_size_value,
                     us_size_value or None,
@@ -577,9 +574,9 @@ class VintedListingApp(ctk.CTk):
         self.title_box.delete("1.0", "end")
         self.size_entry.delete(0, "end")
         self.us_size_entry.delete(0, "end")
+        self.defects_entry.delete(0, "end")
         self.price_text.set("Estimation à venir")
         self.description_box.delete("1.0", "end")
-        self._insert_comment_placeholder()
         logger.step("Application réinitialisée")
 
     def reset_reply(self) -> None:
@@ -682,24 +679,10 @@ class VintedListingApp(ctk.CTk):
         textbox.bind("<Control-a>", handler)
         textbox.bind("<Control-A>", handler)
 
-    def _insert_comment_placeholder(self) -> None:
-        self.comment_box.delete("1.0", "end")
-        self.comment_box.insert("1.0", COMMENT_PLACEHOLDER)
-
-    def _on_comment_focus_in(self, event: object) -> None:
-        current_text = self.comment_box.get("1.0", "end").strip()
-        if current_text == COMMENT_PLACEHOLDER:
-            self.comment_box.delete("1.0", "end")
-
-    def _on_comment_focus_out(self, event: object) -> None:
-        current_text = self.comment_box.get("1.0", "end").strip()
-        if not current_text:
-            self._insert_comment_placeholder()
-
     @staticmethod
-    def _normalize_comment(value: str) -> str:
+    def _normalize_defects(value: str) -> str:
         cleaned = value.strip()
-        if cleaned == COMMENT_PLACEHOLDER:
+        if cleaned == DEFECTS_PLACEHOLDER:
             return ""
         return cleaned
 
