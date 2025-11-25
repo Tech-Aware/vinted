@@ -61,18 +61,22 @@ class ListingGenerator:
         *,
         model: Optional[str] = None,
         api_key: Optional[str] = None,
-        temperature: float = 0.1,
+        temperature: float = 0.4,
+        response_temperature: float = 0.6,
     ) -> None:
         self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not 0 <= temperature <= 1:
-            raise ValueError("La température doit être comprise entre 0 et 1")
-        self.temperature = temperature
+        self.temperature = self._validate_temperature(temperature)
+        self.response_temperature = self._validate_temperature(response_temperature)
         self._client: Optional[OpenAI] = None
         logger.step(
-            "ListingGenerator initialisé avec le modèle %s et une température de %.2f",
+            (
+                "ListingGenerator initialisé avec le modèle %s (annonces: %.2f, "
+                "réponses clients: %.2f)"
+            ),
             self.model,
             self.temperature,
+            self.response_temperature,
         )
 
     @property
@@ -92,6 +96,12 @@ class ListingGenerator:
             self._client = OpenAI(api_key=api_key)
             logger.success("Client OpenAI initialisé")
         return self._client
+
+    @staticmethod
+    def _validate_temperature(value: float) -> float:
+        if not 0 <= value <= 1:
+            raise ValueError("La température doit être comprise entre 0 et 1")
+        return value
 
     def _build_messages(
         self,
@@ -288,7 +298,7 @@ class ListingGenerator:
                 # pour éviter qu'une conversion automatique ne remplace sa valeur.
                 fields = replace(fields, us_w="", us_l="")
 
-        return self._strip_inferred_sizes(fields, size_overridden=size_overridden)
+        return fields
 
     @staticmethod
     def _extract_fr_size_override(user_comment: str) -> Optional[str]:
