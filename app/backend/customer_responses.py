@@ -239,7 +239,7 @@ class CustomerReplyGenerator:
         *,
         model: Optional[str] = None,
         api_key: Optional[str] = None,
-        temperature: float = 0.4,
+        temperature: float = 0.5,
     ) -> None:
         self.model = model or os.getenv("OPENAI_TEXT_MODEL", "gpt-4o-mini")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
