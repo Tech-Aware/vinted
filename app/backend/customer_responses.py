@@ -78,189 +78,145 @@ EXTRA_FIELD_LABELS: Dict[str, str] = {
 
 
 MESSAGE_TYPES: Sequence[MessageType] = (
-    MessageType("incitation", "Relance / incitation à l'achat"),
-    MessageType("negociation", "Négociation / contre-offre"),
-    MessageType("remerciement", "Remerciement / confirmation"),
-    MessageType("infos_envoi", "Infos d'envoi / suivi"),
-    MessageType("taille", "Question taille / mesures"),
-    MessageType("favoris", "Message aux favoris"),
-    MessageType("notification", "Notification de livraison"),
-    MessageType("traduction", "Traduction express"),
+    MessageType("remercier", "Remercier"),
+    MessageType("inciter", "Inciter"),
+    MessageType("negocier", "Négocier"),
+    MessageType("informer", "Informer"),
 )
 
 MESSAGE_TYPE_EXTRA_FIELDS: Dict[str, Sequence[str]] = {
-    "negociation": ("prix_initial", "prix_propose_client", "prix_min_accepte"),
+    "negocier": ("prix_initial", "prix_propose_client", "prix_min_accepte"),
 }
 
 
 SCENARIOS: Dict[str, ScenarioConfig] = {
-    "reservation_incitation": ScenarioConfig(
-        id="reservation_incitation",
-        label="1) Demande de réservation → incitation à acheter",
-        message_type_id="incitation",
+    "remercier_achat": ScenarioConfig(
+        id="remercier_achat",
+        label="Remercier pour un achat",
+        message_type_id="remercier",
         requires_client_message=False,
-        extra_fields=[],
+        extra_fields=["delai_envoi_habituel"],
         rules=(
-            "Ton chaleureux et positif.",
-            "Pas de réservation longue ; encourager l'achat direct tant que l'article est dispo.",
-            "2 à 3 phrases maximum.",
-            "Clore par une invitation légère à visiter le dressing.",
+            "Remercier clairement pour l'achat.",
+            "Mentionner la préparation rapide et l'envoi du suivi.",
+            "Ton chaleureux mais concis (2–3 phrases).",
         ),
         allowed_articles=None,
     ),
-    "contre_offre_19_12_17": ScenarioConfig(
-        id="contre_offre_19_12_17",
-        label="2) Contre-offre Levi's (19 → 12 → 17)",
-        message_type_id="negociation",
-        requires_client_message=True,
-        extra_fields=["prix_initial", "prix_propose_client", "prix_min_accepte"],
-        rules=(
-            "Remercier pour l'intérêt.",
-            "12€ est trop bas au vu de la qualité ; proposer 17€ comme compromis.",
-            "Mentionner le reste du dressing.",
-        ),
-        allowed_articles=("jean_levis",),
-    ),
-    "acceptation_tnf": ScenarioConfig(
-        id="acceptation_tnf",
-        label="3) Acceptation achat veste The North Face",
-        message_type_id="remerciement",
+    "remercier_avis": ScenarioConfig(
+        id="remercier_avis",
+        label="Remercier pour un avis",
+        message_type_id="remercier",
         requires_client_message=False,
-        extra_fields=["delai_envoi_habituel"],
+        extra_fields=[],
         rules=(
-            "Remercier pour l'achat.",
-            "Promettre un envoi rapide et partage du suivi.",
-            "Style sobre, 2–3 phrases, peu ou pas d'émojis.",
+            "Remercier pour l'avis laissé.",
+            "Souligner que le feedback aide à améliorer le service.",
+            "Rester bref et positif (1–2 phrases).",
         ),
-        allowed_articles=("jacket", "polaire_tnf"),
+        allowed_articles=None,
     ),
-    "urgence_adidas": ScenarioConfig(
-        id="urgence_adidas",
-        label="4) Message urgent coupe-vent Adidas",
-        message_type_id="incitation",
-        requires_client_message=False,
-        extra_fields=["delai_envoi_habituel"],
-        rules=(
-            "Article très demandé / beaucoup de vues.",
-            "Souligner l'unicité de la pièce et encourager à valider vite.",
-            "Glisser l'info expédition rapide.",
-            "Ton dynamique sans agressivité, 2–3 phrases.",
-        ),
-        allowed_articles=("jacket",),
-    ),
-    "remerciement_levi_515": ScenarioConfig(
-        id="remerciement_levi_515",
-        label="5) Remerciement achat Levi's 515",
-        message_type_id="remerciement",
-        requires_client_message=False,
-        extra_fields=["delai_envoi_habituel"],
-        rules=(
-            "Remercier pour l'achat.",
-            "Indiquer préparation rapide et partage du suivi.",
-            "Invitation légère à consulter le dressing.",
-        ),
-        allowed_articles=("jean_levis",),
-    ),
-    "contre_offre_20_12_17": ScenarioConfig(
-        id="contre_offre_20_12_17",
-        label="6) Contre-offre Levi's (20 → 12 → 17)",
-        message_type_id="negociation",
-        requires_client_message=True,
-        extra_fields=["prix_initial", "prix_propose_client", "prix_min_accepte"],
-        rules=(
-            "Remercier pour l'offre.",
-            "Valoriser l'état de l'article.",
-            "12€ trop bas ; proposer 17€ comme geste commercial.",
-        ),
-        allowed_articles=("jean_levis",),
-    ),
-    "correspondance_46_w34": ScenarioConfig(
-        id="correspondance_46_w34",
-        label="7) Correspondance taille FR46 → W34",
-        message_type_id="taille",
-        requires_client_message=True,
-        extra_fields=["taille_fr", "equivalence_w"],
-        rules=(
-            "Répondre factuellement sur la correspondance FR46 ≈ W34.",
-            "Préciser que les mesures sont en photo et conseiller une comparaison avec un jean personnel.",
-            "2–3 phrases, ton neutre.",
-        ),
-        allowed_articles=("jean_levis",),
-    ),
-    "relance_favoris": ScenarioConfig(
-        id="relance_favoris",
-        label="8) Message aux favoris",
-        message_type_id="favoris",
+    "remercier_favori": ScenarioConfig(
+        id="remercier_favori",
+        label="Remercier pour l'ajout en favori",
+        message_type_id="remercier",
         requires_client_message=False,
         extra_fields=[],
         rules=(
             "Remercier pour l'ajout en favori.",
-            "Mentionner que l'article est dispo pour le moment.",
-            "Inciter discrètement à finaliser (envoi rapide possible).",
-            "Ton doux, 2–3 phrases.",
+            "Mentionner que l'article est disponible pour le moment.",
+            "Inviter discrètement à finaliser ou poser une question.",
         ),
         allowed_articles=None,
     ),
-    "remerciement_paiement_attente": ScenarioConfig(
-        id="remerciement_paiement_attente",
-        label="9) Remerciement achat (paiement en attente)",
-        message_type_id="remerciement",
+    "inciter_achat": ScenarioConfig(
+        id="inciter_achat",
+        label="Inciter à l'achat",
+        message_type_id="inciter",
         requires_client_message=False,
         extra_fields=[],
         rules=(
-            "Remercier pour l'achat.",
-            "Indiquer expédition dès validation du paiement.",
-            "Proposer de répondre aux questions.",
+            "Mettre en avant la disponibilité actuelle et l'envoi rapide.",
+            "Créer un léger sentiment d'urgence sans être agressif.",
+            "Conclure par une invitation à passer commande.",
         ),
         allowed_articles=None,
     ),
-    "notification_arrivee_colis": ScenarioConfig(
-        id="notification_arrivee_colis",
-        label="10) Notification d'arrivée du colis",
-        message_type_id="notification",
+    "inciter_lot": ScenarioConfig(
+        id="inciter_lot",
+        label="Inciter à faire un lot",
+        message_type_id="inciter",
         requires_client_message=False,
         extra_fields=[],
         rules=(
-            "Informer que le colis est indiqué livré ou en point relais.",
-            "Demander confirmation et proposer aide en cas de souci.",
-            "Si tout est ok, proposer de laisser un avis.",
+            "Proposer de regrouper plusieurs articles pour un envoi unique.",
+            "Suggérer un avantage tarifaire ou frais de port optimisé.",
+            "Ton convivial et orienté solution.",
         ),
         allowed_articles=None,
     ),
-    "traduction_it_avec_plaisir": ScenarioConfig(
-        id="traduction_it_avec_plaisir",
-        label="11) Traduction « Avec plaisir » en italien",
-        message_type_id="traduction",
-        requires_client_message=False,
-        extra_fields=[],
-        rules=(
-            "Répondre uniquement par 'Con piacere'.",
-        ),
-        allowed_articles=None,
-    ),
-    "refus_prix_ferme_15": ScenarioConfig(
-        id="refus_prix_ferme_15",
-        label="12) Refus + prix Levi's Premium 15€ ferme",
-        message_type_id="negociation",
+    "negocier_plus_haut": ScenarioConfig(
+        id="negocier_plus_haut",
+        label="Négocier un prix plus haut",
+        message_type_id="negocier",
         requires_client_message=True,
-        extra_fields=["prix_min_accepte"],
+        extra_fields=["prix_initial", "prix_propose_client", "prix_min_accepte"],
+        rules=(
+            "Remercier pour l'intérêt ou l'offre.",
+            "Expliquer que la proposition est trop basse au regard de la qualité.",
+            "Proposer un montant proche du prix minimum accepté.",
+        ),
+        allowed_articles=None,
+    ),
+    "negocier_prix_ferme": ScenarioConfig(
+        id="negocier_prix_ferme",
+        label="Prix ferme (pas de négociation)",
+        message_type_id="negocier",
+        requires_client_message=True,
+        extra_fields=["prix_initial", "prix_min_accepte"],
         rules=(
             "Remercier pour l'intérêt.",
-            "Expliquer poliment que le prix est ferme à 15€ pour un modèle premium.",
-            "Ton ferme mais respectueux.",
+            "Indiquer que le prix est ferme en justifiant brièvement (état, modèle).",
+            "Rester courtois et concis.",
         ),
-        allowed_articles=("jean_levis",),
+        allowed_articles=None,
     ),
-    "remerciement_acceptation_offre": ScenarioConfig(
-        id="remerciement_acceptation_offre",
-        label="13) Remerciement après acceptation d'offre",
-        message_type_id="remerciement",
+    "informer_preparation": ScenarioConfig(
+        id="informer_preparation",
+        label="Préparation du colis (paiement validé)",
+        message_type_id="informer",
+        requires_client_message=False,
+        extra_fields=["delai_envoi_habituel"],
+        rules=(
+            "Confirmer la validation du paiement et la préparation en cours.",
+            "Partager le délai ou la promesse d'envoi.",
+            "Ton rassurant, 2 phrases max.",
+        ),
+        allowed_articles=None,
+    ),
+    "informer_envoi": ScenarioConfig(
+        id="informer_envoi",
+        label="Envoi du colis",
+        message_type_id="informer",
         requires_client_message=False,
         extra_fields=[],
         rules=(
-            "Remercier pour l'offre acceptée.",
-            "Promettre un envoi rapide et partage du suivi.",
-            "Clore par une phrase de disponibilité.",
+            "Indiquer que le colis vient d'être déposé ou scanné.",
+            "Préciser que le suivi est partagé/à jour.",
+            "Rester bref et pro.",
+        ),
+        allowed_articles=None,
+    ),
+    "informer_livraison": ScenarioConfig(
+        id="informer_livraison",
+        label="Livraison du colis",
+        message_type_id="informer",
+        requires_client_message=False,
+        extra_fields=[],
+        rules=(
+            "Informer que le colis est indiqué livré ou disponible en point relais.",
+            "Inviter à confirmer la bonne réception ou à signaler un souci.",
+            "Proposer de laisser un avis si tout est conforme.",
         ),
         allowed_articles=None,
     ),
@@ -381,12 +337,10 @@ class CustomerReplyGenerator:
             context_lines.append(f"Équivalence W fournie: {payload.equivalence_w}")
 
         rules = list(scenario.rules)
-        if scenario.id in {"contre_offre_19_12_17", "contre_offre_20_12_17"}:
+        if scenario.message_type_id == "negocier":
             rules.append(
-                "Si l'offre du client atteint ou dépasse le prix minimum accepté, accepter directement."
+                "Si l'offre du client atteint ou dépasse le prix minimum accepté, accepte directement."
             )
-        if scenario.id == "traduction_it_avec_plaisir":
-            rules.append("Réponds uniquement par la traduction demandée, sans signe superflu.")
 
         prompt = dedent(
             """
