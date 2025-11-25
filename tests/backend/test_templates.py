@@ -48,7 +48,7 @@ def test_render_defaults_to_femme_when_gender_missing_levis() -> None:
         sku="JLF1",
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert "femme" in title.lower()
     assert "femme" in description.lower()
@@ -137,6 +137,45 @@ def test_render_jean_levis_handles_fabric_label_cut() -> None:
     _, description = template.render(fields)
 
     assert description.count(COMPOSITION_LABEL_CUT_MESSAGE) == 1
+
+
+def test_render_jean_levis_prefers_user_sizes_when_label_visible() -> None:
+    template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
+    fields = ListingFields(
+        model="501",
+        fr_size="38",
+        us_w="28",
+        us_l="30",
+        fit_leg="straight",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=90.0,
+        cotton_pct="99",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="1",
+        gender="Femme",
+        color_main="bleu",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="JLF-SIZE",
+    )
+
+    title, description, _ = template.render(fields)
+
+    assert "FR38" in title
+    assert "W28" in title
+
+    first_paragraph = description.split("\n\n")[0]
+    assert "28 US" in first_paragraph
+    assert "38 FR" in first_paragraph
+
+    hashtags_line = description.split("\n\n")[-1].lower()
+    assert "#w28" in hashtags_line
+    assert "#fr38" in hashtags_line
 
 
 def test_render_jean_levis_marks_estimated_size_without_forbidden_note() -> None:
