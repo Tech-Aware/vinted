@@ -98,6 +98,19 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         ),
         allowed_articles=None,
     ),
+    "remercier_acceptation_offre": ScenarioConfig(
+        id="remercier_acceptation_offre",
+        label="Après avoir accepté une offre",
+        message_type_id="remercier",
+        requires_client_message=False,
+        extra_fields=[],
+        rules=(
+            "Confirmer l'acceptation de l'offre et remercier chaleureusement.",
+            "Indiquer explicitement : je prépare la commande dès que le paiement est validé par Vinted.",
+            "Rester bref (2 à 3 phrases), positif et inviter à suivre l'envoi.",
+        ),
+        allowed_articles=None,
+    ),
     "remercier_avis": ScenarioConfig(
         id="remercier_avis",
         label="Remercier pour un avis",
