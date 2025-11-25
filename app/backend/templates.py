@@ -476,6 +476,14 @@ def render_template_jean_levis_femme(
     elastane_value = (
         _ensure_percent(fields.elastane_pct) if fields.fabric_label_visible else ""
     )
+    elastane_pct_value: Optional[float] = None
+    if fields.fabric_label_visible and fields.elastane_pct:
+        elastane_pct_raw = str(fields.elastane_pct).strip().replace("%", "").replace(",", ".")
+        if elastane_pct_raw:
+            try:
+                elastane_pct_value = float(elastane_pct_raw)
+            except ValueError:
+                elastane_pct_value = None
     polyamide_value = (
         _ensure_percent(fields.polyamide_pct) if fields.fabric_label_visible else ""
     )
@@ -558,7 +566,7 @@ def render_template_jean_levis_femme(
     rise_normalized = rise.casefold()
     rise_is_low = "basse" in rise_normalized if rise_normalized else False
     rise_is_high = "haute" in rise_normalized if rise_normalized else False
-    has_stretch = fields.has_elastane and bool(elastane_value)
+    has_stretch = bool(elastane_pct_value and elastane_pct_value > 2)
 
     fit_normalized_for_flags = _normalize_text_for_comparison(
         fit_hashtag_source or fit_description_text
