@@ -560,6 +560,89 @@ def render_template_jean_levis_femme(
     rise_is_high = "haute" in rise_normalized if rise_normalized else False
     has_stretch = fields.has_elastane and bool(elastane_value)
 
+    fit_normalized_for_flags = _normalize_text_for_comparison(
+        fit_hashtag_source or fit_description_text
+    )
+    fit_is_fitted = any(
+        keyword in fit_normalized_for_flags
+        for keyword in (
+            "slim",
+            "skinny",
+            "taper",
+            "fus",
+            "cigarette",
+            "ajuste",
+            "ajustee",
+        )
+    )
+
+    color_flag_source = _clean(fields.color_main) or color or ""
+    color_normalized_for_flags = _normalize_text_for_comparison(color_flag_source)
+
+    detail_flag_source = " ".join(
+        part
+        for part in (
+            _clean(fields.feature_notes),
+            _clean(fields.technical_features),
+            _clean(fields.special_logo),
+        )
+        if part
+    )
+    details_normalized_for_flags = _normalize_text_for_comparison(detail_flag_source)
+
+    y2k_wash_hint = any(
+        keyword in color_normalized_for_flags
+        for keyword in ("clair", "delave", "delavage", "bleach", "stone", "acid")
+    )
+    y2k_silhouette_hint = any(
+        keyword in fit_normalized_for_flags
+        for keyword in ("bootcut", "flare", "evase", "wide", "baggy", "loose")
+    )
+    y2k_brand_logo_hint = bool(fields.special_logo) or any(
+        keyword in details_normalized_for_flags for keyword in ("logo", "patch", "brode", "brodee")
+    )
+    y2k_color_hint = any(
+        keyword in color_normalized_for_flags
+        for keyword in (
+            "rose",
+            "violet",
+            "lila",
+            "jaune",
+            "orange",
+            "turquoise",
+            "fuchsia",
+            "pastel",
+            "flashy",
+            "vert clair",
+            "bleu clair",
+        )
+    )
+    y2k_detail_hint = any(
+        keyword in details_normalized_for_flags
+        for keyword in (
+            "strass",
+            "paillet",
+            "brillant",
+            "metal",
+            "metalise",
+            "surpiqu",
+            "contrast",
+        )
+    )
+
+    y2k_hint_count = sum(
+        (1 if flag else 0)
+        for flag in (
+            y2k_wash_hint,
+            y2k_silhouette_hint,
+            y2k_brand_logo_hint,
+            y2k_color_hint,
+            y2k_detail_hint,
+        )
+    )
+
+    has_y2k_vibe = rise_is_low or (has_stretch and fit_is_fitted) or y2k_hint_count >= 3
+
     title_intro = "Jean Levi’s"
     if model:
         title_intro = f"{title_intro} {model}"
@@ -612,7 +695,7 @@ def render_template_jean_levis_femme(
     intro_sentence_parts = [
         f"Coupe flatteuse en {rise_display}" if rise_display else None,
         f"{stretch_segment} Levi’s {model}".strip(),
-        "— parfait look Y2K.",
+        "— parfait look Y2K." if has_y2k_vibe else None,
     ]
     intro_sentence = " ".join(part for part in intro_sentence_parts if part).replace(
         "  ", " "
@@ -703,7 +786,7 @@ def render_template_jean_levis_femme(
         "#taillebasse" if rise_is_low else "",
         "#highwaist" if rise_is_high else "",
         f"#stretch" if has_stretch else "",
-        "#y2k",
+        "#y2k" if has_y2k_vibe else "",
         f"#w{us_display.lower()}" if us_display else "",
         f"#fr{fr_display.lower()}" if fr_display else "",
         f"#jean{color.lower().replace(' ', '')}" if color else "",
