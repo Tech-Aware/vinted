@@ -439,8 +439,7 @@ def render_template_jean_levis_femme(
     size_estimated = False
 
     fr_candidate = _clean(fields.fr_size)
-    us_candidate_raw = _clean(fields.us_w)
-    us_candidate = _normalize_us_waist_label(us_candidate_raw)
+    us_candidate = _clean(fields.us_w)
 
     normalized_sizes: Optional[NormalizedSizes] = None
     if fields.size_label_visible or fr_candidate or us_candidate:
@@ -453,9 +452,7 @@ def render_template_jean_levis_femme(
         )
 
     fr_display = fr_candidate or (normalized_sizes.fr_size if normalized_sizes else "")
-    us_display = (normalized_sizes.us_size if normalized_sizes and normalized_sizes.us_size else None)
-    if not us_display:
-        us_display = us_candidate
+    us_display = us_candidate or (normalized_sizes.us_size if normalized_sizes else None)
 
     if normalized_sizes and fields.size_label_visible:
         size_note = normalized_sizes.note
