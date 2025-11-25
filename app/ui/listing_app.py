@@ -360,6 +360,7 @@ class VintedListingApp(ctk.CTk):
         output_frame = ctk.CTkFrame(container)
         output_frame.grid(row=4, column=0, sticky="nsew", padx=12, pady=(4, 8))
         output_frame.columnconfigure(0, weight=1)
+        output_frame.rowconfigure(1, weight=1)
 
         output_header = ctk.CTkLabel(
             output_frame,
@@ -369,16 +370,25 @@ class VintedListingApp(ctk.CTk):
         )
         output_header.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
 
-        self.reply_output_box = ctk.CTkTextbox(output_frame, height=160)
-        self.reply_output_box.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
+        output_container = ctk.CTkFrame(output_frame)
+        output_container.grid(row=1, column=0, sticky="nsew")
+        output_container.columnconfigure(0, weight=1)
+        output_container.rowconfigure(0, weight=1)
 
-        copy_button = ctk.CTkButton(
-            output_frame,
-            text="📋 Copier",
-            width=100,
+        self.reply_output_box = ctk.CTkTextbox(output_container, height=160)
+        self.reply_output_box.grid(row=0, column=0, sticky="nsew", padx=8, pady=(0, 8))
+
+        self.reply_copy_button = ctk.CTkButton(
+            output_container,
+            text="📋",
+            width=32,
+            height=28,
+            corner_radius=6,
+            fg_color=("gray75", "gray25"),
+            hover_color=("gray65", "gray35"),
             command=lambda: self._copy_to_clipboard(self.reply_output_box),
         )
-        copy_button.grid(row=2, column=0, sticky="e", padx=8, pady=(0, 8))
+        self.reply_copy_button.place(relx=1.0, rely=0.0, x=-10, y=10, anchor="ne")
 
         self.reply_context_frame = None
         self.reply_actions_frame = actions_frame
