@@ -128,7 +128,7 @@ class VintedListingApp(ctk.CTk):
         form_frame = ctk.CTkFrame(parent)
         form_frame.grid(row=2, column=0, padx=16, pady=(8, 8), sticky="nsew")
         form_frame.columnconfigure(0, weight=1)
-        form_frame.rowconfigure(4, weight=1)
+        form_frame.rowconfigure(5, weight=1)
 
         self.comment_label = ctk.CTkLabel(
             form_frame,
@@ -163,8 +163,21 @@ class VintedListingApp(ctk.CTk):
             self.clear_button,
         ]
 
+        size_frame = ctk.CTkFrame(form_frame)
+        size_frame.grid(row=3, column=0, sticky="ew", padx=12, pady=(8, 4))
+        size_frame.columnconfigure(1, weight=1)
+
+        self.size_label = ctk.CTkLabel(size_frame, text="Taille FR (cm)", anchor="w")
+        self.size_label.grid(row=0, column=0, padx=(0, 8), pady=(0, 0), sticky="w")
+
+        self.size_entry = ctk.CTkEntry(
+            size_frame,
+            placeholder_text="ex : 32, 44, 46",
+        )
+        self.size_entry.grid(row=0, column=1, sticky="ew")
+
         title_container = ctk.CTkFrame(form_frame)
-        title_container.grid(row=3, column=0, sticky="nsew", padx=12, pady=(12, 4))
+        title_container.grid(row=4, column=0, sticky="nsew", padx=12, pady=(12, 4))
         title_container.columnconfigure(0, weight=1)
         title_container.rowconfigure(0, weight=1)
 
@@ -186,7 +199,7 @@ class VintedListingApp(ctk.CTk):
         self._buttons_to_disable.append(self.title_copy_button)
 
         description_container = ctk.CTkFrame(form_frame)
-        description_container.grid(row=4, column=0, sticky="nsew", padx=12, pady=(4, 12))
+        description_container.grid(row=5, column=0, sticky="nsew", padx=12, pady=(4, 12))
         description_container.columnconfigure(0, weight=1)
         description_container.columnconfigure(1, weight=0)
         description_container.rowconfigure(0, weight=1)
@@ -476,6 +489,11 @@ class VintedListingApp(ctk.CTk):
             return
 
         comment = self._normalize_comment(self.comment_box.get("1.0", "end"))
+        size_override = (self.size_entry.get() or "").strip()
+        if size_override:
+            comment = "\n".join(
+                part for part in (f"Taille {size_override}", comment) if part
+            )
         template_name = self.template_var.get()
         logger.step("Récupération du template: %s", template_name)
         try:
@@ -537,6 +555,7 @@ class VintedListingApp(ctk.CTk):
         self._image_directories.clear()
         self.preview_frame.update_images([])
         self.title_box.delete("1.0", "end")
+        self.size_entry.delete(0, "end")
         self.price_text.set("Estimation à venir")
         self.description_box.delete("1.0", "end")
         self._insert_comment_placeholder()

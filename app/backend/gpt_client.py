@@ -306,6 +306,12 @@ class ListingGenerator:
                 # Lorsque l'utilisateur impose une taille FR, on neutralise W/L
                 # pour éviter qu'une conversion automatique ne remplace sa valeur.
                 fields = replace(fields, us_w="", us_l="")
+            if size_overridden:
+                fields = replace(
+                    fields,
+                    waist_measurement_cm=None,
+                    waist_flat_measurement_cm=None,
+                )
 
         return self._strip_inferred_sizes(fields, size_overridden=size_overridden)
 
