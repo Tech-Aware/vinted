@@ -291,12 +291,7 @@ class CustomerReplyGenerator:
         ]
 
         try:
-            response = self.client.responses.create(
-                model=self.model,
-                input=messages,
-                max_output_tokens=260,
-                temperature=self.temperature,
-            )
+            response = self._create_response(messages, max_tokens=260)
         except Exception:
             logger.exception("Échec de l'appel OpenAI pour la réponse client")
             raise
@@ -358,6 +353,48 @@ class CustomerReplyGenerator:
         logger.info("Prompt de réponse client construit (%d caractères)", len(prompt))
         return prompt.strip()
 
+    def _create_response(self, messages: Sequence[dict], *, max_tokens: int):
+        """Call the OpenAI client using the available API surface."""
+
+        client = self.client
+        if hasattr(client, "responses"):
+            return client.responses.create(
+                model=self.model,
+                input=messages,
+                max_output_tokens=max_tokens,
+                temperature=self.temperature,
+            )
+
+        # Fallback for OpenAI<=2.x without the responses API
+        chat_messages = self._convert_to_chat_messages(messages)
+        return client.chat.completions.create(
+            model=self.model,
+            messages=chat_messages,
+            max_tokens=max_tokens,
+            temperature=self.temperature,
+        )
+
+    def _convert_to_chat_messages(self, messages: Sequence[dict]) -> List[dict]:
+        chat_messages: List[dict] = []
+        for message in messages:
+            content_parts = []
+            for part in message.get("content", []):
+                part_type = part.get("type")
+                if part_type in {"input_text", "text"}:
+                    content_parts.append({"type": "text", "text": part.get("text", "")})
+                elif part_type in {"input_image", "image_url"}:
+                    url = part.get("image_url")
+                    if isinstance(url, dict):
+                        url_value = url.get("url") or url.get("uri")
+                    else:
+                        url_value = url
+                    if url_value:
+                        content_parts.append({"type": "image_url", "image_url": {"url": url_value}})
+            if not content_parts:
+                content_parts.append({"type": "text", "text": ""})
+            chat_messages.append({"role": message.get("role", "user"), "content": content_parts})
+        return chat_messages
+
     def _extract_response_text(self, response: object) -> str:
         parts: List[str] = []
 
@@ -366,6 +403,7 @@ class CustomerReplyGenerator:
             if text:
                 parts.append(text)
 
+        # OpenAI v1.55+ "responses" API
         if hasattr(response, "model_dump"):
             try:
                 dumped = response.model_dump()  # type: ignore[attr-defined]
@@ -384,6 +422,17 @@ class CustomerReplyGenerator:
                                     _append_if_text(item.get("text"))
                 if not parts:
                     _append_if_text(dumped.get("output_text"))
+
+        # Fallback for chat.completions format
+        if not parts and hasattr(response, "choices"):
+            choices = getattr(response, "choices", [])
+            if isinstance(choices, Sequence):
+                for choice in choices:
+                    message = getattr(choice, "message", None)
+                    if message and hasattr(message, "content"):
+                        _append_if_text(message.content)
+                    if hasattr(choice, "text"):
+                        _append_if_text(getattr(choice, "text"))
 
         if not parts:
             output = getattr(response, "output", None)
