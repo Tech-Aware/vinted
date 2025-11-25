@@ -691,6 +691,7 @@ class ListingFields:
                 Ne remplis jamais un champ avec une valeur estimée ou supposée ; retourne la chaîne vide quand une information est manquante ou incertaine.
                 N'invente jamais de matière : si une fibre n'est pas clairement indiquée ou que la ligne est illisible, renvoie la chaîne vide pour ce champ.
                 Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.
+                Si l'étiquette de taille est absente ou floue, laisse strictement vides 'fr_size', 'us_w' et 'us_l' et privilégie les mesures de taille ('waist_measurement_cm' ou 'waist_flat_measurement_cm') lorsqu'elles sont lisibles.
                 Mentionne « Made in Europe » uniquement si l'étiquette confirme un pays européen et n'invente jamais de provenance.
                 Dans le titre, supprime les pourcentages de laine ou de cachemire lorsqu'ils sont faibles, mais conserve la valeur numérique exacte dans la description et recopie-la dans les champs 'wool_pct' et 'cashmere_pct' dès que l'étiquette est lisible ; écris simplement « coton » si le pourcentage de coton est inférieur à 60%.
                 Si une étiquette SKU claire est visible, tu dois recopier exactement la référence PTF correspondante sinon la génération échouera.
@@ -797,6 +798,7 @@ class ListingFields:
                   • l'étiquette de taille placée derrière la composition pour noter précisément le couple W/L.
                 Ne retiens aucune autre information figurant sur ces étiquettes et ignore le reste du texte.
                 Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible sur les photos.
+                Si l'étiquette de taille est absente, floue ou partiellement masquée, laisse strictement vides 'fr_size', 'us_w' et 'us_l' même si une valeur approximative semble visible, et remplis uniquement 'waist_measurement_cm' ou 'waist_flat_measurement_cm' si une mesure nette est disponible.
                 Si l'étiquette de composition est absente, coupée pour plus de confort ou illisible, laisse tous les pourcentages vides, mets 'fabric_label_visible' à false et positionne 'fabric_label_cut' à true uniquement lorsqu'une coupe volontaire est manifeste ; sinon laisse 'fabric_label_cut' à false.
                 Lorsque l'étiquette de taille est absente ou illisible mais qu'une mesure nette du tour de taille est visible, renseigne 'waist_measurement_cm' en centimètres et laisse les champs 'fr_size', 'us_w' et 'us_l' vides.
                 Si les étiquettes de taille ET de composition ont été retirées pour plus de confort, mets 'size_label_visible' et 'fabric_label_visible' à false et 'fabric_label_cut' à true.

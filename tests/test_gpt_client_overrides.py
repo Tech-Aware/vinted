@@ -120,3 +120,36 @@ def test_apply_user_overrides_strips_sizes_when_label_missing() -> None:
     assert sanitized_fields.us_w == ""
     assert sanitized_fields.us_l == ""
     assert sanitized_fields.waist_measurement_cm == 72.0
+
+
+def test_apply_user_overrides_strips_sizes_when_comment_without_override() -> None:
+    generator = ListingGenerator(model="fake", api_key="test")
+
+    fields = ListingFields(
+        model="721",
+        fr_size="36",
+        us_w="27",
+        us_l="32",
+        fit_leg="slim",
+        rise_class="high",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="99",
+        polyester_pct="1",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="Femme",
+        color_main="noir",
+        defects="",
+        defect_tags=(),
+        size_label_visible=False,
+        fabric_label_visible=False,
+        sku="JLF7",
+    )
+
+    sanitized_fields = generator._apply_user_overrides("Super jean !", fields)
+
+    assert sanitized_fields.fr_size == ""
+    assert sanitized_fields.us_w == ""
+    assert sanitized_fields.us_l == ""
