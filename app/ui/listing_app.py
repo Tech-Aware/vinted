@@ -368,7 +368,8 @@ class VintedListingApp(ctk.CTk):
         actions_frame = ctk.CTkFrame(container)
         actions_frame.grid(row=3, column=0, sticky="ew", padx=12, pady=(4, 8))
         actions_frame.columnconfigure(0, weight=0)
-        actions_frame.columnconfigure(1, weight=1)
+        actions_frame.columnconfigure(1, weight=0)
+        actions_frame.columnconfigure(2, weight=1)
 
         self.reply_generate_button = ctk.CTkButton(
             actions_frame,
@@ -377,8 +378,15 @@ class VintedListingApp(ctk.CTk):
         )
         self.reply_generate_button.grid(row=0, column=0, padx=8, pady=6, sticky="w")
 
+        self.reply_reset_button = ctk.CTkButton(
+            actions_frame,
+            text="Réinitialiser",
+            command=self.reset_reply,
+        )
+        self.reply_reset_button.grid(row=0, column=1, padx=8, pady=6, sticky="w")
+
         status_label = ctk.CTkLabel(actions_frame, textvariable=self.reply_status_var, anchor="w")
-        status_label.grid(row=0, column=1, sticky="w", padx=8, pady=6)
+        status_label.grid(row=0, column=2, sticky="w", padx=8, pady=6)
 
         output_frame = ctk.CTkFrame(container)
         output_frame.grid(row=4, column=0, sticky="nsew", padx=12, pady=(4, 8))
@@ -533,6 +541,20 @@ class VintedListingApp(ctk.CTk):
         self.description_box.delete("1.0", "end")
         self._insert_comment_placeholder()
         logger.step("Application réinitialisée")
+
+    def reset_reply(self) -> None:
+        self._set_reply_loading_state(False)
+        self.reply_client_name_var.set("")
+        self.reply_article_var.set("")
+        self.reply_message_type_var.set("")
+        self.reply_scenario_var.set("")
+        for field_var in self.reply_field_vars.values():
+            field_var.set("")
+        self.reply_output_box.delete("1.0", "end")
+        self.reply_inline_price_row.grid_remove()
+        self.reply_extra_container.grid_remove()
+        self.reply_status_var.set("Renseignez le nom du client pour poursuivre.")
+        self._update_reply_visibility()
 
     def _remove_image(self, path: Path) -> None:
         try:
