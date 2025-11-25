@@ -284,9 +284,6 @@ class VintedListingApp(ctk.CTk):
                 value=scenario.id,
                 variable=self.reply_scenario_var,
                 command=self._refresh_extra_fields,
-                anchor="w",
-                justify="left",
-                wraplength=520,
             )
             radio.grid(row=index, column=0, sticky="w", padx=8, pady=4)
 
