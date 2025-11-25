@@ -28,9 +28,16 @@ class ArticleType:
 
 
 @dataclass(frozen=True)
+class MessageType:
+    id: str
+    label: str
+
+
+@dataclass(frozen=True)
 class ScenarioConfig:
     id: str
     label: str
+    message_type_id: str
     requires_client_message: bool
     extra_fields: Sequence[str]
     rules: Sequence[str]
@@ -70,10 +77,23 @@ EXTRA_FIELD_LABELS: Dict[str, str] = {
 }
 
 
+MESSAGE_TYPES: Sequence[MessageType] = (
+    MessageType("incitation", "Relance / incitation à l'achat"),
+    MessageType("negociation", "Négociation / contre-offre"),
+    MessageType("remerciement", "Remerciement / confirmation"),
+    MessageType("infos_envoi", "Infos d'envoi / suivi"),
+    MessageType("taille", "Question taille / mesures"),
+    MessageType("favoris", "Message aux favoris"),
+    MessageType("notification", "Notification de livraison"),
+    MessageType("traduction", "Traduction express"),
+)
+
+
 SCENARIOS: Dict[str, ScenarioConfig] = {
     "reservation_incitation": ScenarioConfig(
         id="reservation_incitation",
         label="1) Demande de réservation → incitation à acheter",
+        message_type_id="incitation",
         requires_client_message=False,
         extra_fields=[],
         rules=(
@@ -86,6 +106,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "contre_offre_19_12_17": ScenarioConfig(
         id="contre_offre_19_12_17",
         label="2) Contre-offre Levi's (19 → 12 → 17)",
+        message_type_id="negociation",
         requires_client_message=True,
         extra_fields=["prix_initial", "prix_propose_client", "prix_min_accepte"],
         rules=(
@@ -98,6 +119,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "acceptation_tnf": ScenarioConfig(
         id="acceptation_tnf",
         label="3) Acceptation achat veste The North Face",
+        message_type_id="remerciement",
         requires_client_message=False,
         extra_fields=["delai_envoi_habituel"],
         rules=(
@@ -110,6 +132,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "urgence_adidas": ScenarioConfig(
         id="urgence_adidas",
         label="4) Message urgent coupe-vent Adidas",
+        message_type_id="incitation",
         requires_client_message=False,
         extra_fields=["delai_envoi_habituel"],
         rules=(
@@ -123,6 +146,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "remerciement_levi_515": ScenarioConfig(
         id="remerciement_levi_515",
         label="5) Remerciement achat Levi's 515",
+        message_type_id="remerciement",
         requires_client_message=False,
         extra_fields=["delai_envoi_habituel"],
         rules=(
@@ -135,6 +159,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "contre_offre_20_12_17": ScenarioConfig(
         id="contre_offre_20_12_17",
         label="6) Contre-offre Levi's (20 → 12 → 17)",
+        message_type_id="negociation",
         requires_client_message=True,
         extra_fields=["prix_initial", "prix_propose_client", "prix_min_accepte"],
         rules=(
@@ -147,6 +172,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "correspondance_46_w34": ScenarioConfig(
         id="correspondance_46_w34",
         label="7) Correspondance taille FR46 → W34",
+        message_type_id="taille",
         requires_client_message=True,
         extra_fields=["taille_fr", "equivalence_w"],
         rules=(
@@ -159,6 +185,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "relance_favoris": ScenarioConfig(
         id="relance_favoris",
         label="8) Message aux favoris",
+        message_type_id="favoris",
         requires_client_message=False,
         extra_fields=[],
         rules=(
@@ -171,6 +198,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "remerciement_paiement_attente": ScenarioConfig(
         id="remerciement_paiement_attente",
         label="9) Remerciement achat (paiement en attente)",
+        message_type_id="remerciement",
         requires_client_message=False,
         extra_fields=[],
         rules=(
@@ -182,6 +210,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "notification_arrivee_colis": ScenarioConfig(
         id="notification_arrivee_colis",
         label="10) Notification d'arrivée du colis",
+        message_type_id="notification",
         requires_client_message=False,
         extra_fields=[],
         rules=(
@@ -193,6 +222,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "traduction_it_avec_plaisir": ScenarioConfig(
         id="traduction_it_avec_plaisir",
         label="11) Traduction « Avec plaisir » en italien",
+        message_type_id="traduction",
         requires_client_message=False,
         extra_fields=[],
         rules=(
@@ -202,6 +232,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "refus_prix_ferme_15": ScenarioConfig(
         id="refus_prix_ferme_15",
         label="12) Refus + prix Levi's Premium 15€ ferme",
+        message_type_id="negociation",
         requires_client_message=True,
         extra_fields=["prix_min_accepte"],
         rules=(
@@ -214,6 +245,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     "remerciement_acceptation_offre": ScenarioConfig(
         id="remerciement_acceptation_offre",
         label="13) Remerciement après acceptation d'offre",
+        message_type_id="remerciement",
         requires_client_message=False,
         extra_fields=[],
         rules=(

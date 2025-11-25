@@ -25,6 +25,7 @@ import customtkinter as ctk
 from app.backend.customer_responses import (
     ARTICLE_TYPES,
     EXTRA_FIELD_LABELS,
+    MESSAGE_TYPES,
     SCENARIOS,
     CustomerReplyGenerator,
     CustomerReplyPayload,
@@ -71,11 +72,14 @@ class VintedListingApp(ctk.CTk):
         self._image_directories: Set[Path] = set()
 
         self.reply_article_var = ctk.StringVar(value="")
+        self.reply_message_type_var = ctk.StringVar(value="")
         self.reply_scenario_var = ctk.StringVar(value="")
         self.reply_status_var = ctk.StringVar(value="")
         self.reply_field_vars: Dict[str, ctk.StringVar] = {}
+        self.reply_message_type_radios: List[ctk.CTkRadioButton] = []
         self.reply_scenario_radios: List[ctk.CTkRadioButton] = []
         self.reply_scenario_frame: Optional[ctk.CTkScrollableFrame] = None
+        self.reply_frames_positions: Dict[ctk.CTkFrame, Dict[str, object]] = {}
 
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
@@ -252,7 +256,8 @@ class VintedListingApp(ctk.CTk):
         selection_frame = ctk.CTkFrame(container)
         selection_frame.grid(row=2, column=0, sticky="nsew", padx=12, pady=(4, 8))
         selection_frame.columnconfigure(0, weight=1)
-        selection_frame.columnconfigure(1, weight=2)
+        selection_frame.columnconfigure(1, weight=1)
+        selection_frame.columnconfigure(2, weight=2)
 
         article_frame = ctk.CTkFrame(selection_frame)
         article_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=8)
@@ -276,12 +281,27 @@ class VintedListingApp(ctk.CTk):
             )
             radio.grid(row=index, column=0, sticky="w", padx=12, pady=4)
 
+        self.reply_message_type_frame = ctk.CTkFrame(selection_frame)
+        self.reply_message_type_frame.grid(
+            row=0, column=1, sticky="nsew", padx=(8, 8), pady=8
+        )
+        self.reply_message_type_frame.columnconfigure(0, weight=1)
+
+        message_type_title = ctk.CTkLabel(
+            self.reply_message_type_frame,
+            text="Type de message",
+            font=ctk.CTkFont(weight="bold"),
+            anchor="w",
+        )
+        message_type_title.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
+
         self.reply_scenario_frame = ctk.CTkScrollableFrame(
             selection_frame, label_text="Scénario de réponse"
         )
-        self.reply_scenario_frame.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=8)
+        self.reply_scenario_frame.grid(row=0, column=2, sticky="nsew", padx=(8, 0), pady=8)
         self.reply_scenario_frame.columnconfigure(0, weight=1)
 
+        self._render_message_types()
         self._render_reply_scenarios()
 
         context_frame = ctk.CTkFrame(container)
@@ -434,7 +454,26 @@ class VintedListingApp(ctk.CTk):
         logger.step("Thread d'analyse lancé")
 
     def display_result(self, result: ListingResult) -> None:
+        self.reply_message_type_frame.grid_remove()
+        self.reply_scenario_frame.grid_remove()
+        context_frame.grid_remove()
+        actions_frame.grid_remove()
+        output_frame.grid_remove()
+
+        self.reply_context_frame = context_frame
+        self.reply_actions_frame = actions_frame
+        self.reply_output_frame = output_frame
+        self.reply_frames_positions = {
+            self.reply_message_type_frame: dict(row=0, column=1, sticky="nsew", padx=(8, 8), pady=8),
+            self.reply_scenario_frame: dict(row=0, column=2, sticky="nsew", padx=(8, 0), pady=8),
+            self.reply_context_frame: dict(row=3, column=0, sticky="nsew", padx=12, pady=(4, 8)),
+            self.reply_actions_frame: dict(row=4, column=0, sticky="ew", padx=12, pady=(4, 8)),
+            self.reply_output_frame: dict(row=5, column=0, sticky="nsew", padx=12, pady=(4, 8)),
+        }
+
         self._stop_loading_state()
+        self.reply_status_var.set("Sélectionnez un type d'article pour commencer.")
+        self._update_reply_visibility()
         sku_missing = getattr(result, "sku_missing", False)
         placeholder_in_title = "SKU/nc" in (result.title or "")
 
@@ -583,17 +622,43 @@ class VintedListingApp(ctk.CTk):
         self.clipboard_append(content)
         logger.info("Contenu copié dans le presse-papiers")
 
+    def _render_message_types(self) -> None:
+        for radio in self.reply_message_type_radios:
+            radio.destroy()
+        self.reply_message_type_radios.clear()
+
+        for index, message_type in enumerate(MESSAGE_TYPES, start=1):
+            radio = ctk.CTkRadioButton(
+                self.reply_message_type_frame,
+                text=message_type.label,
+                value=message_type.id,
+                variable=self.reply_message_type_var,
+                command=self._on_reply_message_type_change,
+            )
+            radio.grid(row=index, column=0, sticky="w", padx=12, pady=4)
+            self.reply_message_type_radios.append(radio)
+
     def _get_visible_reply_scenarios(self) -> List[ScenarioConfig]:
         selected_article = self.reply_article_var.get()
-        if not selected_article:
-            return list(SCENARIOS.values())
+        selected_message_type = self.reply_message_type_var.get()
 
-        return [
-            scenario
-            for scenario in SCENARIOS.values()
-            if scenario.allowed_articles is None
-            or selected_article in scenario.allowed_articles
-        ]
+        scenarios = list(SCENARIOS.values())
+        if selected_article:
+            scenarios = [
+                scenario
+                for scenario in scenarios
+                if scenario.allowed_articles is None
+                or selected_article in scenario.allowed_articles
+            ]
+
+        if selected_message_type:
+            scenarios = [
+                scenario
+                for scenario in scenarios
+                if scenario.message_type_id == selected_message_type
+            ]
+
+        return scenarios
 
     def _render_reply_scenarios(self) -> None:
         if not self.reply_scenario_frame:
@@ -607,6 +672,9 @@ class VintedListingApp(ctk.CTk):
         if self.reply_scenario_var.get() not in {s.id for s in visible_scenarios}:
             self.reply_scenario_var.set("")
 
+        if not visible_scenarios and self.reply_message_type_var.get():
+            self.reply_status_var.set("Aucun scénario compatible pour ce couple article / message.")
+
         for index, scenario in enumerate(visible_scenarios):
             radio = ctk.CTkRadioButton(
                 self.reply_scenario_frame,
@@ -618,12 +686,28 @@ class VintedListingApp(ctk.CTk):
             radio.grid(row=index, column=0, sticky="w", padx=8, pady=4)
             self.reply_scenario_radios.append(radio)
 
+        self._update_reply_visibility()
+
     def _on_reply_article_change(self) -> None:
+        self.reply_message_type_var.set("")
+        self.reply_scenario_var.set("")
+        self.reply_message_box.delete("1.0", "end")
+        self.reply_status_var.set("Sélectionnez un type de message.")
         self._render_reply_scenarios()
         self._refresh_extra_fields()
+        self._update_reply_visibility()
+
+    def _on_reply_message_type_change(self) -> None:
+        self.reply_scenario_var.set("")
+        self.reply_message_box.delete("1.0", "end")
+        self.reply_status_var.set("Sélectionnez un scénario adapté.")
+        self._render_reply_scenarios()
+        self._refresh_extra_fields()
+        self._update_reply_visibility()
 
     def _on_reply_scenario_change(self) -> None:
         self._refresh_extra_fields()
+        self._update_reply_visibility()
 
     def _refresh_extra_fields(self) -> None:
         scenario_id = self.reply_scenario_var.get()
@@ -633,7 +717,9 @@ class VintedListingApp(ctk.CTk):
             frame.grid_forget()
 
         if not scenario:
-            self.reply_status_var.set("Sélectionnez un article puis un scénario compatible.")
+            self.reply_status_var.set(
+                "Sélectionnez un article, un type de message puis un scénario compatible."
+            )
             return
 
         for row_index, field_key in enumerate(scenario.extra_fields, start=1):
@@ -647,6 +733,42 @@ class VintedListingApp(ctk.CTk):
         else:
             self.reply_status_var.set("")
 
+    def _update_reply_visibility(self) -> None:
+        has_article = bool(self.reply_article_var.get())
+        has_message_type = bool(self.reply_message_type_var.get())
+        has_scenario = bool(self.reply_scenario_var.get())
+
+        def show_frame(frame: Optional[ctk.CTkFrame]) -> None:
+            if frame is None:
+                return
+            grid_kwargs = self.reply_frames_positions.get(frame)
+            if grid_kwargs:
+                frame.grid(**grid_kwargs)
+
+        def hide_frame(frame: Optional[ctk.CTkFrame]) -> None:
+            if frame is None:
+                return
+            frame.grid_remove()
+
+        if has_article:
+            show_frame(self.reply_message_type_frame)
+        else:
+            hide_frame(self.reply_message_type_frame)
+
+        if has_article and has_message_type:
+            show_frame(self.reply_scenario_frame)
+        else:
+            hide_frame(self.reply_scenario_frame)
+
+        if has_scenario:
+            show_frame(self.reply_context_frame)
+            show_frame(self.reply_actions_frame)
+            show_frame(self.reply_output_frame)
+        else:
+            hide_frame(self.reply_context_frame)
+            hide_frame(self.reply_actions_frame)
+            hide_frame(self.reply_output_frame)
+
     @staticmethod
     def _parse_float_value(raw_value: str) -> Optional[float]:
         cleaned = raw_value.strip().replace(",", ".")
@@ -659,11 +781,15 @@ class VintedListingApp(ctk.CTk):
 
     def _build_reply_payload(self) -> Optional[CustomerReplyPayload]:
         article_type = self.reply_article_var.get()
+        message_type = self.reply_message_type_var.get()
         scenario_id = self.reply_scenario_var.get()
         scenario = SCENARIOS.get(scenario_id)
 
         if not article_type:
             self._show_error_popup("Sélectionnez un type d'article.")
+            return None
+        if not message_type:
+            self._show_error_popup("Sélectionnez un type de message.")
             return None
         if scenario is None:
             self._show_error_popup("Sélectionnez un scénario de réponse.")

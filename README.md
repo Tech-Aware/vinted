@@ -51,10 +51,11 @@ L'interface s'ouvre avec trois zones principales :
 2. **Commentaires** : précisez les défauts ou informations complémentaires.
 3. **Résultats** : titre et description générés, modifiables directement.
 
-L'onglet « Réponses aux clients » vous permet de choisir un type d'article, un scénario
-de réponse (13 cas concrets) puis de remplir les champs requis (message client,
-prix proposé, délai d'envoi, équivalences de taille...). Cliquez sur « Générer la
-réponse » pour obtenir un texte prêt à coller dans Vinted et copiable en un clic.
+L'onglet « Réponses aux clients » déroule le flux suivant : sélection du type
+d'article, choix du type de message (favori, remerciement, négociation...) puis
+scénario précis (13 cas concrets). Les champs contextuels n'apparaissent qu'après
+le scénario, et le bouton « Générer la réponse » n'est affiché qu'en dernier. Vous
+obtenez un texte prêt à coller dans Vinted et copiable en un clic.
 
 Cliquez sur « Analyser » pour envoyer les photos et commentaires à GPT. Les
 données transitent en base64 dans la requête OpenAI. Une fois la réponse
