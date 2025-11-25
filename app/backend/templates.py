@@ -590,8 +590,16 @@ def render_template_jean_levis_femme(
     )
 
     rise_normalized = rise.casefold()
-    rise_is_low = "basse" in rise_normalized if rise_normalized else False
-    rise_is_high = "haute" in rise_normalized if rise_normalized else False
+    rise_is_low = (
+        "basse" in rise_normalized or "low" in rise_normalized
+        if rise_normalized
+        else False
+    )
+    rise_is_high = (
+        "haute" in rise_normalized or "high" in rise_normalized
+        if rise_normalized
+        else False
+    )
     has_stretch = bool(elastane_pct_value and elastane_pct_value > 2)
 
     fit_normalized_for_flags = _normalize_text_for_comparison(
@@ -704,34 +712,50 @@ def render_template_jean_levis_femme(
     title_parts.extend(["-", sku_display])
     title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
 
-    size_fragments: List[str] = []
     us_sentence_label = " ".join(
         part for part in (us_display_label, us_length_label) if part
     ).strip()
-    if us_sentence_label and fr_display:
-        size_fragments.append(
-            f"Taille {us_sentence_label} US (équivalent {fr_display} FR)"
-        )
-    elif us_sentence_label:
-        size_fragments.append(f"Taille {us_sentence_label} US")
-    elif fr_display:
-        size_fragments.append(f"Taille {fr_display} FR")
-    else:
-        size_fragments.append("Taille non précisée")
     fit_phrase = fit_description_text or "non précisée"
-    rise_phrase = rise or "non précisée"
-    size_fragments.append(f"coupe {fit_phrase}")
-    size_fragments.append(f"à taille {rise_phrase}")
-    size_sentence_core = ", ".join(size_fragments)
-    if size_estimated:
-        size_sentence_core = f"{size_sentence_core} (voir photos)"
-    size_sentence = (
-        f"{size_sentence_core}, pour une silhouette ajustée et confortable."
-    )
+    if rise_is_low:
+        rise_phrase = "basse"
+    elif rise_is_high:
+        rise_phrase = "haute"
+    elif rise:
+        rise_phrase = rise
+    else:
+        rise_phrase = "moyenne"
 
-    rise_label = (
-        "taille basse" if rise_is_low else "taille haute" if rise_is_high else "taille moyenne"
+    rise_label = f"taille {rise_phrase}"
+    rise_label_english = "mid rise"
+    if rise_is_low:
+        rise_label_english = "low rise"
+    elif rise_is_high:
+        rise_label_english = "high rise"
+    elif "moy" not in rise_phrase.lower():
+        rise_label_english = "mid rise"
+
+    rise_measured_from_photo = bool(fields.rise_measurement_cm and not fields.rise_class)
+
+    if fr_display:
+        fr_size_sentence = f"Taille {fr_display} FR"
+    elif us_sentence_label:
+        fr_size_sentence = f"Taille {us_sentence_label} US"
+    else:
+        fr_size_sentence = "Taille non précisée"
+    if size_estimated:
+        fr_size_sentence = f"{fr_size_sentence} (voir photos)"
+    fr_size_sentence = f"{fr_size_sentence}."
+
+    rise_fit_sentence = (
+        f"{rise_label_english}/{rise_label} coupe {fit_phrase}, pour une silhouette ajustée et confortable."
     )
+    rise_measurement_note: Optional[str] = None
+    if rise_measured_from_photo:
+        rise_measurement_note = "Hauteur de taille déduite de la mesure en cm visible en photo."
+    us_size_sentence: Optional[str] = None
+    if us_sentence_label and fr_display:
+        us_size_sentence = f"Équivalent US {us_sentence_label}."
+
     gender_label = gender_value or "femme"
     model_segment = f" {model}" if model else ""
     intro_sentence_parts = [
@@ -746,11 +770,12 @@ def render_template_jean_levis_femme(
         "Disponible immédiatement — envoi rapide 🚚 / Ajoutez aux favoris si vous hésitez encore ✨"
     )
 
-    first_paragraph_lines = [
-        intro_sentence,
-        size_sentence,
-        cta_sentence,
-    ]
+    first_paragraph_lines = [intro_sentence, fr_size_sentence, rise_fit_sentence]
+    if rise_measurement_note:
+        first_paragraph_lines.append(rise_measurement_note)
+    if us_size_sentence:
+        first_paragraph_lines.append(us_size_sentence)
+    first_paragraph_lines.append(cta_sentence)
     if size_note:
         first_paragraph_lines.append(size_note)
 
