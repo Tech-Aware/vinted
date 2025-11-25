@@ -396,10 +396,11 @@ class VintedListingApp(ctk.CTk):
         output_container = ctk.CTkFrame(output_frame)
         output_container.grid(row=1, column=0, sticky="nsew")
         output_container.columnconfigure(0, weight=1)
+        output_container.columnconfigure(1, weight=0)
         output_container.rowconfigure(0, weight=1)
 
         self.reply_output_box = ctk.CTkTextbox(output_container, height=160)
-        self.reply_output_box.grid(row=0, column=0, sticky="nsew", padx=8, pady=(0, 8))
+        self.reply_output_box.grid(row=0, column=0, sticky="nsew", padx=(8, 4), pady=(0, 8))
 
         self.reply_copy_button = ctk.CTkButton(
             output_container,
@@ -411,7 +412,7 @@ class VintedListingApp(ctk.CTk):
             hover_color=("gray65", "gray35"),
             command=lambda: self._copy_to_clipboard(self.reply_output_box),
         )
-        self.reply_copy_button.place(relx=1.0, rely=0.0, x=-10, y=10, anchor="ne")
+        self.reply_copy_button.grid(row=0, column=1, sticky="ne", padx=(4, 8), pady=(0, 8))
 
         self.reply_context_frame = None
         self.reply_actions_frame = actions_frame
