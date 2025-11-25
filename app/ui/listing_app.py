@@ -28,6 +28,7 @@ from app.backend.customer_responses import (
     SCENARIOS,
     CustomerReplyGenerator,
     CustomerReplyPayload,
+    ScenarioConfig,
 )
 from app.backend.api_key_manager import ensure_api_key
 from app.backend.gpt_client import ListingGenerator, ListingResult
@@ -73,6 +74,8 @@ class VintedListingApp(ctk.CTk):
         self.reply_scenario_var = ctk.StringVar(value="")
         self.reply_status_var = ctk.StringVar(value="")
         self.reply_field_vars: Dict[str, ctk.StringVar] = {}
+        self.reply_scenario_radios: List[ctk.CTkRadioButton] = []
+        self.reply_scenario_frame: Optional[ctk.CTkScrollableFrame] = None
 
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
@@ -269,23 +272,17 @@ class VintedListingApp(ctk.CTk):
                 text=article.label,
                 value=article.id,
                 variable=self.reply_article_var,
-                command=self._refresh_extra_fields,
+                command=self._on_reply_article_change,
             )
             radio.grid(row=index, column=0, sticky="w", padx=12, pady=4)
 
-        scenario_frame = ctk.CTkScrollableFrame(selection_frame, label_text="Scénario de réponse")
-        scenario_frame.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=8)
-        scenario_frame.columnconfigure(0, weight=1)
+        self.reply_scenario_frame = ctk.CTkScrollableFrame(
+            selection_frame, label_text="Scénario de réponse"
+        )
+        self.reply_scenario_frame.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=8)
+        self.reply_scenario_frame.columnconfigure(0, weight=1)
 
-        for index, scenario in enumerate(SCENARIOS.values()):
-            radio = ctk.CTkRadioButton(
-                scenario_frame,
-                text=scenario.label,
-                value=scenario.id,
-                variable=self.reply_scenario_var,
-                command=self._refresh_extra_fields,
-            )
-            radio.grid(row=index, column=0, sticky="w", padx=8, pady=4)
+        self._render_reply_scenarios()
 
         context_frame = ctk.CTkFrame(container)
         context_frame.grid(row=3, column=0, sticky="nsew", padx=12, pady=(4, 8))
@@ -586,6 +583,48 @@ class VintedListingApp(ctk.CTk):
         self.clipboard_append(content)
         logger.info("Contenu copié dans le presse-papiers")
 
+    def _get_visible_reply_scenarios(self) -> List[ScenarioConfig]:
+        selected_article = self.reply_article_var.get()
+        if not selected_article:
+            return list(SCENARIOS.values())
+
+        return [
+            scenario
+            for scenario in SCENARIOS.values()
+            if scenario.allowed_articles is None
+            or selected_article in scenario.allowed_articles
+        ]
+
+    def _render_reply_scenarios(self) -> None:
+        if not self.reply_scenario_frame:
+            return
+
+        for radio in self.reply_scenario_radios:
+            radio.destroy()
+        self.reply_scenario_radios.clear()
+
+        visible_scenarios = self._get_visible_reply_scenarios()
+        if self.reply_scenario_var.get() not in {s.id for s in visible_scenarios}:
+            self.reply_scenario_var.set("")
+
+        for index, scenario in enumerate(visible_scenarios):
+            radio = ctk.CTkRadioButton(
+                self.reply_scenario_frame,
+                text=scenario.label,
+                value=scenario.id,
+                variable=self.reply_scenario_var,
+                command=self._on_reply_scenario_change,
+            )
+            radio.grid(row=index, column=0, sticky="w", padx=8, pady=4)
+            self.reply_scenario_radios.append(radio)
+
+    def _on_reply_article_change(self) -> None:
+        self._render_reply_scenarios()
+        self._refresh_extra_fields()
+
+    def _on_reply_scenario_change(self) -> None:
+        self._refresh_extra_fields()
+
     def _refresh_extra_fields(self) -> None:
         scenario_id = self.reply_scenario_var.get()
         scenario = SCENARIOS.get(scenario_id)
@@ -594,7 +633,7 @@ class VintedListingApp(ctk.CTk):
             frame.grid_forget()
 
         if not scenario:
-            self.reply_status_var.set("Sélectionnez un scénario et un article pour commencer.")
+            self.reply_status_var.set("Sélectionnez un article puis un scénario compatible.")
             return
 
         for row_index, field_key in enumerate(scenario.extra_fields, start=1):
