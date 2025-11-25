@@ -16,12 +16,19 @@ limitations under the License.
 
 import threading
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import Dict, List, Optional, Set
 
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
+from app.backend.customer_responses import (
+    ARTICLE_TYPES,
+    EXTRA_FIELD_LABELS,
+    SCENARIOS,
+    CustomerReplyGenerator,
+    CustomerReplyPayload,
+)
 from app.backend.api_key_manager import ensure_api_key
 from app.backend.gpt_client import ListingGenerator, ListingResult
 from app.backend.image_encoding import encode_images_to_base64
@@ -57,9 +64,15 @@ class VintedListingApp(ctk.CTk):
             raise
 
         self.generator = ListingGenerator()
+        self.reply_generator = CustomerReplyGenerator()
         self.template_registry = ListingTemplateRegistry()
         self.selected_images: List[Path] = []
         self._image_directories: Set[Path] = set()
+
+        self.reply_article_var = ctk.StringVar(value="")
+        self.reply_scenario_var = ctk.StringVar(value="")
+        self.reply_status_var = ctk.StringVar(value="")
+        self.reply_field_vars: Dict[str, ctk.StringVar] = {}
 
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
@@ -207,41 +220,166 @@ class VintedListingApp(ctk.CTk):
         parent.columnconfigure(0, weight=1)
         parent.rowconfigure(0, weight=1)
 
-        placeholder = ctk.CTkFrame(parent)
-        placeholder.grid(row=0, column=0, padx=24, pady=24, sticky="nsew")
-        placeholder.columnconfigure(0, weight=1)
+        container = ctk.CTkFrame(parent)
+        container.grid(row=0, column=0, padx=16, pady=16, sticky="nsew")
+        container.columnconfigure(0, weight=1)
+        container.rowconfigure(3, weight=1)
+        container.rowconfigure(5, weight=1)
 
         title = ctk.CTkLabel(
-            placeholder,
+            container,
             text="Réponses aux clients",
             font=ctk.CTkFont(size=16, weight="bold"),
             anchor="w",
         )
-        title.grid(row=0, column=0, sticky="w", padx=12, pady=(8, 4))
+        title.grid(row=0, column=0, sticky="w", padx=12, pady=(4, 2))
 
         description = ctk.CTkLabel(
-            placeholder,
+            container,
             text=(
-                "Préparez des réponses personnalisées aux messages clients. Collez la demande, "
-                "ajoutez vos consignes et obtenez une réponse prête à envoyer."
+                "Générez des réponses prêtes à coller dans Vinted : choisissez un article, un scénario "
+                "et remplissez les champs contextuels si besoin."
             ),
             justify="left",
             anchor="w",
-            wraplength=720,
+            wraplength=820,
         )
         description.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
 
-        coming_soon = ctk.CTkLabel(
-            placeholder,
-            text=(
-                "Cette section dédiée est en cours de préparation : la génération automatisée des "
-                "réponses clients sera bientôt disponible."
-            ),
+        selection_frame = ctk.CTkFrame(container)
+        selection_frame.grid(row=2, column=0, sticky="nsew", padx=12, pady=(4, 8))
+        selection_frame.columnconfigure(0, weight=1)
+        selection_frame.columnconfigure(1, weight=2)
+
+        article_frame = ctk.CTkFrame(selection_frame)
+        article_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=8)
+        article_frame.columnconfigure(0, weight=1)
+
+        article_title = ctk.CTkLabel(
+            article_frame,
+            text="Type d'article",
+            font=ctk.CTkFont(weight="bold"),
             anchor="w",
-            justify="left",
-            wraplength=720,
         )
-        coming_soon.grid(row=2, column=0, sticky="ew", padx=12, pady=(4, 8))
+        article_title.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
+
+        for index, article in enumerate(ARTICLE_TYPES, start=1):
+            radio = ctk.CTkRadioButton(
+                article_frame,
+                text=article.label,
+                value=article.id,
+                variable=self.reply_article_var,
+                command=self._refresh_extra_fields,
+            )
+            radio.grid(row=index, column=0, sticky="w", padx=12, pady=4)
+
+        scenario_frame = ctk.CTkScrollableFrame(selection_frame, label_text="Scénario de réponse")
+        scenario_frame.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=8)
+        scenario_frame.columnconfigure(0, weight=1)
+
+        for index, scenario in enumerate(SCENARIOS.values()):
+            radio = ctk.CTkRadioButton(
+                scenario_frame,
+                text=scenario.label,
+                value=scenario.id,
+                variable=self.reply_scenario_var,
+                command=self._refresh_extra_fields,
+                anchor="w",
+                justify="left",
+                wraplength=520,
+            )
+            radio.grid(row=index, column=0, sticky="w", padx=8, pady=4)
+
+        context_frame = ctk.CTkFrame(container)
+        context_frame.grid(row=3, column=0, sticky="nsew", padx=12, pady=(4, 8))
+        context_frame.columnconfigure(0, weight=1)
+        context_frame.columnconfigure(1, weight=1)
+        context_frame.rowconfigure(0, weight=1)
+
+        left_context = ctk.CTkFrame(context_frame)
+        left_context.grid(row=0, column=0, sticky="nsew", padx=(0, 6), pady=6)
+        left_context.columnconfigure(0, weight=1)
+        left_context.rowconfigure(1, weight=1)
+
+        message_label = ctk.CTkLabel(
+            left_context,
+            text="Message du client (copier-coller)",
+            anchor="w",
+        )
+        message_label.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
+
+        self.reply_message_box = ctk.CTkTextbox(left_context, height=140)
+        self.reply_message_box.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
+
+        extra_frame = ctk.CTkFrame(context_frame)
+        extra_frame.grid(row=0, column=1, sticky="nsew", padx=(6, 0), pady=6)
+        extra_frame.columnconfigure(0, weight=1)
+
+        extra_title = ctk.CTkLabel(extra_frame, text="Champs complémentaires", anchor="w")
+        extra_title.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
+
+        self.reply_extra_field_frames: Dict[str, ctk.CTkFrame] = {}
+        for index, (field_key, field_label) in enumerate(EXTRA_FIELD_LABELS.items(), start=1):
+            field_container = ctk.CTkFrame(extra_frame)
+            field_container.grid(row=index, column=0, sticky="ew", padx=8, pady=4)
+            field_container.columnconfigure(0, weight=1)
+
+            label = ctk.CTkLabel(field_container, text=field_label, anchor="w")
+            label.grid(row=0, column=0, sticky="w")
+
+            entry_var = ctk.StringVar()
+            if field_key == "delai_envoi_habituel":
+                entry_var.set("24-48h")
+            elif field_key == "equivalence_w":
+                entry_var.set("W34")
+            elif field_key == "taille_fr":
+                entry_var.set("46")
+            self.reply_field_vars[field_key] = entry_var
+
+            entry = ctk.CTkEntry(field_container, textvariable=entry_var)
+            entry.grid(row=1, column=0, sticky="ew", pady=(2, 4))
+
+            self.reply_extra_field_frames[field_key] = field_container
+
+        actions_frame = ctk.CTkFrame(container)
+        actions_frame.grid(row=4, column=0, sticky="ew", padx=12, pady=(4, 8))
+        actions_frame.columnconfigure(0, weight=0)
+        actions_frame.columnconfigure(1, weight=1)
+
+        self.reply_generate_button = ctk.CTkButton(
+            actions_frame,
+            text="Générer la réponse",
+            command=self._start_reply_generation,
+        )
+        self.reply_generate_button.grid(row=0, column=0, padx=8, pady=6, sticky="w")
+
+        status_label = ctk.CTkLabel(actions_frame, textvariable=self.reply_status_var, anchor="w")
+        status_label.grid(row=0, column=1, sticky="w", padx=8, pady=6)
+
+        output_frame = ctk.CTkFrame(container)
+        output_frame.grid(row=5, column=0, sticky="nsew", padx=12, pady=(4, 8))
+        output_frame.columnconfigure(0, weight=1)
+
+        output_header = ctk.CTkLabel(
+            output_frame,
+            text="Réponse générée",
+            font=ctk.CTkFont(weight="bold"),
+            anchor="w",
+        )
+        output_header.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))
+
+        self.reply_output_box = ctk.CTkTextbox(output_frame, height=160)
+        self.reply_output_box.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
+
+        copy_button = ctk.CTkButton(
+            output_frame,
+            text="📋 Copier",
+            width=100,
+            command=lambda: self._copy_to_clipboard(self.reply_output_box),
+        )
+        copy_button.grid(row=2, column=0, sticky="e", padx=8, pady=(0, 8))
+
+        self._refresh_extra_fields()
 
     def select_images(self) -> None:
         logger.step("Ouverture de la boîte de dialogue de sélection d'images")
@@ -450,6 +588,136 @@ class VintedListingApp(ctk.CTk):
         self.clipboard_clear()
         self.clipboard_append(content)
         logger.info("Contenu copié dans le presse-papiers")
+
+    def _refresh_extra_fields(self) -> None:
+        scenario_id = self.reply_scenario_var.get()
+        scenario = SCENARIOS.get(scenario_id)
+
+        for frame in self.reply_extra_field_frames.values():
+            frame.grid_forget()
+
+        if not scenario:
+            self.reply_status_var.set("Sélectionnez un scénario et un article pour commencer.")
+            return
+
+        for row_index, field_key in enumerate(scenario.extra_fields, start=1):
+            frame = self.reply_extra_field_frames.get(field_key)
+            if frame is None:
+                continue
+            frame.grid(row=row_index, column=0, sticky="ew", padx=8, pady=4)
+
+        if scenario.requires_client_message:
+            self.reply_status_var.set("Le message client est requis pour ce scénario.")
+        else:
+            self.reply_status_var.set("")
+
+    @staticmethod
+    def _parse_float_value(raw_value: str) -> Optional[float]:
+        cleaned = raw_value.strip().replace(",", ".")
+        if not cleaned:
+            return None
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+
+    def _build_reply_payload(self) -> Optional[CustomerReplyPayload]:
+        article_type = self.reply_article_var.get()
+        scenario_id = self.reply_scenario_var.get()
+        scenario = SCENARIOS.get(scenario_id)
+
+        if not article_type:
+            self._show_error_popup("Sélectionnez un type d'article.")
+            return None
+        if scenario is None:
+            self._show_error_popup("Sélectionnez un scénario de réponse.")
+            return None
+
+        client_message = self.reply_message_box.get("1.0", "end").strip()
+        if scenario.requires_client_message and not client_message:
+            self._show_error_popup("Ajoutez le message client pour ce scénario.")
+            return None
+
+        missing_fields: List[str] = []
+        numeric_fields = {"prix_initial", "prix_propose_client", "prix_min_accepte"}
+        numeric_values: Dict[str, Optional[float]] = {}
+        text_values: Dict[str, str] = {}
+
+        for field_key in scenario.extra_fields:
+            raw_value = self.reply_field_vars.get(field_key, ctk.StringVar()).get().strip()
+            if not raw_value:
+                missing_fields.append(EXTRA_FIELD_LABELS.get(field_key, field_key))
+                continue
+            if field_key in numeric_fields:
+                parsed = self._parse_float_value(raw_value)
+                if parsed is None:
+                    self._show_error_popup(
+                        f"Le champ {EXTRA_FIELD_LABELS.get(field_key, field_key)} doit être un nombre."
+                    )
+                    return None
+                numeric_values[field_key] = parsed
+            else:
+                text_values[field_key] = raw_value
+
+        if missing_fields:
+            self._show_error_popup(
+                "Complétez les champs requis : " + ", ".join(sorted(set(missing_fields)))
+            )
+            return None
+
+        payload = CustomerReplyPayload(
+            article_type=article_type,
+            scenario_id=scenario_id,
+            client_message=client_message,
+            prix_initial=numeric_values.get("prix_initial"),
+            prix_propose_client=numeric_values.get("prix_propose_client"),
+            prix_min_accepte=numeric_values.get("prix_min_accepte"),
+            delai_envoi_habituel=text_values.get(
+                "delai_envoi_habituel", self.reply_field_vars.get("delai_envoi_habituel", ctk.StringVar()).get()
+            ),
+            taille_fr=text_values.get("taille_fr", self.reply_field_vars.get("taille_fr", ctk.StringVar()).get()),
+            equivalence_w=text_values.get(
+                "equivalence_w", self.reply_field_vars.get("equivalence_w", ctk.StringVar()).get()
+            ),
+        )
+        return payload
+
+    def _start_reply_generation(self) -> None:
+        payload = self._build_reply_payload()
+        if payload is None:
+            return
+
+        self.reply_status_var.set("Génération en cours...")
+        self._set_reply_loading_state(True)
+        self.reply_output_box.delete("1.0", "end")
+
+        def worker() -> None:
+            try:
+                reply = self.reply_generator.generate_reply(payload)
+                self.after(0, lambda: self._handle_reply_result(reply))
+            except Exception as exc:  # pragma: no cover - UI feedback
+                logger.exception("Erreur lors de la génération de la réponse client")
+                self.after(0, lambda err=exc: self._handle_reply_error(err))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _handle_reply_result(self, reply: str) -> None:
+        self._set_reply_loading_state(False)
+        self.reply_status_var.set("Réponse prête ✅")
+        self.reply_output_box.delete("1.0", "end")
+        self.reply_output_box.insert("1.0", reply)
+
+    def _handle_reply_error(self, error: Exception) -> None:
+        self._set_reply_loading_state(False)
+        self.reply_status_var.set("Erreur lors de la génération")
+        self._show_error_popup(f"Erreur: {error}")
+
+    def _set_reply_loading_state(self, loading: bool) -> None:
+        state = "disabled" if loading else "normal"
+        try:
+            self.reply_generate_button.configure(state=state)
+        except Exception:
+            pass
 
     def _update_price_chip_wraplength(self, event: Optional[object] = None) -> None:
         try:

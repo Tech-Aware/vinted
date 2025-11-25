@@ -13,6 +13,8 @@ sous Windows que sous Chromebook (via l'environnement Linux).
   l'API OpenAI Vision (GPT-4o).
 - Résultats affichés dans deux zones éditables prêtes au copier/coller.
 - Gestion des templates d'annonces (fournit un modèle Levi's femme par défaut).
+- Onglet « Réponses aux clients » : scénarios prêts à l'emploi (favoris, contre-offre,
+  remerciements, suivi d'envoi...) avec champs dynamiques selon le cas.
 
 ## Pré-requis
 
@@ -48,6 +50,11 @@ L'interface s'ouvre avec trois zones principales :
 1. **Prévisualisation des images** : ajoutez vos photos via « Ajouter des photos ».
 2. **Commentaires** : précisez les défauts ou informations complémentaires.
 3. **Résultats** : titre et description générés, modifiables directement.
+
+L'onglet « Réponses aux clients » vous permet de choisir un type d'article, un scénario
+de réponse (13 cas concrets) puis de remplir les champs requis (message client,
+prix proposé, délai d'envoi, équivalences de taille...). Cliquez sur « Générer la
+réponse » pour obtenir un texte prêt à coller dans Vinted et copiable en un clic.
 
 Cliquez sur « Analyser » pour envoyer les photos et commentaires à GPT. Les
 données transitent en base64 dans la requête OpenAI. Une fois la réponse
