@@ -316,9 +316,14 @@ class VintedListingApp(ctk.CTk):
         )
         price_title.grid(row=0, column=0, sticky="w", padx=6, pady=(8, 4))
 
+        self.reply_inline_price_row = ctk.CTkFrame(self.reply_extra_container)
+        for col_index in range(len(EXTRA_FIELD_LABELS)):
+            self.reply_inline_price_row.columnconfigure(col_index, weight=1)
+
         self.reply_extra_field_frames: Dict[str, ctk.CTkFrame] = {}
-        for index, (field_key, field_label) in enumerate(EXTRA_FIELD_LABELS.items(), start=1):
-            field_container = ctk.CTkFrame(self.reply_extra_container)
+        self.reply_field_columns: Dict[str, int] = {}
+        for index, (field_key, field_label) in enumerate(EXTRA_FIELD_LABELS.items()):
+            field_container = ctk.CTkFrame(self.reply_inline_price_row)
             field_container.columnconfigure(0, weight=1)
 
             label = ctk.CTkLabel(field_container, text=field_label, anchor="w")
@@ -327,10 +332,15 @@ class VintedListingApp(ctk.CTk):
             entry_var = ctk.StringVar()
             self.reply_field_vars[field_key] = entry_var
 
-            entry = ctk.CTkEntry(field_container, textvariable=entry_var, width=140)
+            entry = ctk.CTkEntry(field_container, textvariable=entry_var, width=88)
             entry.grid(row=1, column=0, sticky="ew", padx=6, pady=(2, 6))
 
+            field_container.grid(row=0, column=index, sticky="nsew", padx=4, pady=2)
+
+            self.reply_field_columns[field_key] = index
             self.reply_extra_field_frames[field_key] = field_container
+
+        self.reply_inline_price_row.grid(row=1, column=0, sticky="ew", padx=4, pady=(0, 8))
 
         actions_frame = ctk.CTkFrame(container)
         actions_frame.grid(row=3, column=0, sticky="ew", padx=12, pady=(4, 8))
@@ -712,8 +722,9 @@ class VintedListingApp(ctk.CTk):
         )
 
         for frame in self.reply_extra_field_frames.values():
-            frame.grid_forget()
+            frame.grid_remove()
 
+        self.reply_inline_price_row.grid_remove()
         self.reply_extra_container.grid_remove()
 
         if not scenario:
@@ -724,13 +735,16 @@ class VintedListingApp(ctk.CTk):
 
         merged_fields = list(dict.fromkeys((*message_type_extras, *scenario.extra_fields)))
 
-        for row_index, field_key in enumerate(merged_fields, start=1):
-            frame = self.reply_extra_field_frames.get(field_key)
-            if frame is None:
-                continue
-            frame.grid(row=row_index, column=0, sticky="ew", padx=6, pady=2)
-
         if merged_fields:
+            self.reply_inline_price_row.grid(row=1, column=0, sticky="ew", padx=4, pady=(0, 8))
+
+            for field_key in merged_fields:
+                frame = self.reply_extra_field_frames.get(field_key)
+                if frame is None:
+                    continue
+                column = self.reply_field_columns.get(field_key, 0)
+                frame.grid(row=0, column=column, sticky="nsew", padx=4, pady=2)
+
             self.reply_extra_container.grid(
                 row=getattr(self, "reply_extra_container_row", 1),
                 column=0,
