@@ -366,6 +366,54 @@ def test_render_jean_levis_fabric_label_missing_no_duplicate_messages() -> None:
     assert COMBINED_LABEL_CUT_MESSAGE not in description
 
 
+def test_render_jean_levis_stretch_mentions_threshold() -> None:
+    template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
+
+    def render_with_elastane(elastane_pct: str) -> tuple[str, str, str]:
+        return template.render(
+            ListingFields(
+                model="501",
+                fr_size="38",
+                us_w="28",
+                us_l="30",
+                fit_leg="slim",
+                rise_class="regular",
+                rise_measurement_cm=None,
+                waist_measurement_cm=None,
+                cotton_pct="98",
+                polyester_pct="",
+                polyamide_pct="",
+                viscose_pct="",
+                elastane_pct=elastane_pct,
+                gender="Femme",
+                color_main="bleu",
+                defects="",
+                defect_tags=(),
+                size_label_visible=True,
+                fabric_label_visible=True,
+                fabric_label_cut=False,
+                sku="JLF201",
+            )
+        )
+
+    title_low, description_low, _ = render_with_elastane("2")
+    title_high, description_high, _ = render_with_elastane("3")
+
+    assert "stretch" not in title_low.lower()
+    assert "stretch" not in description_low.lower()
+    low_hashtags = [
+        token for token in description_low.splitlines()[-1].split() if token.startswith("#")
+    ]
+    assert "#stretch" not in {token.lower() for token in low_hashtags}
+
+    assert "stretch" in title_high.lower()
+    assert "stretch" in description_high.lower()
+    high_hashtags = [
+        token for token in description_high.splitlines()[-1].split() if token.startswith("#")
+    ]
+    assert "#stretch" in {token.lower() for token in high_hashtags}
+
+
 def test_render_jean_levis_avoids_duplicate_missing_fabric_label_sentence() -> None:
     template = ListingTemplateRegistry().get_template("template-jean-levis-femme")
     fields = ListingFields(
