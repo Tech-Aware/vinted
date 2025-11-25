@@ -165,16 +165,28 @@ class VintedListingApp(ctk.CTk):
 
         size_frame = ctk.CTkFrame(form_frame)
         size_frame.grid(row=3, column=0, sticky="ew", padx=12, pady=(8, 4))
-        size_frame.columnconfigure(1, weight=1)
+        for col_index in range(4):
+            size_frame.columnconfigure(col_index, weight=0)
 
         self.size_label = ctk.CTkLabel(size_frame, text="Taille FR (cm)", anchor="w")
         self.size_label.grid(row=0, column=0, padx=(0, 8), pady=(0, 0), sticky="w")
 
         self.size_entry = ctk.CTkEntry(
             size_frame,
+            width=120,
             placeholder_text="ex : 32, 44, 46",
         )
-        self.size_entry.grid(row=0, column=1, sticky="ew")
+        self.size_entry.grid(row=0, column=1, sticky="w")
+
+        self.us_size_label = ctk.CTkLabel(size_frame, text="Taille US (W)", anchor="w")
+        self.us_size_label.grid(row=0, column=2, padx=(12, 8), pady=(0, 0), sticky="w")
+
+        self.us_size_entry = ctk.CTkEntry(
+            size_frame,
+            width=120,
+            placeholder_text="ex : 28, 30, 32",
+        )
+        self.us_size_entry.grid(row=0, column=3, sticky="w")
 
         title_container = ctk.CTkFrame(form_frame)
         title_container.grid(row=4, column=0, sticky="nsew", padx=12, pady=(12, 4))
@@ -488,12 +500,14 @@ class VintedListingApp(ctk.CTk):
             logger.error("Analyse annulée: aucune image sélectionnée")
             return
 
+        fr_size_value = (self.size_entry.get() or "").strip()
+        if not fr_size_value:
+            self._show_error_popup("Merci de renseigner la taille FR (champ obligatoire)")
+            logger.error("Analyse annulée: taille FR manquante")
+            return
+
+        us_size_value = (self.us_size_entry.get() or "").strip()
         comment = self._normalize_comment(self.comment_box.get("1.0", "end"))
-        size_override = (self.size_entry.get() or "").strip()
-        if size_override:
-            comment = "\n".join(
-                part for part in (f"Taille {size_override}", comment) if part
-            )
         template_name = self.template_var.get()
         logger.step("Récupération du template: %s", template_name)
         try:
@@ -515,7 +529,13 @@ class VintedListingApp(ctk.CTk):
             try:
                 logger.step("Thread d'analyse démarré")
                 encoded_images = encode_images_to_base64(self.selected_images)
-                result = self.generator.generate_listing(encoded_images, comment, template)
+                result = self.generator.generate_listing(
+                    encoded_images,
+                    comment,
+                    template,
+                    fr_size_value,
+                    us_size_value or None,
+                )
                 logger.success("Analyse terminée avec succès")
                 self.after(0, lambda: self.display_result(result))
             except Exception as exc:  # pragma: no cover - UI feedback
@@ -556,6 +576,7 @@ class VintedListingApp(ctk.CTk):
         self.preview_frame.update_images([])
         self.title_box.delete("1.0", "end")
         self.size_entry.delete(0, "end")
+        self.us_size_entry.delete(0, "end")
         self.price_text.set("Estimation à venir")
         self.description_box.delete("1.0", "end")
         self._insert_comment_placeholder()
