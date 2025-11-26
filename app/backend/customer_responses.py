@@ -241,6 +241,19 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         ),
         allowed_articles=None,
     ),
+    "informer_envoi_aujourdhui": ScenarioConfig(
+        id="informer_envoi_aujourdhui",
+        label="D'un envoi aujourd'hui",
+        message_type_id="informer",
+        requires_client_message=False,
+        extra_fields=[],
+        rules=(
+            "Informer clairement que le colis part aujourd'hui (formule explicite).",
+            "Préciser le dépôt imminent ou en cours et que le suivi sera partagé dès scan.",
+            "Rester très concis (1 à 2 phrases) et rassurer sur la prise en charge rapide.",
+        ),
+        allowed_articles=None,
+    ),
     "informer_livraison": ScenarioConfig(
         id="informer_livraison",
         label="De la livraison du colis",
@@ -274,6 +287,7 @@ STYLE_RULES: Sequence[str] = (
     "Inclure au moins deux émojis ou smileys répartis dans la réponse.",
     "Rédiger entre 1 et 3 phrases maximum, sans puces ni listes.",
     "Ne rien promettre d'irréaliste ; tu peux mentionner un envoi rapide si pertinent.",
+    "Tutoiement interdit : vouvoie toujours le client et parles en ton nom (\"je\").",
 )
 
 
@@ -341,9 +355,10 @@ class CustomerReplyGenerator:
                         "type": "input_text",
                         "text": (
                             "Tu es un vendeur professionnel Vinted (Durin31). Tu réponds en français avec "
-                            "un ton courtois, professionnel, fun, avenant et convivial. Ta réponse doit "
-                            "contenir au moins deux émojis, rester concise (1 à 4 phrases), sans puces ni "
-                            "numéros, et orientée client. Tu ne promets rien que tu ne puisses tenir."
+                            "un ton courtois, professionnel, fun, avenant et convivial. Tu vouvoies "
+                            "toujours le client (jamais de tutoiement) et parles en ton nom (je). Ta réponse "
+                            "doit contenir au moins deux émojis, rester concise (1 à 4 phrases), sans puces "
+                            "ni numéros, et orientée client. Tu ne promets rien que tu ne puisses tenir."
                         ),
                     }
                 ],
@@ -438,6 +453,7 @@ class CustomerReplyGenerator:
             "remercier_acceptation_offre",
             "informer_preparation",
             "informer_envoi",
+            "informer_envoi_aujourdhui",
             "informer_livraison",
             "informer_retour",
         }
