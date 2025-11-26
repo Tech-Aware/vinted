@@ -272,7 +272,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
 STYLE_RULES: Sequence[str] = (
     "Réponds en français avec un ton courtois, professionnel, fun, avenant et convivial.",
     "Inclure au moins deux émojis ou smileys répartis dans la réponse.",
-    "Rédiger entre 1 et 4 phrases maximum, sans puces ni listes.",
+    "Rédiger entre 1 et 3 phrases maximum, sans puces ni listes.",
     "Ne rien promettre d'irréaliste ; tu peux mentionner un envoi rapide si pertinent.",
 )
 
