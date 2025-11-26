@@ -369,7 +369,9 @@ class CustomerReplyGenerator:
         return reply.strip()
 
     def _build_prompt(self, payload: CustomerReplyPayload, scenario: ScenarioConfig) -> str:
-        article_label = get_article_label(payload.article_type)
+        article_label = self._resolve_article_label(
+            article_type=payload.article_type, scenario=scenario
+        )
         context_lines = [
             f"Client: {payload.client_name}",
             f"Scénario: {scenario.label}",
@@ -423,6 +425,27 @@ class CustomerReplyGenerator:
 
         logger.info("Prompt de réponse client construit (%d caractères)", len(prompt))
         return prompt.strip()
+
+    def _resolve_article_label(
+        self, *, article_type: str, scenario: ScenarioConfig
+    ) -> str:
+        base_label = get_article_label(article_type)
+        if article_type != "autre":
+            return base_label
+
+        order_related_scenarios = {
+            "remercier_achat",
+            "remercier_acceptation_offre",
+            "informer_preparation",
+            "informer_envoi",
+            "informer_livraison",
+            "informer_retour",
+        }
+
+        if scenario.id in order_related_scenarios or scenario.message_type_id == "informer":
+            return "Votre commande"
+
+        return "Votre article"
 
     def _build_personalization_rules(
         self,
