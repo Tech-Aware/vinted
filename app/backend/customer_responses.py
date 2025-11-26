@@ -407,7 +407,7 @@ class CustomerReplyGenerator:
             context_lines.append(f"Message client: {payload.client_message.strip()}")
 
         price_details = []
-        if payload.offre_client is not None:
+        if payload.offre_client is not None and scenario.id != "negocier_plus_haut":
             price_details.append(f"Offre client: {payload.offre_client}€")
         if payload.contre_offre is not None:
             price_details.append(f"Votre proposition: {payload.contre_offre}€")
@@ -491,19 +491,9 @@ class CustomerReplyGenerator:
             "Ajouter un mini détail concret (état général, style ou saison) sans inventer de faits précis.",
         ]
 
-        if has_price_details and scenario.message_type_id != "negocier":
-            rules.append(
-                "Justifier en une phrase simple le prix proposé (état, modèle) sans juger l'offre du client."
-            )
-
         if payload.client_message.strip():
             rules.append(
                 "Réagir brièvement au message du client pour montrer que sa demande a été comprise."
-            )
-
-        if scenario.message_type_id == "negocier":
-            rules.append(
-                "Utiliser des tournures variées (pas toujours 'merci pour l'offre') pour dynamiser la négociation."
             )
 
         return rules
