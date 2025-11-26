@@ -29,7 +29,7 @@ def test_negocier_plus_haut_prompt_omits_client_offer() -> None:
     prompt = generator._build_prompt(payload, scenario)
 
     assert "Offre client" not in prompt
-    assert "Votre proposition" not in prompt
+    assert "Votre proposition: 15€" in prompt
     assert scenario.label in prompt
 
 

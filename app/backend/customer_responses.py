@@ -170,7 +170,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         label="Un prix plus haut",
         message_type_id="negocier",
         requires_client_message=False,
-        extra_fields=["offre_client", "contre_offre"],
+        extra_fields=["contre_offre"],
         rules=(
             "Remercier pour l'intérêt ou l'offre.",
             "Expliquer que la proposition est trop basse au regard de la qualité.",
@@ -407,10 +407,10 @@ class CustomerReplyGenerator:
             context_lines.append(f"Message client: {payload.client_message.strip()}")
 
         price_details = []
-        include_price_details = scenario.id != "negocier_plus_haut"
-        if include_price_details and payload.offre_client is not None:
+        include_client_offer = scenario.id != "negocier_plus_haut"
+        if include_client_offer and payload.offre_client is not None:
             price_details.append(f"Offre client: {payload.offre_client}€")
-        if include_price_details and payload.contre_offre is not None:
+        if payload.contre_offre is not None:
             price_details.append(f"Votre proposition: {payload.contre_offre}€")
         if payload.prix_ferme is not None:
             price_details.append(f"Prix ferme: {payload.prix_ferme}€")
