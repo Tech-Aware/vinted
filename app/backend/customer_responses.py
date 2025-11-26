@@ -175,6 +175,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Proposer un montant révisé (contre-offre) clair et valoriser l'article.",
             "Utiliser exactement la contre-offre fournie (montant inchangé).",
             "Mentionner l'envoi rapide et encourager à valider ou regarder le dressing.",
+            "Utiliser uniquement l'une des deux phrases courtes prévues pour cette situation (pas d'autres variations).",
         ),
         allowed_articles=None,
     ),
@@ -489,11 +490,6 @@ class CustomerReplyGenerator:
         if payload.client_message.strip():
             rules.append(
                 "Réagir brièvement au message du client pour montrer que sa demande a été comprise."
-            )
-
-        if scenario.message_type_id == "negocier":
-            rules.append(
-                "Utiliser des tournures variées (pas toujours 'merci pour l'offre') pour dynamiser la négociation."
             )
 
         return rules
