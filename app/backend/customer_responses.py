@@ -173,21 +173,21 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         extra_fields=[],
         rules=(
             "Remercier pour l'intérêt et la demande de réservation.",
-            "Expliquer que la réservation n'est pas possible sans engagement immédiat.",
+            "Expliquer que la plateforme ne permet pas de réserver en amont (ex: \"Malheureusement Vinted ne permet pas de réserver ces produits à l'avance.\").",
             "Proposer une alternative (achat direct, lot ou délai court) sans mentionner de prix.",
             "Ton courtois, ferme mais encourageant, en invitant à valider rapidement.",
         ),
         allowed_articles=None,
-            examples=(
-                dedent(
-                    """
-                    Bonjour,
-                    Malheureusement Vinted ne prend pas en charge les réservations sur cet article. Le mieux que je puisse faire est de vous proposer une réduction.
-                Si malgré tout ce jean vous intéresse et qu'il est toujours disponible jeudi, alors il est à vous.
-                    """
-                ).strip(),
-            ),
+        examples=(
+            dedent(
+                """
+                Bonjour,
+                Merci pour votre message ! Malheureusement Vinted ne permet pas de réserver ces produits à l'avance, mais vous pouvez le valider dès maintenant.
+                Si malgré tout ce jean vous intéresse et qu'il est toujours disponible jeudi, il sera toujours là pour vous.
+                """
+            ).strip(),
         ),
+    ),
     "negocier_prix_ferme": ScenarioConfig(
         id="negocier_prix_ferme",
         label="Prix ferme (pas de négociation)",
