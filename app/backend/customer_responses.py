@@ -186,21 +186,21 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         extra_fields=[],
         rules=(
             "Remercier pour l'intérêt et la demande de réservation.",
-            "Expliquer que la réservation n'est pas possible sans engagement immédiat.",
+            "Expliquer que la plateforme ne permet pas de réserver en amont (ex: \"Malheureusement Vinted ne permet pas de réserver ces produits à l'avance.\").",
             "Proposer une alternative (achat direct, lot ou délai court) sans mentionner de prix.",
             "Ton courtois, ferme mais encourageant, en invitant à valider rapidement.",
         ),
         allowed_articles=None,
-            examples=(
-                dedent(
-                    """
-                    Bonjour,
-                    Malheureusement Vinted ne prend pas en charge les réservations sur cet article. Le mieux que je puisse faire est de vous proposer une réduction.
-                Si malgré tout ce jean vous intéresse et qu'il est toujours disponible jeudi, alors il est à vous.
-                    """
-                ).strip(),
-            ),
+        examples=(
+            dedent(
+                """
+                Bonjour,
+                Merci pour votre message ! Malheureusement Vinted ne permet pas de réserver ces produits à l'avance, mais vous pouvez le valider dès maintenant.
+                Si malgré tout ce jean vous intéresse et qu'il est toujours disponible jeudi, il sera toujours là pour vous.
+                """
+            ).strip(),
         ),
+    ),
     "negocier_prix_ferme": ScenarioConfig(
         id="negocier_prix_ferme",
         label="Prix ferme (pas de négociation)",
@@ -376,6 +376,14 @@ class CustomerReplyGenerator:
             context_lines.append(" / ".join(price_details))
 
         rules = list(scenario.rules)
+        rules.extend(
+            self._build_personalization_rules(
+                payload=payload,
+                scenario=scenario,
+                article_label=article_label,
+                has_price_details=bool(price_details),
+            )
+        )
         rules.extend(STYLE_RULES)
 
         examples_block = ""
@@ -402,6 +410,40 @@ class CustomerReplyGenerator:
 
         logger.info("Prompt de réponse client construit (%d caractères)", len(prompt))
         return prompt.strip()
+
+    def _build_personalization_rules(
+        self,
+        *,
+        payload: CustomerReplyPayload,
+        scenario: ScenarioConfig,
+        article_label: str,
+        has_price_details: bool,
+    ) -> Sequence[str]:
+        """Add anti-redondancy cues so replies feel fresher and more contextual."""
+
+        rules = [
+            "Varier l'accroche et la conclusion pour éviter les formules toutes faites.",
+            f"Citer l'article ({article_label}) pour ancrer la réponse et éviter les messages génériques.",
+            "Ne pas répéter deux fois la même formule (remerciements ou invitation) dans le message.",
+            "Ajouter un mini détail concret (état général, style ou saison) sans inventer de faits précis.",
+        ]
+
+        if has_price_details:
+            rules.append(
+                "Expliquer en une phrase pourquoi le prix proposé est cohérent (qualité, état, demande)."
+            )
+
+        if payload.client_message.strip():
+            rules.append(
+                "Réagir brièvement au message du client pour montrer que sa demande a été comprise."
+            )
+
+        if scenario.message_type_id == "negocier":
+            rules.append(
+                "Utiliser des tournures variées (pas toujours 'merci pour l'offre') pour dynamiser la négociation."
+            )
+
+        return rules
 
     def _create_response(self, messages: Sequence[dict], *, max_tokens: int):
         """Call the OpenAI client using the available API surface."""
