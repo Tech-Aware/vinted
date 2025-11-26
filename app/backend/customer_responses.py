@@ -249,8 +249,8 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         extra_fields=[],
         rules=(
             "Informer clairement que le colis part aujourd'hui (formule explicite).",
-            "Préciser le dépôt imminent ou en cours et que le suivi sera partagé dès scan.",
-            "Rester très concis (1 à 2 phrases) et rassurer sur la prise en charge rapide.",
+            "Préciser le dépôt imminent ou en cours et que Vinted mettra à jour le suivi dès le premier scan.",
+            "Rester très concis (1 à 2 phrases), sans formules pompeuses, et rassurer sur la prise en charge rapide.",
         ),
         allowed_articles=None,
     ),
@@ -286,6 +286,7 @@ STYLE_RULES: Sequence[str] = (
     "Réponds en français avec un ton courtois, professionnel, fun, avenant et convivial.",
     "Inclure au moins deux émojis ou smileys répartis dans la réponse.",
     "Rédiger entre 1 et 3 phrases maximum, sans puces ni listes.",
+    "Toujours éviter les formulations pompeuses : reste simple, direct et concis.",
     "Ne rien promettre d'irréaliste ; tu peux mentionner un envoi rapide si pertinent.",
     "Tutoiement interdit : vouvoie toujours le client et parles en ton nom (\"je\").",
 )
