@@ -292,6 +292,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
 STYLE_RULES: Sequence[str] = (
     "Réponds en français avec un ton simple, cordial et convivial.",
     "Utiliser un vocabulaire courant, sans superlatifs ni tournures pompeuses.",
+    "Pas de chichi : éviter les formules creuses ou vendeuses (ex. \"parfait pour la saison\").",
     "Inclure au maximum un seul émoji ou smiley.",
     "Rédiger une seule phrase courte, sans puces ni listes.",
     "Ne rien promettre d'irréaliste ; tu peux mentionner un envoi rapide si pertinent.",
