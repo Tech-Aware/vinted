@@ -481,7 +481,7 @@ class CustomerReplyGenerator:
             "Ajouter un mini détail concret (état général, style ou saison) sans inventer de faits précis.",
         ]
 
-        if has_price_details:
+        if has_price_details and scenario.message_type_id == "negocier":
             rules.append(
                 "Expliquer en une phrase pourquoi le prix proposé est cohérent (qualité, état, demande)."
             )
@@ -494,6 +494,11 @@ class CustomerReplyGenerator:
         if scenario.message_type_id == "negocier":
             rules.append(
                 "Utiliser des tournures variées (pas toujours 'merci pour l'offre') pour dynamiser la négociation."
+            )
+
+        if scenario.message_type_id in {"informer", "inciter"}:
+            rules.append(
+                "Formuler le message en une seule phrase percutante sans ajouter de justification tarifaire."
             )
 
         return rules
