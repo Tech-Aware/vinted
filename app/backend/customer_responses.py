@@ -86,7 +86,7 @@ MESSAGE_TYPE_EXTRA_FIELDS: Dict[str, Sequence[str]] = {}
 SCENARIOS: Dict[str, ScenarioConfig] = {
     "remercier_achat": ScenarioConfig(
         id="remercier_achat",
-        label="Remercier pour un achat",
+        label="Pour un achat",
         message_type_id="remercier",
         requires_client_message=False,
         extra_fields=[],
@@ -113,7 +113,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     ),
     "remercier_avis": ScenarioConfig(
         id="remercier_avis",
-        label="Remercier pour un avis",
+        label="Pour une évaluation",
         message_type_id="remercier",
         requires_client_message=False,
         extra_fields=[],
@@ -126,7 +126,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     ),
     "remercier_favori": ScenarioConfig(
         id="remercier_favori",
-        label="Remercier pour l'ajout en favori",
+        label="Pour l'ajout d'un favoris",
         message_type_id="remercier",
         requires_client_message=False,
         extra_fields=[],
@@ -139,7 +139,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     ),
     "inciter_achat": ScenarioConfig(
         id="inciter_achat",
-        label="Inciter à l'achat",
+        label="À l'achat",
         message_type_id="inciter",
         requires_client_message=False,
         extra_fields=[],
@@ -152,7 +152,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     ),
     "inciter_lot": ScenarioConfig(
         id="inciter_lot",
-        label="Inciter à faire un lot",
+        label="À constituer un lot",
         message_type_id="inciter",
         requires_client_message=False,
         extra_fields=[],
@@ -165,7 +165,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     ),
     "negocier_plus_haut": ScenarioConfig(
         id="negocier_plus_haut",
-        label="Négocier un prix plus haut",
+        label="Un prix plus haut",
         message_type_id="negocier",
         requires_client_message=False,
         extra_fields=["offre_client", "contre_offre"],
@@ -180,7 +180,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     ),
     "negocier_reservation": ScenarioConfig(
         id="negocier_reservation",
-        label="Négocier une demande de réservation",
+        label="Une demande de réservation",
         message_type_id="negocier",
         requires_client_message=False,
         extra_fields=[],
@@ -203,7 +203,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     ),
     "negocier_prix_ferme": ScenarioConfig(
         id="negocier_prix_ferme",
-        label="Prix ferme (pas de négociation)",
+        label="Un prix ferme",
         message_type_id="negocier",
         requires_client_message=False,
         extra_fields=["offre_client", "prix_ferme"],
@@ -217,7 +217,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     ),
     "informer_preparation": ScenarioConfig(
         id="informer_preparation",
-        label="Préparation du colis (paiement validé)",
+        label="De la préparation du colis",
         message_type_id="informer",
         requires_client_message=False,
         extra_fields=[],
@@ -230,7 +230,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     ),
     "informer_envoi": ScenarioConfig(
         id="informer_envoi",
-        label="Envoi du colis",
+        label="De l'envois du colis",
         message_type_id="informer",
         requires_client_message=False,
         extra_fields=[],
@@ -243,7 +243,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
     ),
     "informer_livraison": ScenarioConfig(
         id="informer_livraison",
-        label="Livraison du colis",
+        label="De la livraison du colis",
         message_type_id="informer",
         requires_client_message=False,
         extra_fields=[],
@@ -251,6 +251,19 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Informer que le colis est indiqué livré ou disponible en point relais.",
             "Inviter à confirmer la bonne réception ou à signaler un souci.",
             "Proposer de laisser un avis si tout est conforme.",
+        ),
+        allowed_articles=None,
+    ),
+    "informer_retour": ScenarioConfig(
+        id="informer_retour",
+        label="De l'acceptation d'un retour",
+        message_type_id="informer",
+        requires_client_message=False,
+        extra_fields=[],
+        rules=(
+            "Confirmer que le retour a été accepté et que les instructions de renvoi sont valides.",
+            "Préciser le délai ou l'étape suivante pour le remboursement ou l'échange.",
+            "Rester rassurant, bref (2 phrases max) et inviter à revenir vers vous en cas de question.",
         ),
         allowed_articles=None,
     ),
