@@ -67,7 +67,7 @@ class ListingGenerator:
         model: Optional[str] = None,
         api_key: Optional[str] = None,
         temperature: float = 0.4,
-        response_temperature: float = 0.6,
+        response_temperature: float = 0.3,
     ) -> None:
         self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
