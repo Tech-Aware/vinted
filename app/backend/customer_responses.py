@@ -94,7 +94,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Remercier clairement pour l'achat.",
             "Mentionner la préparation rapide et l'envoi du suivi.",
             "Glisser une invitation légère à visiter le dressing.",
-            "Ton chaleureux mais concis (2–3 phrases).",
+            "Ton chaleureux et concis en une seule phrase.",
         ),
         allowed_articles=None,
     ),
@@ -107,7 +107,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Confirmer l'acceptation de l'offre et remercier chaleureusement.",
             "Indiquer explicitement : je prépare la commande dès que le paiement est validé par Vinted.",
-            "Rester bref (2 à 3 phrases), positif et inviter à suivre l'envoi.",
+            "Rester bref (1 phrase), positif et inviter à suivre l'envoi.",
         ),
         allowed_articles=None,
     ),
@@ -120,7 +120,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Remercier pour l'avis laissé.",
             "Souligner que le feedback aide à améliorer le service.",
-            "Rester bref et positif (1–2 phrases).",
+            "Rester bref et positif en une phrase.",
         ),
         allowed_articles=None,
     ),
@@ -147,6 +147,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Mettre en avant la disponibilité actuelle et l'envoi rapide.",
             "Créer un léger sentiment d'urgence sans être agressif.",
             "Conclure par une invitation à passer commande et à regarder le dressing.",
+            "Formuler l'ensemble en une seule phrase simple et positive.",
         ),
         allowed_articles=None,
     ),
@@ -160,6 +161,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Proposer de regrouper plusieurs articles pour un envoi unique.",
             "Suggérer un avantage tarifaire ou frais de port optimisé.",
             "Ton convivial et orienté solution, en invitant à explorer le dressing.",
+            "Tout dire en une seule phrase directe et positive.",
         ),
         allowed_articles=None,
     ),
@@ -178,6 +180,10 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
             "Utiliser uniquement l'une des deux phrases courtes prévues pour cette situation (pas d'autres variations).",
         ),
         allowed_articles=None,
+        examples=(
+            "Merci pour votre offre, j’envoie dès demain 🚀",
+            "Merci pour votre offre, l'article est en très bon état pour {contre_offre}€ c’est bon pour moi et j’envoie dès demain matin ;)",
+        ),
     ),
     "negocier_reservation": ScenarioConfig(
         id="negocier_reservation",
@@ -187,17 +193,16 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         extra_fields=[],
         rules=(
             "Remercier pour l'intérêt et la demande de réservation.",
-            "Expliquer que la plateforme ne permet pas de réserver en amont (ex: \"Malheureusement Vinted ne permet pas de réserver ces produits à l'avance.\").",
+            "Expliquer simplement que la plateforme fonctionne sans réservation à l'avance (ex: \"Les articles restent disponibles en continu, vous pouvez valider quand vous êtes prête.\").",
             "Proposer une alternative (achat direct, lot ou délai court) sans mentionner de prix.",
             "Ton courtois, ferme mais encourageant, en invitant à valider rapidement.",
+            "Répondre en une seule phrase positive sans négation.",
         ),
         allowed_articles=None,
         examples=(
             dedent(
                 """
-                Bonjour,
-                Merci pour votre message ! Malheureusement Vinted ne permet pas de réserver ces produits à l'avance, mais vous pouvez le valider dès maintenant.
-                Si malgré tout ce jean vous intéresse et qu'il est toujours disponible jeudi, il sera toujours là pour vous.
+                Bonjour, merci pour votre message, la plateforme fonctionne sans réservation à l'avance et vous pouvez valider dès maintenant si le jean vous plaît.
                 """
             ).strip(),
         ),
@@ -210,9 +215,10 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         extra_fields=["offre_client", "prix_ferme"],
         rules=(
             "Remercier pour l'intérêt.",
-            "Indiquer que le prix est ferme en justifiant brièvement (état, modèle).",
-            "Reprendre exactement le prix ferme saisi (sans le modifier).",
-            "Rester courtois et concis, en rappelant l'envoi rapide et le dressing.",
+            "Dire simplement que vous restez sur le prix indiqué sans employer l'expression 'prix ferme'.",
+            "Reprendre exactement le prix saisi (sans le modifier).",
+            "Rester courtois, concis et orienté sur l'envoi rapide si la vente est validée.",
+            "Tout tenir en une phrase positive et directe.",
         ),
         allowed_articles=None,
     ),
@@ -225,7 +231,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Confirmer la validation du paiement et la préparation en cours.",
             "Partager le délai ou la promesse d'envoi.",
-            "Ton rassurant, 2 phrases max, avec un clin d'œil convivial.",
+            "Ton rassurant en une phrase avec un clin d'œil convivial.",
         ),
         allowed_articles=None,
     ),
@@ -251,7 +257,7 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Informer clairement que le colis part aujourd'hui (formule explicite).",
             "Préciser le dépôt imminent ou en cours et que Vinted mettra à jour le suivi dès le premier scan.",
-            "Rester très concis (1 à 2 phrases), sans formules pompeuses, et rassurer sur la prise en charge rapide.",
+            "Rester très concis (1 phrase), sans formules pompeuses, et rassurer sur la prise en charge rapide.",
         ),
         allowed_articles=None,
     ),
@@ -277,17 +283,17 @@ SCENARIOS: Dict[str, ScenarioConfig] = {
         rules=(
             "Confirmer que le retour a été accepté et que les instructions de renvoi sont valides.",
             "Préciser le délai ou l'étape suivante pour le remboursement ou l'échange.",
-            "Rester rassurant, bref (2 phrases max) et inviter à revenir vers vous en cas de question.",
+            "Rester rassurant en une phrase et inviter à revenir vers vous en cas de question.",
         ),
         allowed_articles=None,
     ),
 }
 
 STYLE_RULES: Sequence[str] = (
-    "Réponds en français avec un ton courtois, professionnel, fun, avenant et convivial.",
-    "Inclure au moins deux émojis ou smileys répartis dans la réponse.",
-    "Rédiger entre 1 et 3 phrases maximum, sans puces ni listes.",
-    "Toujours éviter les formulations pompeuses : reste simple, direct et concis.",
+    "Réponds en français avec un ton simple, cordial et convivial.",
+    "Utiliser un vocabulaire courant, sans superlatifs ni tournures pompeuses.",
+    "Inclure au maximum un seul émoji ou smiley.",
+    "Rédiger une seule phrase courte, sans puces ni listes.",
     "Ne rien promettre d'irréaliste ; tu peux mentionner un envoi rapide si pertinent.",
     "Tutoiement interdit : vouvoie toujours le client et parles en ton nom (\"je\").",
 )
@@ -308,7 +314,7 @@ class CustomerReplyGenerator:
         *,
         model: Optional[str] = None,
         api_key: Optional[str] = None,
-        temperature: float = 0.5,
+        temperature: float = 0.3,
     ) -> None:
         self.model = model or os.getenv("OPENAI_TEXT_MODEL", "gpt-4o-mini")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -356,11 +362,13 @@ class CustomerReplyGenerator:
                     {
                         "type": "input_text",
                         "text": (
-                            "Tu es un vendeur professionnel Vinted (Durin31). Tu réponds en français avec "
-                            "un ton courtois, professionnel, fun, avenant et convivial. Tu vouvoies "
-                            "toujours le client (jamais de tutoiement) et parles en ton nom (je). Ta réponse "
-                            "doit contenir au moins deux émojis, rester concise (1 à 4 phrases), sans puces "
-                            "ni numéros, et orientée client. Tu ne promets rien que tu ne puisses tenir."
+                            "Tu es un vendeur Vinted (Durin31). Tu réponds en français avec un ton simple, "
+                            "cordial et convivial. Tu vouvoies toujours le client (jamais de tutoiement) et "
+                            "parles en ton nom (je). Utilise une seule phrase courte avec un vocabulaire "
+                            "courant, sans tournures pompeuses ni superlatifs de qualité. Ta réponse doit contenir "
+                            "au maximum un émoji, éviter les puces ou numéros, et rester orientée client. Formule "
+                            "sans négations (pas de 'pas', 'jamais', 'malheureusement') et ne promets rien que tu "
+                            "ne puisses tenir."
                         ),
                     }
                 ],
@@ -398,7 +406,7 @@ class CustomerReplyGenerator:
             context_lines.append(f"Message client: {payload.client_message.strip()}")
 
         price_details = []
-        if payload.offre_client is not None:
+        if payload.offre_client is not None and scenario.id != "negocier_plus_haut":
             price_details.append(f"Offre client: {payload.offre_client}€")
         if payload.contre_offre is not None:
             price_details.append(f"Votre proposition: {payload.contre_offre}€")
@@ -481,11 +489,6 @@ class CustomerReplyGenerator:
             "Ne pas répéter deux fois la même formule (remerciements ou invitation) dans le message.",
             "Ajouter un mini détail concret (état général, style ou saison) sans inventer de faits précis.",
         ]
-
-        if has_price_details:
-            rules.append(
-                "Expliquer en une phrase pourquoi le prix proposé est cohérent (qualité, état, demande)."
-            )
 
         if payload.client_message.strip():
             rules.append(
