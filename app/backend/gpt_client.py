@@ -169,6 +169,7 @@ class ListingGenerator:
         template: ListingTemplate,
         fr_size_override: str,
         us_size_override: Optional[str] = None,
+        manual_sku: Optional[str] = None,
     ) -> ListingResult:
         logger.step("Début de la génération d'annonce")
         encoded_images_list = list(encoded_images)
@@ -228,6 +229,7 @@ class ListingGenerator:
             fields,
             fr_size_override=fr_size_override,
             us_size_override=us_size_override,
+            manual_sku=manual_sku,
         )
 
         if template.name == "template-pull-tommy-femme" and not (fields.sku and fields.sku.strip()):
@@ -283,12 +285,17 @@ class ListingGenerator:
         *,
         fr_size_override: Optional[str] = None,
         us_size_override: Optional[str] = None,
+        manual_sku: Optional[str] = None,
     ) -> ListingFields:
         """Force model fields with explicit user instructions."""
 
         size_overridden = False
         us_size_mentioned = False
         explicit_overrides: dict = {}
+
+        if manual_sku and manual_sku.strip():
+            explicit_overrides["sku"] = manual_sku.strip()
+            logger.step("SKU renseigné manuellement, application de la valeur fournie")
 
         if fr_size_override:
             explicit_overrides["fr_size"] = fr_size_override.strip()

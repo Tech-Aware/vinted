@@ -71,6 +71,7 @@ class VintedListingApp(ctk.CTk):
         self.template_registry = ListingTemplateRegistry()
         self.selected_images: List[Path] = []
         self._image_directories: Set[Path] = set()
+        self._last_generation_params: Optional[Dict[str, object]] = None
 
         self.reply_article_var = ctk.StringVar(value="")
         self.reply_message_type_var = ctk.StringVar(value="")
@@ -550,28 +551,15 @@ class VintedListingApp(ctk.CTk):
             len(self.selected_images),
             len(defects),
         )
+        self._last_generation_params = {
+            "selected_images": list(self.selected_images),
+            "defects": defects,
+            "template": template,
+            "fr_size": fr_size_value,
+            "us_size": us_size_value or None,
+        }
 
-        self._start_loading_state()
-
-        def worker() -> None:
-            try:
-                logger.step("Thread d'analyse démarré")
-                encoded_images = encode_images_to_base64(self.selected_images)
-                result = self.generator.generate_listing(
-                    encoded_images,
-                    defects,
-                    template,
-                    fr_size_value,
-                    us_size_value or None,
-                )
-                logger.success("Analyse terminée avec succès")
-                self.after(0, lambda: self.display_result(result))
-            except Exception as exc:  # pragma: no cover - UI feedback
-                logger.exception("Erreur lors de la génération de l'annonce")
-                self.after(0, lambda err=exc: self._handle_error(err))
-
-        threading.Thread(target=worker, daemon=True).start()
-        logger.step("Thread d'analyse lancé")
+        self._start_generation(manual_sku=None)
 
     def display_result(self, result: ListingResult) -> None:
         self._stop_loading_state()
@@ -581,7 +569,7 @@ class VintedListingApp(ctk.CTk):
 
         if sku_missing or placeholder_in_title:
             logger.warning("SKU manquant détecté dans le résultat, notification utilisateur")
-            self._show_error_popup("Sku non visible, merci de le fournir puis recommencer")
+            self._prompt_missing_sku()
             return
 
         self.title_box.delete("1.0", "end")
@@ -601,6 +589,7 @@ class VintedListingApp(ctk.CTk):
         self._cleanup_image_directories()
         self.selected_images.clear()
         self._image_directories.clear()
+        self._last_generation_params = None
         self.preview_frame.update_images([])
         self.title_box.delete("1.0", "end")
         self.size_entry.delete(0, "end")
@@ -661,6 +650,37 @@ class VintedListingApp(ctk.CTk):
                 except OSError as exc:
                     logger.error("Suppression impossible pour %s", file, exc_info=exc)
 
+    def _start_generation(self, manual_sku: Optional[str]) -> None:
+        if not self._last_generation_params:
+            self._show_error_popup("Aucune analyse en attente : relancez l'opération")
+            return
+
+        params = self._last_generation_params
+        self._start_loading_state()
+
+        def worker() -> None:
+            try:
+                logger.step("Thread d'analyse démarré")
+                encoded_images = encode_images_to_base64(
+                    params["selected_images"]
+                )  # type: ignore[arg-type]
+                result = self.generator.generate_listing(
+                    encoded_images,
+                    params["defects"],
+                    params["template"],
+                    params["fr_size"],
+                    params["us_size"],
+                    manual_sku=manual_sku,
+                )
+                logger.success("Analyse terminée avec succès")
+                self.after(0, lambda: self.display_result(result))
+            except Exception as exc:  # pragma: no cover - UI feedback
+                logger.exception("Erreur lors de la génération de l'annonce")
+                self.after(0, lambda err=exc: self._handle_error(err))
+
+        threading.Thread(target=worker, daemon=True).start()
+        logger.step("Thread d'analyse lancé")
+
     def _start_loading_state(self) -> None:
         if self._loading_after_id is not None:
             self.after_cancel(self._loading_after_id)
@@ -702,6 +722,54 @@ class VintedListingApp(ctk.CTk):
 
     def _show_error_popup(self, message: str) -> None:
         messagebox.showerror("Erreur", message)
+
+    def _prompt_missing_sku(self) -> None:
+        if not self._last_generation_params:
+            self._show_error_popup("Aucun contexte d'analyse pour relancer avec un SKU.")
+            return
+
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("SKU manquant")
+        dialog.grab_set()
+        dialog.geometry("380x180")
+
+        label = ctk.CTkLabel(
+            dialog,
+            text=(
+                "SKU non détecté. Indiquez la référence manuellement "
+                "pour relancer l'analyse."
+            ),
+            justify="left",
+            wraplength=340,
+        )
+        label.pack(padx=16, pady=(16, 8), anchor="w")
+
+        entry = ctk.CTkEntry(dialog, width=320, placeholder_text="ex : PTF123")
+        entry.pack(padx=16, pady=(0, 12))
+        entry.focus_set()
+
+        button_frame = ctk.CTkFrame(dialog)
+        button_frame.pack(fill="x", padx=16, pady=(4, 12))
+
+        def submit(_: object | None = None) -> None:
+            sku_value = entry.get().strip()
+            if not sku_value:
+                self._show_error_popup("Merci de renseigner un SKU avant de relancer.")
+                return
+
+            dialog.destroy()
+            self._start_generation(manual_sku=sku_value)
+
+        def cancel() -> None:
+            dialog.destroy()
+
+        ok_button = ctk.CTkButton(button_frame, text="OK", command=submit)
+        ok_button.pack(side="right", padx=(8, 0))
+        cancel_button = ctk.CTkButton(button_frame, text="Annuler", command=cancel)
+        cancel_button.pack(side="right")
+
+        dialog.bind("<Return>", submit)
+        dialog.protocol("WM_DELETE_WINDOW", cancel)
 
     def _enable_select_all(self, textbox: ctk.CTkTextbox) -> None:
         def handler(event: object) -> str:
