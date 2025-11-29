@@ -80,7 +80,7 @@ def test_render_jean_levis_femme_uses_sku_placeholder_when_missing() -> None:
         sku="",
     )
 
-    _title, description = template.render(fields)
+    _title, description, _ = template.render(fields)
 
     assert "sku" not in description.lower()
 
@@ -134,7 +134,7 @@ def test_render_jean_levis_handles_fabric_label_cut() -> None:
         sku="JLF20",
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     assert description.count(COMPOSITION_LABEL_CUT_MESSAGE) == 1
 
@@ -205,7 +205,7 @@ def test_render_jean_levis_marks_estimated_size_without_forbidden_note() -> None
         waist_flat_measurement_cm=41.2,
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert "(voir photos)" in description
     assert "Taille estimée à partir" not in title
@@ -398,7 +398,7 @@ def test_render_jean_levis_fabric_label_missing_no_duplicate_messages() -> None:
         sku="JLF23",
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     assert description.count(COMPOSITION_LABEL_CUT_MESSAGE) == 1
     assert SIZE_LABEL_CUT_MESSAGE not in description
@@ -479,7 +479,7 @@ def test_render_jean_levis_avoids_duplicate_missing_fabric_label_sentence() -> N
         sku="JLF21",
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
     assert COMPOSITION_LABEL_CUT_MESSAGE not in description
@@ -513,7 +513,7 @@ def test_render_pull_tommy_femme_includes_made_in_europe_and_hashtags() -> None:
         made_in="Made in Portugal",
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert "Pull Tommy Hilfiger femme" in title
     assert "100% coton" in title
@@ -567,7 +567,7 @@ def test_render_pull_tommy_femme_estimates_size_from_bust_measurement() -> None:
         hem_flat_measurement_cm=47.0,
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert "taille L" in title
     assert "estimée" not in title
@@ -619,7 +619,7 @@ def test_render_pull_tommy_femme_estimates_size_from_full_circumference() -> Non
         hem_flat_measurement_cm=None,
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert "taille L" in title
 
@@ -659,7 +659,7 @@ def test_render_pull_tommy_femme_splits_neckline_from_pattern() -> None:
         knit_pattern="Marinière col V",
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert title.startswith("Pull Tommy Hilfiger femme taille M")
     assert title.split(" - ")[0].endswith("col V")
@@ -709,7 +709,7 @@ def test_render_pull_tommy_femme_omits_irrelevant_bust_measurement() -> None:
         hem_flat_measurement_cm=46.0,
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     first_line = description.split("\n\n")[0].split("\n")[0]
     assert "poitrine" not in first_line.lower()
@@ -744,7 +744,7 @@ def test_render_pull_tommy_femme_handles_fabric_label_cut() -> None:
         sku="PTF99",
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
     assert "Référence SKU" not in description
@@ -777,7 +777,7 @@ def test_render_pull_tommy_femme_skips_cut_sentence_when_other_labels_visible() 
         sku="PTF97",
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     assert description.count(COMBINED_LABEL_CUT_MESSAGE) == 1
     assert "Composition non lisible sur l'étiquette (voir photos pour confirmation)." not in description
@@ -810,7 +810,7 @@ def test_render_pull_tommy_femme_handles_hidden_fabric_label() -> None:
         sku="PTF98",
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     assert description.count(COMPOSITION_LABEL_CUT_MESSAGE) == 1
     assert COMBINED_LABEL_CUT_MESSAGE not in description
@@ -843,7 +843,7 @@ def test_render_jean_levis_includes_polyamide_when_present() -> None:
         sku="JLF9",
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     assert "12% polyamide" in description
 
@@ -876,7 +876,7 @@ def test_render_pull_tommy_femme_switches_to_cardigan() -> None:
         is_cardigan=True,
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert title.startswith("Gilet Tommy Hilfiger femme")
     assert description.splitlines()[0].startswith("Gilet Tommy Hilfiger")
@@ -913,7 +913,7 @@ def test_render_pull_tommy_femme_handles_dress() -> None:
         is_dress=True,
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert title.startswith("Robe Tommy Hilfiger femme")
     first_paragraph_lines = description.split("\n\n")[0].split("\n")
@@ -955,7 +955,7 @@ def test_render_pull_tommy_femme_updates_hashtag_with_size() -> None:
         sku="PTF42",
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     paragraphs = description.split("\n\n")
     assert any("#durin31tfXL" in line for line in paragraphs[3].splitlines())
@@ -991,7 +991,7 @@ def test_render_pull_tommy_femme_normalizes_extended_sizes() -> None:
         sku="PTF07",
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert "taille XL" in title
     assert "1X" not in title
@@ -1122,7 +1122,7 @@ def test_render_pull_tommy_femme_uses_sku_placeholder_when_missing() -> None:
         sku="",
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert title.endswith("SKU/nc")
     assert "Référence SKU" not in description
@@ -1155,7 +1155,7 @@ def test_render_pull_tommy_femme_mentions_polyamide_in_composition() -> None:
         sku="PTF10",
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     assert "20% polyamide" in description
 
@@ -1186,7 +1186,7 @@ def test_render_pull_tommy_femme_handles_unreadable_composition() -> None:
         sku="PTF88",
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     assert "Composition non lisible sur l'étiquette" in description
 
@@ -1220,7 +1220,7 @@ def test_render_pull_tommy_femme_title_avoids_pattern_duplicates() -> None:
         made_in="Made in Portugal",
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert (
         title
@@ -1401,7 +1401,7 @@ def test_render_pull_tommy_femme_pattern_specific_rules(
     base_fields.update(extra_fields)
     fields = ListingFields(**base_fields)
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
     paragraphs = description.split("\n\n")
     marketing_line = paragraphs[1].splitlines()[0]
     style_line = paragraphs[0].splitlines()[1]
@@ -1476,7 +1476,7 @@ def test_listing_fields_accepts_polaire_sku_prefixes() -> None:
 def test_listing_fields_normalizes_polaire_sku_variants() -> None:
     payload = _build_base_polaire_payload(sku="ptnf 12", brand="The North Face")
     fields = ListingFields.from_dict(payload, template_name="template-polaire-outdoor")
-    assert fields.sku == "PTNF12"
+    assert fields.sku == "PTNF-12"
 
     digits_only_payload = _build_base_polaire_payload(sku="17", brand="The North Face")
     digits_only_fields = ListingFields.from_dict(
@@ -1494,7 +1494,7 @@ def test_listing_fields_normalizes_polaire_sku_variants() -> None:
     long_fields = ListingFields.from_dict(
         long_payload, template_name="template-polaire-outdoor"
     )
-    assert long_fields.sku == "PTNF123"
+    assert long_fields.sku == "PTNF-123"
 
 
 def test_listing_fields_rejects_mismatched_polaire_brand_and_sku() -> None:
@@ -1542,7 +1542,7 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
         hem_flat_measurement_cm=47.0,
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert "Polaire fleece The North Face" in title
     assert "PTNF-42" in title
@@ -1559,7 +1559,7 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
     assert "#durin31fM" in hashtags_line
 
 
-def test_generate_listing_recovers_missing_polaire_sku(
+def test_generate_listing_does_not_recover_missing_polaire_sku(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     template = ListingTemplateRegistry().get_template("template-polaire-outdoor")
@@ -1584,23 +1584,17 @@ def test_generate_listing_recovers_missing_polaire_sku(
     generator = ListingGenerator()
     generator._client = _FakeClient(json.dumps(payload))  # type: ignore[attr-defined]
 
-    calls: dict[str, int] = {"count": 0}
-
     def _fake_recover(
         self: ListingGenerator, encoded_images: list[str], user_comment: str
     ) -> str:
-        calls["count"] += 1
-        assert encoded_images == []
-        assert user_comment == ""
-        return "```text\nPTNF-77```"
+        raise AssertionError("Le SKU polaire ne doit plus être récupéré automatiquement")
 
     monkeypatch.setattr(ListingGenerator, "_recover_polaire_sku", _fake_recover, raising=True)
 
     result = generator.generate_listing([], "", template, "")
 
-    assert calls["count"] == 1
-    assert "PTNF-77" in result.title
-    assert result.sku_missing is False
+    assert result.sku_missing is True
+    assert "PTNF" not in result.title
 
 
 def test_generate_listing_ignores_polaire_sku_when_labels_hidden(
@@ -1640,14 +1634,14 @@ def test_generate_listing_ignores_polaire_sku_when_labels_hidden(
 
 
 @pytest.mark.parametrize(
-    "raw_sku, brand, recovered",
+    "raw_sku, brand",
     [
-        ("1", "The North Face", "PTNF-88"),
-        ("01", "Columbia", "PC-01"),
+        ("1", "The North Face"),
+        ("01", "Columbia"),
     ],
 )
-def test_generate_listing_recovers_numeric_polaire_sku(
-    monkeypatch: pytest.MonkeyPatch, raw_sku: str, brand: str, recovered: str
+def test_generate_listing_ignores_numeric_polaire_sku(
+    monkeypatch: pytest.MonkeyPatch, raw_sku: str, brand: str
 ) -> None:
     template = ListingTemplateRegistry().get_template("template-polaire-outdoor")
     base_payload = _build_base_polaire_payload(sku=raw_sku, brand=brand)
@@ -1671,23 +1665,18 @@ def test_generate_listing_recovers_numeric_polaire_sku(
     generator = ListingGenerator()
     generator._client = _FakeClient(json.dumps(payload))  # type: ignore[attr-defined]
 
-    calls: dict[str, int] = {"count": 0}
-
     def _fake_recover(
         self: ListingGenerator, encoded_images: list[str], user_comment: str
     ) -> str:
-        calls["count"] += 1
-        assert encoded_images == []
-        assert user_comment == ""
-        return f"```text\n{recovered}```"
+        raise AssertionError("Le SKU polaire ne doit plus être récupéré automatiquement")
 
     monkeypatch.setattr(ListingGenerator, "_recover_polaire_sku", _fake_recover, raising=True)
 
     result = generator.generate_listing([], "", template, "")
 
-    assert calls["count"] == 1
-    assert recovered in result.title
-    assert result.sku_missing is False
+    assert result.sku_missing is True
+    assert "PTNF" not in result.title
+    assert "PC-" not in result.title
 
 
 def test_render_polaire_outdoor_skips_polyester_default_when_defects_mentions_fiber() -> None:
@@ -1729,7 +1718,7 @@ def test_render_polaire_outdoor_skips_polyester_default_when_defects_mentions_fi
         hem_flat_measurement_cm=47.0,
     )
 
-    _, description = template.render(fields)
+    _, description, _ = template.render(fields)
 
     assert "Composition : 100% polyester" not in description
     assert COMBINED_LABEL_MISSING_MESSAGE in description
@@ -1774,7 +1763,7 @@ def test_render_polaire_outdoor_handles_columbia_material_and_hashtags() -> None
         hem_flat_measurement_cm=51.0,
     )
 
-    title, description = template.render(fields)
+    title, description, _ = template.render(fields)
 
     assert "Polaire fleece Columbia" in title
     assert "en coton" in title
