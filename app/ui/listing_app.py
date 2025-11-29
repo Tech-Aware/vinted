@@ -529,14 +529,6 @@ class VintedListingApp(ctk.CTk):
             logger.error("Analyse annulée: aucune image sélectionnée")
             return
 
-        fr_size_value = (self.size_entry.get() or "").strip()
-        if not fr_size_value:
-            self._show_error_popup("Merci de renseigner la taille FR (champ obligatoire)")
-            logger.error("Analyse annulée: taille FR manquante")
-            return
-
-        us_size_value = (self.us_size_entry.get() or "").strip()
-        defects = self._normalize_defects(self.defects_entry.get())
         template_name = self.template_var.get()
         logger.step("Récupération du template: %s", template_name)
         try:
@@ -546,6 +538,21 @@ class VintedListingApp(ctk.CTk):
             logger.error("Template introuvable: %s", template_name, exc_info=exc)
             return
         logger.success("Template '%s' récupéré", template_name)
+
+        fr_size_value = (self.size_entry.get() or "").strip()
+        us_size_value = (self.us_size_entry.get() or "").strip()
+        defects = self._normalize_defects(self.defects_entry.get())
+
+        optional_fr_size_templates = {
+            "template-polaire-outdoor",
+            "template-pull-tommy-femme",
+        }
+        fr_size_required = template_name not in optional_fr_size_templates
+
+        if fr_size_required and not fr_size_value:
+            self._show_error_popup("Merci de renseigner la taille FR (champ obligatoire)")
+            logger.error("Analyse annulée: taille FR manquante")
+            return
         logger.info(
             "Lancement de l'analyse (%d image(s), %d caractère(s) de défauts saisis)",
             len(self.selected_images),
