@@ -1442,7 +1442,7 @@ def _build_base_polaire_payload(**overrides: object) -> dict[str, object]:
         "fabric_label_visible": True,
         "fabric_label_cut": False,
         "non_size_labels_visible": True,
-        "sku": "PTNF-10",
+        "sku": "PTNF10",
         "bust_flat_measurement_cm": 50.0,
         "length_measurement_cm": 60.0,
         "sleeve_measurement_cm": 58.0,
@@ -1461,23 +1461,23 @@ def _build_base_polaire_payload(**overrides: object) -> dict[str, object]:
 
 
 def test_listing_fields_accepts_polaire_sku_prefixes() -> None:
-    base_payload = _build_base_polaire_payload(sku="PTNF-12", brand="The North Face")
+    base_payload = _build_base_polaire_payload(sku="PTNF12", brand="The North Face")
     fields = ListingFields.from_dict(base_payload, template_name="template-polaire-outdoor")
-    assert fields.sku == "PTNF-12"
+    assert fields.sku == "PTNF12"
 
     columbia_payload = _build_base_polaire_payload(
-        sku="PC-9", brand="Columbia", polyester_pct="95", cotton_pct="5"
+        sku="PC9", brand="Columbia", polyester_pct="95", cotton_pct="5"
     )
     fields_col = ListingFields.from_dict(
         columbia_payload, template_name="template-polaire-outdoor"
     )
-    assert fields_col.sku == "PC-9"
+    assert fields_col.sku == "PC9"
 
 
 def test_listing_fields_normalizes_polaire_sku_variants() -> None:
     payload = _build_base_polaire_payload(sku="ptnf 12", brand="The North Face")
     fields = ListingFields.from_dict(payload, template_name="template-polaire-outdoor")
-    assert fields.sku == "PTNF-12"
+    assert fields.sku == "PTNF12"
 
     digits_only_payload = _build_base_polaire_payload(sku="17", brand="The North Face")
     digits_only_fields = ListingFields.from_dict(
@@ -1495,11 +1495,11 @@ def test_listing_fields_normalizes_polaire_sku_variants() -> None:
     long_fields = ListingFields.from_dict(
         long_payload, template_name="template-polaire-outdoor"
     )
-    assert long_fields.sku == "PTNF-123"
+    assert long_fields.sku == "PTNF123"
 
 
 def test_listing_fields_rejects_mismatched_polaire_brand_and_sku() -> None:
-    payload = _build_base_polaire_payload(sku="PTNF-20", brand="Columbia")
+    payload = _build_base_polaire_payload(sku="PTNF20", brand="Columbia")
     with pytest.raises(ValueError):
         ListingFields.from_dict(payload, template_name="template-polaire-outdoor")
 
@@ -1527,7 +1527,7 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
         size_label_visible=False,
         fabric_label_visible=False,
         fabric_label_cut=False,
-        sku="PTNF-42",
+        sku="PTNF42",
         brand="The North Face",
         zip_style="1/4 zip",
         neckline_style="col montant",
@@ -1546,7 +1546,7 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
     title, description, _ = template.render(fields)
 
     assert "Polaire fleece The North Face" in title
-    assert "PTNF-42" in title
+    assert "PTNF42" in title
     assert "1/4 zip" in title
     assert "col montant" in title
     assert "ruban rose" in title
@@ -1611,7 +1611,7 @@ def test_generate_listing_ignores_polaire_sku_when_labels_hidden(
 ) -> None:
     template = ListingTemplateRegistry().get_template("template-polaire-outdoor")
     base_payload = _build_base_polaire_payload(
-        sku="PTNF-55",
+        sku="PTNF55",
         brand="The North Face",
         fabric_label_visible=False,
         non_size_labels_visible=False,
@@ -1658,7 +1658,7 @@ def test_generate_listing_ignores_polaire_sku_when_labels_hidden(
 def test_listing_fields_clear_polaire_sku_when_labels_unreadable() -> None:
     template = ListingTemplateRegistry().get_template("template-polaire-outdoor")
     payload = _build_base_polaire_payload(
-        sku="PTNF-1",
+        sku="PTNF1",
         fabric_label_visible=False,
         non_size_labels_visible=False,
     )
@@ -1716,7 +1716,7 @@ def test_generate_listing_ignores_numeric_polaire_sku(
 
     assert result.sku_missing is True
     assert "PTNF" not in result.title
-    assert "PC-" not in result.title
+    assert "PC" not in result.title
 
 
 def test_render_polaire_outdoor_skips_polyester_default_when_defects_mentions_fiber() -> None:
@@ -1742,7 +1742,7 @@ def test_render_polaire_outdoor_skips_polyester_default_when_defects_mentions_fi
         size_label_visible=False,
         fabric_label_visible=False,
         fabric_label_cut=False,
-        sku="PTNF-43",
+        sku="PTNF43",
         brand="The North Face",
         zip_style="1/4 zip",
         neckline_style="col montant",
@@ -1787,7 +1787,7 @@ def test_render_polaire_outdoor_handles_columbia_material_and_hashtags() -> None
         size_label_visible=True,
         fabric_label_visible=True,
         fabric_label_cut=False,
-        sku="PC-7",
+        sku="PC7",
         brand="Columbia",
         zip_style="zip intégral",
         neckline_style="col montant",
@@ -1807,7 +1807,7 @@ def test_render_polaire_outdoor_handles_columbia_material_and_hashtags() -> None
 
     assert "Polaire fleece Columbia" in title
     assert "en coton" in title
-    assert "PC-7" in title
+    assert "PC7" in title
     assert "Poches zippées" in description
     assert "Omni-Heat" in description
     assert "patch expédition" in title
