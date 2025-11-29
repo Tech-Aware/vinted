@@ -408,12 +408,11 @@ class ListingFields:
             return cleaned
 
         prefix_match = re.search(r"(PTNF|PC)", collapsed)
-        if prefix_match:
-            prefix = prefix_match.group(1)
-            digits_source = collapsed[prefix_match.end() :]
-        else:
-            prefix = ListingFields._infer_polaire_prefix_from_brand(brand)
-            digits_source = collapsed
+        if not prefix_match:
+            return ""
+
+        prefix = prefix_match.group(1)
+        digits_source = collapsed[prefix_match.end() :]
 
         digits = re.sub(r"\D", "", digits_source)
         if len(digits) > 3:
@@ -423,17 +422,6 @@ class ListingFields:
             return f"{prefix}{digits}"
 
         return cleaned
-
-    @staticmethod
-    def _infer_polaire_prefix_from_brand(brand: FieldValue) -> Optional[str]:
-        if not brand:
-            return None
-        normalized_brand = _normalize_text(brand)
-        if "north face" in normalized_brand:
-            return "PTNF"
-        if "columbia" in normalized_brand:
-            return "PC"
-        return None
 
     @staticmethod
     def _parse_measurement(value: Any, *, field_name: str) -> Optional[float]:
