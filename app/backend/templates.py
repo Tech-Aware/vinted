@@ -1966,7 +1966,7 @@ class ListingTemplateRegistry:
                     - Made in = {{made_in}}
                     - Défauts = {{defects}} + {{defect_tags}}
                     - Visibilité des étiquettes = {{size_label_visible}}, {{fabric_label_visible}}, {{fabric_label_cut}}, {{non_size_labels_visible}}
-                    - SKU = {{sku}} (PTNFn pour The North Face, PCn pour Columbia, n ∈ [1;999])
+                    - SKU = {{sku}} (PTNF-n pour The North Face, PC-n pour Columbia, n ∈ [1;999])
 
                     Règles :
                     - Le bloc Commentaire est prioritaire : si l'utilisateur indique taille, coupe, matière ou défaut, applique ces informations avant toute déduction des photos pour remplir les champs, calculer l'estimation et rédiger l'annonce.
@@ -1974,7 +1974,7 @@ class ListingTemplateRegistry:
                     - Dans le titre, combine un maximum de détails : {{zip_style}} (full zip / 1/4 zip / boutons…) + {{neckline_style}} (col roulé / col montant / col V / col rond) et signale toute information {{special_logo}} visible (ex : ruban rose).
                     - Sauf commentaire explicite dans la boîte Commentaire mentionnant une autre fibre, considère les polaires comme 100% polyester quand l’étiquette n’est pas lisible : renseigne {{polyester_pct}} = "100" et laisse les autres champs matière vides.
                     - Ne mentionne la matière dans le titre que pour les fibres intéressantes (coton, laine, cachemire, soie) et jamais avec un pourcentage.
-                    - Le SKU doit respecter exactement le format PTNFn ou PCn ; renvoie la chaîne vide si l’information manque.
+                    - Le SKU doit respecter exactement le format PTNF-n ou PC-n ; renvoie la chaîne vide si l’information manque.
                     - Signale toute étiquette coupée via {{fabric_label_cut}} et rappelle si les étiquettes taille/composition sont absentes.
                     - Ajoute un hashtag dédié aux tailles : #durin31f{{fr_size}} pour un modèle femme, #durin31h{{fr_size}} pour un modèle homme (majuscule), ou adapte pour une version mixte.
 
