@@ -230,7 +230,7 @@ class ListingGenerator:
                     "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
                 ) from exc
 
-        manual_sku_applied = bool(manual_sku and manual_sku.strip())
+        manual_sku_provided = bool(manual_sku and manual_sku.strip())
 
         fields = self._apply_user_overrides(
             user_comment,
@@ -260,17 +260,25 @@ class ListingGenerator:
             labels_uncertain = not (
                 fields.fabric_label_visible and fields.non_size_labels_visible
             )
-            should_attempt_recovery = (
-                not manual_sku_applied
-                and (labels_uncertain or not (fields.sku and fields.sku.strip()))
-            )
+            manual_sku_valid = False
 
-            if manual_sku_applied and fields.sku and fields.sku.strip():
+            if manual_sku_provided and fields.sku and fields.sku.strip():
                 normalized_manual_sku = ListingFields._normalize_polaire_sku(
                     fields.sku, fields.brand
                 )
                 if normalized_manual_sku:
                     fields = replace(fields, sku=normalized_manual_sku)
+                    manual_sku_valid = True
+                else:
+                    logger.warning(
+                        "SKU polaire manuel invalide ou incomplet, suppression pour demander un numéro utilisateur",
+                    )
+                    fields = replace(fields, sku="")
+
+            should_attempt_recovery = (
+                not manual_sku_valid
+                and (labels_uncertain or not (fields.sku and fields.sku.strip()))
+            )
 
             if should_attempt_recovery:
                 logger.step("Récupération ciblée du SKU polaire")
@@ -582,9 +590,9 @@ class ListingGenerator:
 
         prompt_lines = [
             "Analyse uniquement les photos ci-dessus.",
-            "Repère un SKU polaire au format PTNF-n (1 à 3 chiffres) pour The North Face ou PC-n pour Columbia.",
-            "Si tu lis clairement ce code, réponds uniquement avec ce SKU exact.",
-            "Si aucun code n'est lisible, réponds avec une chaîne vide sans autre texte.",
+            "Repère un SKU polaire au format PTNF + chiffres (1 à 3) pour The North Face ou PC + chiffres pour Columbia, sans tiret.",
+            "Si tu lis clairement ce code fourni sur une étiquette, réponds uniquement avec ce SKU exact.",
+            "Si aucun code complet n'est lisible, réponds avec une chaîne vide sans autre texte (ne pas inventer de numéro).",
         ]
         if user_comment:
             prompt_lines.append(
