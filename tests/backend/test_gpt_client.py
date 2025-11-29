@@ -321,3 +321,47 @@ def test_polaire_invalid_sku_fallbacks_to_empty(monkeypatch: pytest.MonkeyPatch)
     fields = captured.get("fields")
     assert fields is not None
     assert fields.sku == ""
+
+
+def test_manual_polaire_sku_used_in_title(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    payload = _polaire_fields_payload(
+        sku="",
+        brand="The North Face",
+        fabric_label_visible=False,
+        non_size_labels_visible=False,
+    )
+    main_response = _listing_response(payload)
+    fake_client = FakeClient([main_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {}
+
+    def _render(fields: ListingFields) -> tuple[str, str]:
+        captured["fields"] = fields
+        return ("TITLE", f"DESC-{fields.sku or 'EMPTY'}")
+
+    template = ListingTemplate(
+        name="template-polaire-outdoor",
+        description="",
+        prompt="PROMPT",
+        render_callback=_render,
+    )
+
+    def _recover(_self, _images: list[str], _comment: str) -> str:  # pragma: no cover - safety
+        raise AssertionError("Targeted recovery should not run when SKU is provided manually")
+
+    monkeypatch.setattr(ListingGenerator, "_recover_polaire_sku", _recover, raising=True)
+
+    manual_sku = "PTNF 99"
+    result = generator.generate_listing(
+        ["data:image/png;base64,AAA"], "", template, "", manual_sku=manual_sku
+    )
+
+    assert result.description == "DESC-PTNF-99"
+    assert result.sku_missing is False
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.sku == "PTNF-99"

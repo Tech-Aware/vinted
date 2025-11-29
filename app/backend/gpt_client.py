@@ -230,6 +230,8 @@ class ListingGenerator:
                     "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
                 ) from exc
 
+        manual_sku_applied = bool(manual_sku and manual_sku.strip())
+
         fields = self._apply_user_overrides(
             user_comment,
             fields,
@@ -258,7 +260,19 @@ class ListingGenerator:
             labels_uncertain = not (
                 fields.fabric_label_visible and fields.non_size_labels_visible
             )
-            if labels_uncertain or not (fields.sku and fields.sku.strip()):
+            should_attempt_recovery = (
+                not manual_sku_applied
+                and (labels_uncertain or not (fields.sku and fields.sku.strip()))
+            )
+
+            if manual_sku_applied and fields.sku and fields.sku.strip():
+                normalized_manual_sku = ListingFields._normalize_polaire_sku(
+                    fields.sku, fields.brand
+                )
+                if normalized_manual_sku:
+                    fields = replace(fields, sku=normalized_manual_sku)
+
+            if should_attempt_recovery:
                 logger.step("Récupération ciblée du SKU polaire")
                 recovered_sku_raw = self._recover_polaire_sku(encoded_images_list, user_comment)
                 recovered_sku_raw = (recovered_sku_raw or "").strip()
