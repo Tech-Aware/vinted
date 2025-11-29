@@ -249,26 +249,20 @@ class ListingGenerator:
             fields = replace(fields, sku=recovered_sku)
 
         if template.name == "template-polaire-outdoor" and not (fields.sku and fields.sku.strip()):
-            labels_support_sku = fields.fabric_label_visible or fields.non_size_labels_visible
-            if labels_support_sku:
-                logger.step("Récupération ciblée du SKU polaire")
-                recovered_sku_raw = self._recover_polaire_sku(encoded_images_list, user_comment)
-                recovered_sku_raw = (recovered_sku_raw or "").strip()
-                fenced = re.fullmatch(r"```[a-zA-Z0-9_-]*\s*(.*?)\s*```", recovered_sku_raw, re.DOTALL)
-                if fenced:
-                    recovered_sku_raw = fenced.group(1)
-                match = re.search(r"(PTNF|PC)-\d{1,3}", recovered_sku_raw, re.IGNORECASE)
-                if not match:
-                    raise ValueError(
-                        "Impossible de récupérer un SKU polaire lisible. "
-                        "Merci de fournir la référence dans le commentaire ou des photos plus nettes."
-                    )
-                recovered_sku = match.group(0).strip().upper()
-                fields = replace(fields, sku=recovered_sku)
-            else:
-                logger.warning(
-                    "SKU polaire manquant et étiquettes invisibles : signalement sans récupération"
+            logger.step("Récupération ciblée du SKU polaire")
+            recovered_sku_raw = self._recover_polaire_sku(encoded_images_list, user_comment)
+            recovered_sku_raw = (recovered_sku_raw or "").strip()
+            fenced = re.fullmatch(r"```[a-zA-Z0-9_-]*\s*(.*?)\s*```", recovered_sku_raw, re.DOTALL)
+            if fenced:
+                recovered_sku_raw = fenced.group(1)
+            match = re.search(r"(PTNF|PC)-\d{1,3}", recovered_sku_raw, re.IGNORECASE)
+            if not match:
+                raise ValueError(
+                    "Impossible de récupérer un SKU polaire lisible. "
+                    "Merci de fournir la référence dans le commentaire ou des photos plus nettes."
                 )
+            recovered_sku = match.group(0).strip().upper()
+            fields = replace(fields, sku=recovered_sku)
 
         title, description, price_estimate = template.render(fields)
         logger.success("Titre et description générés depuis les données structurées")
