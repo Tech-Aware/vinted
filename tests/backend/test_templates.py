@@ -5,6 +5,7 @@ import sys
 import json
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -1559,11 +1560,13 @@ def test_render_polaire_outdoor_applies_polyester_default_and_brand_hashtags() -
     assert "#durin31fM" in hashtags_line
 
 
-def test_generate_listing_does_not_recover_missing_polaire_sku(
+def test_generate_listing_recovers_missing_polaire_sku(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     template = ListingTemplateRegistry().get_template("template-polaire-outdoor")
-    base_payload = _build_base_polaire_payload(sku="", brand="The North Face")
+    base_payload = _build_base_polaire_payload(
+        sku="", brand="The North Face", fabric_label_visible=False, non_size_labels_visible=False
+    )
     payload = {"fields": base_payload}
 
     class _FakeResponse:
@@ -1584,17 +1587,23 @@ def test_generate_listing_does_not_recover_missing_polaire_sku(
     generator = ListingGenerator()
     generator._client = _FakeClient(json.dumps(payload))  # type: ignore[attr-defined]
 
+    captured: dict[str, Any] = {}
+
     def _fake_recover(
         self: ListingGenerator, encoded_images: list[str], user_comment: str
     ) -> str:
-        raise AssertionError("Le SKU polaire ne doit plus être récupéré automatiquement")
+        captured["images"] = encoded_images
+        captured["comment"] = user_comment
+        return ""
 
     monkeypatch.setattr(ListingGenerator, "_recover_polaire_sku", _fake_recover, raising=True)
 
-    result = generator.generate_listing([], "", template, "")
+    result = generator.generate_listing(["data:image/png;base64,AAA"], "", template, "")
 
     assert result.sku_missing is True
-    assert "PTNF" not in result.title
+    assert "SKU/nc" in result.title
+    assert captured["images"] == ["data:image/png;base64,AAA"]
+    assert captured["comment"] == ""
 
 
 def test_generate_listing_ignores_polaire_sku_when_labels_hidden(
@@ -1627,10 +1636,23 @@ def test_generate_listing_ignores_polaire_sku_when_labels_hidden(
     generator = ListingGenerator()
     generator._client = _FakeClient(json.dumps(payload))  # type: ignore[attr-defined]
 
-    result = generator.generate_listing([], "", template, "")
+    captured: dict[str, Any] = {}
+
+    def _fake_recover(
+        self: ListingGenerator, encoded_images: list[str], user_comment: str
+    ) -> str:
+        captured["images"] = encoded_images
+        captured["comment"] = user_comment
+        return ""
+
+    monkeypatch.setattr(ListingGenerator, "_recover_polaire_sku", _fake_recover, raising=True)
+
+    result = generator.generate_listing(["data:image/png;base64,BBB"], "", template, "")
 
     assert result.sku_missing is True
-    assert "PTNF" not in result.title
+    assert "SKU/nc" in result.title
+    assert captured["images"] == ["data:image/png;base64,BBB"]
+    assert captured["comment"] == ""
 
 
 @pytest.mark.parametrize(
@@ -1668,11 +1690,11 @@ def test_generate_listing_ignores_numeric_polaire_sku(
     def _fake_recover(
         self: ListingGenerator, encoded_images: list[str], user_comment: str
     ) -> str:
-        raise AssertionError("Le SKU polaire ne doit plus être récupéré automatiquement")
+        return "123456"
 
     monkeypatch.setattr(ListingGenerator, "_recover_polaire_sku", _fake_recover, raising=True)
 
-    result = generator.generate_listing([], "", template, "")
+    result = generator.generate_listing(["data:image/png;base64,CCC"], "", template, "")
 
     assert result.sku_missing is True
     assert "PTNF" not in result.title
