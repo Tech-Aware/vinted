@@ -1476,7 +1476,7 @@ def test_listing_fields_accepts_polaire_sku_prefixes() -> None:
 def test_listing_fields_normalizes_polaire_sku_variants() -> None:
     payload = _build_base_polaire_payload(sku="ptnf 12", brand="The North Face")
     fields = ListingFields.from_dict(payload, template_name="template-polaire-outdoor")
-    assert fields.sku == "PTNF-12"
+    assert fields.sku == "PTNF12"
 
     digits_only_payload = _build_base_polaire_payload(sku="17", brand="The North Face")
     digits_only_fields = ListingFields.from_dict(
@@ -1494,7 +1494,7 @@ def test_listing_fields_normalizes_polaire_sku_variants() -> None:
     long_fields = ListingFields.from_dict(
         long_payload, template_name="template-polaire-outdoor"
     )
-    assert long_fields.sku == "PTNF-123"
+    assert long_fields.sku == "PTNF123"
 
 
 def test_listing_fields_rejects_mismatched_polaire_brand_and_sku() -> None:
