@@ -1633,6 +1633,24 @@ def test_generate_listing_ignores_polaire_sku_when_labels_hidden(
     assert "PTNF" not in result.title
 
 
+def test_listing_fields_clear_polaire_sku_when_labels_unreadable() -> None:
+    template = ListingTemplateRegistry().get_template("template-polaire-outdoor")
+    payload = _build_base_polaire_payload(
+        sku="PTNF-1",
+        fabric_label_visible=False,
+        non_size_labels_visible=False,
+    )
+
+    fields = ListingFields.from_dict(payload, template_name="template-polaire-outdoor")
+
+    assert fields.sku == ""
+
+    title, description, _ = template.render(fields)
+
+    assert "SKU/nc" in title
+    assert "Référence SKU" not in description
+
+
 @pytest.mark.parametrize(
     "raw_sku, brand",
     [

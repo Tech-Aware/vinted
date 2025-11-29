@@ -284,9 +284,12 @@ class ListingFields:
             data.get("non_size_labels_visible"), default=False
         )
         sku = sku_raw.upper() if sku_raw else sku_raw
+        manual_sku_provided = ListingFields._normalize_visibility_flag(
+            data.get("manual_sku_provided"), default=False
+        )
         if template_normalized == "template-polaire-outdoor":
-            labels_support_sku = fabric_label_visible or non_size_labels_visible
-            if sku and labels_support_sku:
+            labels_support_sku = fabric_label_visible and non_size_labels_visible
+            if sku and (labels_support_sku or manual_sku_provided):
                 sku = ListingFields._normalize_polaire_sku(sku, brand)
             else:
                 sku = ""
