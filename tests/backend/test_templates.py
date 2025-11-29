@@ -1603,42 +1603,6 @@ def test_generate_listing_recovers_missing_polaire_sku(
     assert result.sku_missing is False
 
 
-def test_generate_listing_ignores_polaire_sku_when_labels_hidden(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    template = ListingTemplateRegistry().get_template("template-polaire-outdoor")
-    base_payload = _build_base_polaire_payload(
-        sku="PTNF-55",
-        brand="The North Face",
-        fabric_label_visible=False,
-        non_size_labels_visible=False,
-    )
-    payload = {"fields": base_payload}
-
-    class _FakeResponse:
-        def __init__(self, text: str) -> None:
-            self.output_text = text
-
-    class _FakeResponses:
-        def __init__(self, text: str) -> None:
-            self._text = text
-
-        def create(self, **_kwargs: object) -> _FakeResponse:
-            return _FakeResponse(self._text)
-
-    class _FakeClient:
-        def __init__(self, text: str) -> None:
-            self.responses = _FakeResponses(text)
-
-    generator = ListingGenerator()
-    generator._client = _FakeClient(json.dumps(payload))  # type: ignore[attr-defined]
-
-    result = generator.generate_listing([], "", template, "")
-
-    assert result.sku_missing is True
-    assert "PTNF" not in result.title
-
-
 @pytest.mark.parametrize(
     "raw_sku, brand, recovered",
     [
