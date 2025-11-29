@@ -250,7 +250,7 @@ class ListingGenerator:
 
         if template.name == "template-polaire-outdoor" and not (fields.sku and fields.sku.strip()):
             labels_support_sku = fields.fabric_label_visible or fields.non_size_labels_visible
-            if labels_support_sku:
+            if labels_support_sku and fields.sku_provided:
                 logger.step("Récupération ciblée du SKU polaire")
                 recovered_sku_raw = self._recover_polaire_sku(encoded_images_list, user_comment)
                 recovered_sku_raw = (recovered_sku_raw or "").strip()
@@ -265,7 +265,7 @@ class ListingGenerator:
                     )
                 recovered_sku = match.group(0).strip().upper()
                 fields = replace(fields, sku=recovered_sku)
-            else:
+            elif not labels_support_sku:
                 logger.warning(
                     "SKU polaire manquant et étiquettes invisibles : signalement sans récupération"
                 )

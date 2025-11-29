@@ -163,6 +163,7 @@ class ListingFields:
     waist_flat_measurement_cm: Optional[float] = None
     hem_flat_measurement_cm: Optional[float] = None
     non_size_labels_visible: bool = False
+    sku_provided: bool = False
 
     @classmethod
     def from_dict(
@@ -266,6 +267,7 @@ class ListingFields:
         neckline_style = normalize(data.get("neckline_style"))
         special_logo = normalize(data.get("special_logo"))
         sku_raw = normalize(data.get("sku"))
+        sku_provided = bool(sku_raw)
 
         defect_tags_raw = data.get("defect_tags", [])
         defect_tags: Sequence[str] = ListingFields._normalize_defect_tags(defect_tags_raw)
@@ -397,6 +399,7 @@ class ListingFields:
             waist_flat_measurement_cm=waist_flat_measurement_cm,
             hem_flat_measurement_cm=hem_flat_measurement_cm,
             non_size_labels_visible=non_size_labels_visible,
+            sku_provided=sku_provided,
         )
 
     @staticmethod
