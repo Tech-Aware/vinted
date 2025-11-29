@@ -170,9 +170,13 @@ class ListingFields:
     ) -> "ListingFields":
         template_normalized = (template_name or "").strip().lower()
 
+        optional_fr_size_templates = {
+            "template-polaire-outdoor",
+            "template-pull-tommy-femme",
+        }
+
         always_required_fields = (
             "model",
-            "fr_size",
             "us_w",
             "us_l",
             "fit_leg",
@@ -202,14 +206,19 @@ class ListingFields:
         required_fields: tuple[str, ...]
         polaire_additional_fields = ("neckline_style", "special_logo")
 
-        if template_normalized == "template-polaire-outdoor":
-            required_fields = (
-                always_required_fields + measurement_fields + polaire_additional_fields
-            )
-        elif template_normalized == "template-pull-tommy-femme":
-            required_fields = always_required_fields + measurement_fields
+        fr_size_required = template_normalized not in optional_fr_size_templates
+        base_fields: tuple[str, ...]
+        if fr_size_required:
+            base_fields = ("fr_size",) + always_required_fields
         else:
-            required_fields = always_required_fields
+            base_fields = always_required_fields
+
+        if template_normalized == "template-polaire-outdoor":
+            required_fields = base_fields + measurement_fields + polaire_additional_fields
+        elif template_normalized == "template-pull-tommy-femme":
+            required_fields = base_fields + measurement_fields
+        else:
+            required_fields = base_fields
 
         missing = [key for key in required_fields if key not in data]
         if missing:

@@ -1144,9 +1144,15 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         length_measurement_cm=fields.length_measurement_cm,
     )
     estimated_size_label = (
-        top_size_estimate.estimated_size if not fields.size_label_visible else None
+        top_size_estimate.estimated_size
+        if (not fields.size_label_visible or not size_value)
+        else None
     )
-    estimated_size_note = top_size_estimate.note if not fields.size_label_visible else None
+    estimated_size_note = (
+        top_size_estimate.note
+        if (not fields.size_label_visible or not size_value)
+        else None
+    )
     estimated_size_primary = (
         _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
     )
@@ -1538,9 +1544,15 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
         length_measurement_cm=fields.length_measurement_cm,
     )
     estimated_size_label = (
-        top_size_estimate.estimated_size if not fields.size_label_visible else None
+        top_size_estimate.estimated_size
+        if (not fields.size_label_visible or not size_value)
+        else None
     )
-    estimated_size_note = top_size_estimate.note if not fields.size_label_visible else None
+    estimated_size_note = (
+        top_size_estimate.note
+        if (not fields.size_label_visible or not size_value)
+        else None
+    )
     estimated_size_primary = (
         _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
     )
