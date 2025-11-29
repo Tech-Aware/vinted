@@ -90,6 +90,31 @@ def _listing_response(fields: Dict[str, Any]) -> FakeResponse:
     return FakeResponse(json.dumps({"fields": fields}))
 
 
+def _polaire_fields_payload(**overrides: Any) -> Dict[str, Any]:
+    payload = _base_fields_payload(
+        cotton_pct="",
+        polyester_pct="100",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        acrylic_pct="",
+    )
+    payload.update(
+        {
+            "brand": "The North Face",
+            "zip_style": "",
+            "feature_notes": "",
+            "technical_features": "",
+            "has_hood": False,
+            "neckline_style": "",
+            "special_logo": "",
+            "non_size_labels_visible": False,
+        }
+    )
+    payload.update(overrides)
+    return payload
+
+
 def _build_template(captured: Dict[str, Any]) -> ListingTemplate:
     def _render(fields):
         captured["fields"] = fields
@@ -138,7 +163,7 @@ def test_generate_listing_recovers_tommy_sku(
     captured: Dict[str, Any] = {}
     template = _build_template(captured)
 
-    result = generator.generate_listing(["data:image/png;base64,AAA"], "", template)
+    result = generator.generate_listing(["data:image/png;base64,AAA"], "", template, "")
 
     assert result.title == "TITLE"
     fields = captured.get("fields")
@@ -162,7 +187,7 @@ def test_generate_listing_raises_when_recovery_fails(monkeypatch: pytest.MonkeyP
     template = _build_template({})
 
     with pytest.raises(ValueError, match="Impossible de récupérer un SKU Tommy Hilfiger lisible"):
-        generator.generate_listing(["data:image/png;base64,BBB"], "", template)
+        generator.generate_listing(["data:image/png;base64,BBB"], "", template, "")
 
     assert len(fake_client.responses.calls) == 2
 
@@ -204,7 +229,7 @@ def test_comment_overrides_fr_size(monkeypatch: pytest.MonkeyPatch) -> None:
     template = _build_template_with_size_capture(captured)
 
     result = generator.generate_listing(
-        ["data:image/png;base64,AAA"], "taille FR38, coupe droite", template
+        ["data:image/png;base64,AAA"], "taille FR38, coupe droite", template, ""
     )
 
     assert result.title == "TITRE-38"
@@ -226,7 +251,7 @@ def test_comment_without_explicit_size_keeps_model_value(monkeypatch: pytest.Mon
     template = _build_template_with_size_capture(captured)
 
     result = generator.generate_listing(
-        ["data:image/png;base64,AAA"], "Coupe droite sans précision de taille", template
+        ["data:image/png;base64,AAA"], "Coupe droite sans précision de taille", template, ""
     )
 
     assert result.title == "TITRE-40"
@@ -250,8 +275,169 @@ def test_comment_with_defect_information_overrides_defects(
     template = _build_template(captured)
 
     comment = "Tache visible sur la manche"
-    generator.generate_listing(["data:image/png;base64,AAA"], comment, template)
+    generator.generate_listing(["data:image/png;base64,AAA"], comment, template, "")
 
     fields = captured.get("fields")
     assert fields is not None
     assert fields.defects == comment
+
+
+def test_polaire_invalid_sku_fallbacks_to_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    invalid_payload = _polaire_fields_payload(
+        sku="PTNF-42",
+        brand="Columbia",
+        fabric_label_visible=True,
+        non_size_labels_visible=True,
+    )
+    main_response = _listing_response(invalid_payload)
+    fake_client = FakeClient([main_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {}
+
+    def _render(fields: ListingFields) -> tuple[str, str]:
+        captured["fields"] = fields
+        return ("TITLE", f"DESC-{fields.sku or 'EMPTY'}")
+
+    template = ListingTemplate(
+        name="template-polaire-outdoor",
+        description="",
+        prompt="PROMPT",
+        render_callback=_render,
+    )
+
+    def _recover(self, _images: list[str], _comment: str) -> str:
+        return ""
+
+    monkeypatch.setattr(ListingGenerator, "_recover_polaire_sku", _recover, raising=True)
+
+    result = generator.generate_listing(["data:image/png;base64,AAA"], "", template, "")
+
+    assert result.title == "TITLE"
+    assert result.sku_missing is True
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.sku == ""
+
+
+def test_manual_polaire_sku_used_in_title(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    payload = _polaire_fields_payload(
+        sku="",
+        brand="The North Face",
+        fabric_label_visible=False,
+        non_size_labels_visible=False,
+    )
+    main_response = _listing_response(payload)
+    fake_client = FakeClient([main_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {}
+
+    def _render(fields: ListingFields) -> tuple[str, str]:
+        captured["fields"] = fields
+        return ("TITLE", f"DESC-{fields.sku or 'EMPTY'}")
+
+    template = ListingTemplate(
+        name="template-polaire-outdoor",
+        description="",
+        prompt="PROMPT",
+        render_callback=_render,
+    )
+
+    def _recover(_self, _images: list[str], _comment: str) -> str:  # pragma: no cover - safety
+        raise AssertionError("Targeted recovery should not run when SKU is provided manually")
+
+    monkeypatch.setattr(ListingGenerator, "_recover_polaire_sku", _recover, raising=True)
+
+    manual_sku = "PTNF 99"
+    result = generator.generate_listing(
+        ["data:image/png;base64,AAA"], "", template, "", manual_sku=manual_sku
+    )
+
+    assert result.description == "DESC-PTNF-99"
+    assert result.sku_missing is False
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.sku == "PTNF-99"
+
+
+def test_polaire_hallucinated_sku_cleared_when_brand_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    payload = _polaire_fields_payload(
+        sku="PTNF-77",
+        brand="",  # marque non identifiée
+        fabric_label_visible=True,
+        non_size_labels_visible=True,
+    )
+    main_response = _listing_response(payload)
+    fake_client = FakeClient([main_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {"recover_called": False}
+
+    def _recover(self, _images: list[str], _comment: str) -> str:
+        captured["recover_called"] = True
+        return ""
+
+    monkeypatch.setattr(ListingGenerator, "_recover_polaire_sku", _recover, raising=True)
+
+    template = ListingTemplate(
+        name="template-polaire-outdoor",
+        description="",
+        prompt="PROMPT",
+        render_callback=lambda fields: ("TITLE", f"DESC-{fields.sku or 'EMPTY'}"),
+    )
+
+    result = generator.generate_listing(["data:image/png;base64,AAA"], "", template, "")
+
+    assert captured["recover_called"] is True
+    assert result.sku_missing is True
+    assert result.description == "DESC-EMPTY"
+
+
+def test_polaire_sku_recovery_runs_when_fabric_label_cut(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    payload = _polaire_fields_payload(
+        sku="PTNF-10",
+        fabric_label_visible=True,
+        non_size_labels_visible=True,
+        fabric_label_cut=True,
+    )
+    main_response = _listing_response(payload)
+    fake_client = FakeClient([main_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {"recover_called": False}
+
+    def _recover(self, _images: list[str], _comment: str) -> str:
+        captured["recover_called"] = True
+        return ""
+
+    monkeypatch.setattr(ListingGenerator, "_recover_polaire_sku", _recover, raising=True)
+
+    template = ListingTemplate(
+        name="template-polaire-outdoor",
+        description="",
+        prompt="PROMPT",
+        render_callback=lambda fields: ("TITLE", f"DESC-{fields.sku or 'EMPTY'}"),
+    )
+
+    result = generator.generate_listing(["data:image/png;base64,ZZZ"], "", template, "")
+
+    assert captured["recover_called"] is True
+    assert result.sku_missing is True
+    assert result.description == "DESC-EMPTY"
