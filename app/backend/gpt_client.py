@@ -204,19 +204,25 @@ class ListingGenerator:
             )
         except Exception as exc:
             template_name = template.name or ""
-            if (
-                isinstance(exc, ValueError)
-                and "SKU invalide" in str(exc)
-                and template_name.startswith("template-jean-levis")
-            ):
-                logger.warning(
-                    "SKU Levi's invalide renvoyé par le modèle, application du fallback",
-                )
-                sanitized_payload = dict(fields_payload)
-                sanitized_payload["sku"] = ""
-                fields = ListingFields.from_dict(
-                    sanitized_payload, template_name=template.name
-                )
+            if isinstance(exc, ValueError) and "SKU invalide" in str(exc):
+                if template_name.startswith("template-jean-levis"):
+                    logger.warning(
+                        "SKU Levi's invalide renvoyé par le modèle, application du fallback",
+                    )
+                    sanitized_payload = dict(fields_payload)
+                    sanitized_payload["sku"] = ""
+                    fields = ListingFields.from_dict(
+                        sanitized_payload, template_name=template.name
+                    )
+                elif template_name == "template-polaire-outdoor":
+                    logger.warning(
+                        "SKU polaire invalide renvoyé par le modèle, suppression de la valeur",
+                    )
+                    sanitized_payload = dict(fields_payload)
+                    sanitized_payload["sku"] = ""
+                    fields = ListingFields.from_dict(
+                        sanitized_payload, template_name=template.name
+                    )
             else:
                 logger.exception("Échec de l'analyse de la réponse JSON")
                 snippet = content_to_parse[:200]
@@ -249,7 +255,9 @@ class ListingGenerator:
             fields = replace(fields, sku=recovered_sku)
 
         if template.name == "template-polaire-outdoor":
-            labels_uncertain = not (fields.fabric_label_visible or fields.non_size_labels_visible)
+            labels_uncertain = not (
+                fields.fabric_label_visible and fields.non_size_labels_visible
+            )
             if labels_uncertain or not (fields.sku and fields.sku.strip()):
                 logger.step("Récupération ciblée du SKU polaire")
                 recovered_sku_raw = self._recover_polaire_sku(encoded_images_list, user_comment)
