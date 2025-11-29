@@ -248,16 +248,35 @@ class ListingGenerator:
             recovered_sku = match.group(0).strip().upper()
             fields = replace(fields, sku=recovered_sku)
 
-        if template.name == "template-polaire-outdoor" and not (fields.sku and fields.sku.strip()):
-            labels_support_sku = fields.fabric_label_visible or fields.non_size_labels_visible
-            if labels_support_sku:
-                logger.warning(
-                    "SKU polaire manquant malgré des étiquettes visibles : aucune récupération automatique",
+        if template.name == "template-polaire-outdoor":
+            labels_uncertain = not (fields.fabric_label_visible or fields.non_size_labels_visible)
+            if labels_uncertain or not (fields.sku and fields.sku.strip()):
+                logger.step("Récupération ciblée du SKU polaire")
+                recovered_sku_raw = self._recover_polaire_sku(encoded_images_list, user_comment)
+                recovered_sku_raw = (recovered_sku_raw or "").strip()
+                fenced = re.fullmatch(
+                    r"```[a-zA-Z0-9_-]*\s*(.*?)\s*```",
+                    recovered_sku_raw,
+                    re.DOTALL,
                 )
-            else:
-                logger.warning(
-                    "SKU polaire manquant et étiquettes invisibles : signalement sans récupération"
+                if fenced:
+                    recovered_sku_raw = fenced.group(1)
+
+                normalized_sku = ListingFields._normalize_polaire_sku(
+                    recovered_sku_raw, fields.brand
                 )
+                if normalized_sku:
+                    fields = replace(fields, sku=normalized_sku)
+                elif not recovered_sku_raw:
+                    fields = replace(fields, sku="")
+                    logger.warning(
+                        "SKU polaire absent après récupération ciblée, utilisation de la valeur par défaut",
+                    )
+                else:
+                    fields = replace(fields, sku="")
+                    logger.warning(
+                        "SKU polaire invalide récupéré, suppression de la valeur incertaine",
+                    )
         title, description, price_estimate = template.render(fields)
         logger.success("Titre et description générés depuis les données structurées")
 
