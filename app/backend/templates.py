@@ -1148,14 +1148,18 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         if (not fields.size_label_visible or not size_value)
         else None
     )
+    estimated_size_primary = (
+        _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
+    )
     estimated_size_note = (
         top_size_estimate.note
         if (not fields.size_label_visible or not size_value)
         else None
     )
-    estimated_size_primary = (
-        _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
-    )
+    if not estimated_size_note and estimated_size_primary:
+        estimated_size_note = (
+            f"Taille {estimated_size_primary}, estimée à la main à partir des mesures à plat (voir photos)."
+        )
     length_descriptor = top_size_estimate.length_descriptor
     sku = (fields.sku or "").strip()
     sku_display = sku if sku else "SKU/nc"
@@ -1506,14 +1510,18 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
         if (not fields.size_label_visible or not size_value)
         else None
     )
+    estimated_size_primary = (
+        _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
+    )
     estimated_size_note = (
         top_size_estimate.note
         if (not fields.size_label_visible or not size_value)
         else None
     )
-    estimated_size_primary = (
-        _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
-    )
+    if not estimated_size_note and estimated_size_primary:
+        estimated_size_note = (
+            f"Taille {estimated_size_primary}, estimée à la main à partir des mesures à plat (voir photos)."
+        )
     length_descriptor = top_size_estimate.length_descriptor
 
     size_label_missing = not fields.size_label_visible
