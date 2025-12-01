@@ -162,7 +162,7 @@ def estimate_fr_top_size(
 
     size_note_label = _extract_primary_size_label(estimated_size) or estimated_size
     note = (
-        f"Taille {size_note_label} estimée à la main à la main à partir des mesures à plat (voir photos)"
+        f"Taille {size_note_label}, estimée à la main à partir des mesures à plat (voir photos)"
         if size_note_label
         else "Taille estimée à la main à partir des mesures à plat (voir photos)"
     )

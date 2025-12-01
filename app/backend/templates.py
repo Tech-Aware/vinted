@@ -1236,8 +1236,6 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         first_sentence = (
             f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
         )
-        if estimated_size_note:
-            first_sentence = f"{first_sentence} {estimated_size_note}"
     elif size_value:
         size_sentence = size_value
         first_sentence = (
@@ -1367,7 +1365,9 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         defects = raw_defects if raw_defects else ""
 
     first_paragraph_lines: List[str] = [first_sentence]
-    if estimated_size_note and not estimated_size_label:
+    if estimated_size_label and estimated_size_note:
+        first_paragraph_lines.append(estimated_size_note)
+    elif estimated_size_note and not estimated_size_label:
         first_paragraph_lines.append(estimated_size_note)
     if style_sentence:
         first_paragraph_lines.append(style_sentence)
@@ -1627,7 +1627,14 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     first_paragraph_lines.append(" ".join(part for part in intro_parts if part).strip() + ".")
     if fields.size_label_visible and size_value:
         first_paragraph_lines.append(f"Taille FR {size_value}.")
-    elif estimated_size_label and estimated_size_note:
+    elif estimated_size_label:
+        if estimated_size_note:
+            first_paragraph_lines.append(estimated_size_note)
+        else:
+            first_paragraph_lines.append(
+                f"Taille {estimated_size_primary or estimated_size_label}, estimée à la main à partir des mesures à plat (voir photos)."
+            )
+    elif estimated_size_note:
         first_paragraph_lines.append(estimated_size_note)
     style_tokens: List[str] = []
     if color:
