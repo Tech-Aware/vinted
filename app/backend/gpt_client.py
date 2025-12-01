@@ -469,6 +469,19 @@ class ListingGenerator:
                 return group.strip()
         return None
 
+    @staticmethod
+    def _extract_gender_from_segment(normalized_segment: str) -> Optional[str]:
+        if not normalized_segment:
+            return None
+
+        if "femme" in normalized_segment:
+            return "femme"
+        if "homme" in normalized_segment:
+            return "homme"
+        if "mix" in normalized_segment or "unisexe" in normalized_segment:
+            return "mixte"
+        return None
+
     def _extract_overrides_from_comment(
         self, user_comment: str
     ) -> tuple[dict, list[str], bool, bool]:
@@ -519,6 +532,12 @@ class ListingGenerator:
                 brand_value = segment.split(":", 1)[-1].strip() if ":" in segment else ""
                 if brand_value:
                     overrides["brand"] = brand_value
+                    continue
+
+            if "gender" not in overrides:
+                gender_override = self._extract_gender_from_segment(normalized)
+                if gender_override:
+                    overrides["gender"] = gender_override
                     continue
 
             if lower.startswith("modele") or lower.startswith("modèle"):
