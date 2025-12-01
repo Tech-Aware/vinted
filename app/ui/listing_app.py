@@ -174,37 +174,37 @@ class VintedListingApp(ctk.CTk):
             self.clear_button,
         ]
 
-        size_frame = ctk.CTkFrame(form_frame)
-        size_frame.grid(row=1, column=0, sticky="ew", padx=12, pady=(8, 4))
+        self.size_frame = ctk.CTkFrame(form_frame)
+        self.size_frame.grid(row=1, column=0, sticky="ew", padx=12, pady=(8, 4))
         for col_index in range(6):
-            size_frame.columnconfigure(col_index, weight=0)
-        size_frame.columnconfigure(5, weight=1)
+            self.size_frame.columnconfigure(col_index, weight=0)
+        self.size_frame.columnconfigure(5, weight=1)
 
-        self.size_label = ctk.CTkLabel(size_frame, text="Taille FR (cm)", anchor="w")
+        self.size_label = ctk.CTkLabel(self.size_frame, text="Taille FR (cm)", anchor="w")
         self.size_label.grid(row=0, column=0, padx=(0, 8), pady=(0, 0), sticky="w")
 
         self.size_entry = ctk.CTkEntry(
-            size_frame,
+            self.size_frame,
             width=120,
             placeholder_text="ex : 32, 44, 46",
         )
         self.size_entry.grid(row=0, column=1, sticky="w")
 
-        self.us_size_label = ctk.CTkLabel(size_frame, text="Taille US (W)", anchor="w")
+        self.us_size_label = ctk.CTkLabel(self.size_frame, text="Taille US (W)", anchor="w")
         self.us_size_label.grid(row=0, column=2, padx=(12, 8), pady=(0, 0), sticky="w")
 
         self.us_size_entry = ctk.CTkEntry(
-            size_frame,
+            self.size_frame,
             width=120,
             placeholder_text="ex : 28, 30, 32",
         )
         self.us_size_entry.grid(row=0, column=3, sticky="w")
 
-        self.defects_label = ctk.CTkLabel(size_frame, text="Défauts", anchor="w")
+        self.defects_label = ctk.CTkLabel(self.size_frame, text="Défauts", anchor="w")
         self.defects_label.grid(row=0, column=4, padx=(12, 8), pady=(0, 0), sticky="w")
 
         self.defects_entry = ctk.CTkEntry(
-            size_frame,
+            self.size_frame,
             width=260,
             placeholder_text=DEFECTS_PLACEHOLDER,
         )
@@ -271,7 +271,7 @@ class VintedListingApp(ctk.CTk):
         self.price_chip.grid(row=1, column=0, columnspan=2, padx=(0, 0), pady=(4, 8), sticky="w")
         description_container.bind("<Configure>", self._update_price_chip_wraplength)
         self.after_idle(self._update_price_chip_wraplength)
-        self.after_idle(self._update_size_mode_visibility)
+        self.after_idle(self._update_template_field_visibility)
 
     def _build_customer_responses_tab(self, parent: ctk.CTkFrame) -> None:
         parent.columnconfigure(0, weight=1)
@@ -549,7 +549,11 @@ class VintedListingApp(ctk.CTk):
 
     def _on_template_change(self) -> None:
         self.size_mode_var.set("label")
+        self._update_template_field_visibility()
+
+    def _update_template_field_visibility(self) -> None:
         self._update_size_mode_visibility()
+        self._update_size_fields_visibility()
 
     def _update_size_mode_visibility(self) -> None:
         template_name = (self.template_var.get() or "").strip()
@@ -558,6 +562,48 @@ class VintedListingApp(ctk.CTk):
         else:
             self.size_mode_frame.grid_remove()
             self.size_mode_var.set("label")
+
+    def _update_size_fields_visibility(self) -> None:
+        template_name = (self.template_var.get() or "").strip()
+        show_size_inputs = template_name == "template-jean-levis-femme"
+
+        if show_size_inputs:
+            for col_index in range(6):
+                self.size_frame.columnconfigure(col_index, weight=0)
+            self.size_frame.columnconfigure(5, weight=1)
+
+            self.size_label.grid(
+                row=0, column=0, padx=(0, 8), pady=(0, 0), sticky="w"
+            )
+            self.size_entry.grid(row=0, column=1, sticky="w")
+
+            self.us_size_label.grid(
+                row=0, column=2, padx=(12, 8), pady=(0, 0), sticky="w"
+            )
+            self.us_size_entry.grid(row=0, column=3, sticky="w")
+
+            self.defects_label.grid(
+                row=0, column=4, padx=(12, 8), pady=(0, 0), sticky="w"
+            )
+            self.defects_entry.grid(row=0, column=5, sticky="ew")
+        else:
+            for widget in (
+                self.size_label,
+                self.size_entry,
+                self.us_size_label,
+                self.us_size_entry,
+            ):
+                widget.grid_remove()
+
+            self.size_frame.columnconfigure(0, weight=0)
+            self.size_frame.columnconfigure(1, weight=1)
+            for col_index in range(2, 6):
+                self.size_frame.columnconfigure(col_index, weight=0)
+
+            self.defects_label.grid(
+                row=0, column=0, padx=(0, 8), pady=(0, 0), sticky="w"
+            )
+            self.defects_entry.grid(row=0, column=1, sticky="ew")
 
     @staticmethod
     def _is_measurement_toggle_applicable(template_name: str) -> bool:
