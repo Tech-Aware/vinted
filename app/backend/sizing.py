@@ -111,7 +111,10 @@ def _extract_primary_size_label(value: Optional[str]) -> Optional[str]:
 
 
 def estimate_fr_top_size(
-    bust_flat_measurement_cm: Optional[float], *, length_measurement_cm: Optional[float] = None
+    bust_flat_measurement_cm: Optional[float],
+    *,
+    length_measurement_cm: Optional[float] = None,
+    measurement_profile: Optional[str] = None,
 ) -> TopSizeEstimate:
     """Estimate a FR top size from a flat bust measurement.
 
@@ -129,6 +132,36 @@ def estimate_fr_top_size(
 
     if bust_flat_measurement_cm is None or bust_flat_measurement_cm <= 0:
         return TopSizeEstimate(estimated_size=None, note=None, length_descriptor=length_descriptor)
+
+    if measurement_profile == "polaire_pull":
+        chart = (
+            (45.0, 47.0, "XS"),
+            (48.0, 50.0, "S"),
+            (51.0, 53.0, "M"),
+            (54.0, 56.0, "L"),
+            (57.0, 60.0, "XL"),
+            (61.0, 64.0, "XXL"),
+        )
+        width = float(bust_flat_measurement_cm)
+        estimated_size = None
+        for lower, upper, label in chart:
+            if lower <= width <= upper:
+                estimated_size = label
+                break
+
+        if estimated_size is None:
+            _closest_lower, _closest_upper, closest_label = min(
+                chart,
+                key=lambda entry: abs(width - ((entry[0] + entry[1]) / 2)),
+            )
+            estimated_size = closest_label
+
+        note = f"Taille {estimated_size}, estimée à la main à partir des mesures à plat (voir photos)"
+        return TopSizeEstimate(
+            estimated_size=estimated_size,
+            note=note,
+            length_descriptor=length_descriptor,
+        )
 
     measurement_is_circumference = (
         _MIN_REASONABLE_BUST_CM
