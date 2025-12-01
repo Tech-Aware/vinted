@@ -595,10 +595,7 @@ class VintedListingApp(ctk.CTk):
         user_comment = defects
         if size_from_measurements:
             fr_size_value = ""
-            measurement_hint = (
-                "Étiquette de taille absente ou illisible : estime la taille (S, M, L, XL...) "
-                "à partir des mesures à plat visibles."
-            )
+            measurement_hint = "Etiquettes coupées pour plus de confort."
             user_comment = "\n".join(segment for segment in (measurement_hint, defects) if segment)
 
         optional_fr_size_templates = {
