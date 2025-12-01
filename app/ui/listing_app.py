@@ -108,6 +108,7 @@ class VintedListingApp(ctk.CTk):
         template_frame = ctk.CTkFrame(parent)
         template_frame.grid(row=0, column=0, padx=16, pady=(8, 0), sticky="ew")
         template_frame.columnconfigure(0, weight=1)
+        template_frame.columnconfigure(1, weight=0)
 
         self.template_var = ctk.StringVar(value=self.template_registry.default_template)
         self.template_combo = ctk.CTkComboBox(
@@ -115,9 +116,31 @@ class VintedListingApp(ctk.CTk):
             values=self.template_registry.available_templates,
             variable=self.template_var,
             width=260,
+            command=lambda _=None: self._on_template_change(),
         )
         self.template_combo.grid(row=0, column=0, sticky="w", padx=12, pady=8)
         self._template_combo_default_state = self.template_combo.cget("state") or "normal"
+
+        self.size_mode_var = ctk.StringVar(value="label")
+        self.size_mode_frame = ctk.CTkFrame(template_frame)
+        self.size_mode_frame.grid(row=0, column=1, sticky="e", padx=(12, 12), pady=8)
+        self.size_mode_frame.columnconfigure((0, 1), weight=0)
+
+        self.size_label_radio = ctk.CTkRadioButton(
+            self.size_mode_frame,
+            text="Étiquette lisible",
+            value="label",
+            variable=self.size_mode_var,
+        )
+        self.size_label_radio.grid(row=0, column=0, padx=(0, 8), pady=0)
+
+        self.size_measurements_radio = ctk.CTkRadioButton(
+            self.size_mode_frame,
+            text="Analyser les mesures",
+            value="measurements",
+            variable=self.size_mode_var,
+        )
+        self.size_measurements_radio.grid(row=0, column=1, padx=(0, 0), pady=0)
 
         content_frame = ctk.CTkFrame(parent)
         content_frame.grid(row=1, column=0, padx=16, pady=(8, 8), sticky="nsew")
@@ -248,6 +271,7 @@ class VintedListingApp(ctk.CTk):
         self.price_chip.grid(row=1, column=0, columnspan=2, padx=(0, 0), pady=(4, 8), sticky="w")
         description_container.bind("<Configure>", self._update_price_chip_wraplength)
         self.after_idle(self._update_price_chip_wraplength)
+        self.after_idle(self._update_size_mode_visibility)
 
     def _build_customer_responses_tab(self, parent: ctk.CTkFrame) -> None:
         parent.columnconfigure(0, weight=1)
@@ -523,6 +547,30 @@ class VintedListingApp(ctk.CTk):
         self.preview_frame.update_images(self.selected_images)
         logger.info("%d image(s) actuellement sélectionnée(s)", len(self.selected_images))
 
+    def _on_template_change(self) -> None:
+        self.size_mode_var.set("label")
+        self._update_size_mode_visibility()
+
+    def _update_size_mode_visibility(self) -> None:
+        template_name = (self.template_var.get() or "").strip()
+        if self._is_measurement_toggle_applicable(template_name):
+            self.size_mode_frame.grid()
+        else:
+            self.size_mode_frame.grid_remove()
+            self.size_mode_var.set("label")
+
+    @staticmethod
+    def _is_measurement_toggle_applicable(template_name: str) -> bool:
+        return template_name in {
+            "template-polaire-outdoor",
+            "template-pull-tommy-femme",
+        }
+
+    def _should_use_measurements(self, template_name: str) -> bool:
+        if not self._is_measurement_toggle_applicable(template_name):
+            return False
+        return self.size_mode_var.get() == "measurements"
+
     def generate_listing(self) -> None:
         if not self.selected_images:
             self._show_error_popup("Ajoutez au moins une image avant d'analyser")
@@ -542,6 +590,13 @@ class VintedListingApp(ctk.CTk):
         fr_size_value = (self.size_entry.get() or "").strip()
         us_size_value = (self.us_size_entry.get() or "").strip()
         defects = self._normalize_defects(self.defects_entry.get())
+        size_from_measurements = self._should_use_measurements(template_name)
+
+        user_comment = defects
+        if size_from_measurements:
+            fr_size_value = ""
+            measurement_hint = "Etiquettes coupées pour plus de confort."
+            user_comment = "\n".join(segment for segment in (measurement_hint, defects) if segment)
 
         optional_fr_size_templates = {
             "template-polaire-outdoor",
@@ -560,10 +615,11 @@ class VintedListingApp(ctk.CTk):
         )
         self._last_generation_params = {
             "selected_images": list(self.selected_images),
-            "defects": defects,
+            "user_comment": user_comment,
             "template": template,
             "fr_size": fr_size_value,
             "us_size": us_size_value or None,
+            "size_from_measurements": size_from_measurements,
         }
 
         self._start_generation(manual_sku=None)
@@ -673,11 +729,12 @@ class VintedListingApp(ctk.CTk):
                 )  # type: ignore[arg-type]
                 result = self.generator.generate_listing(
                     encoded_images,
-                    params["defects"],
+                    params["user_comment"],
                     params["template"],
                     params["fr_size"],
                     params["us_size"],
                     manual_sku=manual_sku,
+                    size_from_measurements=params.get("size_from_measurements", False),
                 )
                 logger.success("Analyse terminée avec succès")
                 self.after(0, lambda: self.display_result(result))

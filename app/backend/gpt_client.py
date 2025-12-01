@@ -118,25 +118,32 @@ class ListingGenerator:
         encoded_images: Iterable[str],
         user_comment: str,
         template: ListingTemplate,
+        *,
+        measurement_guidance: str | None = None,
     ) -> List[dict]:
         logger.step("Construction du prompt pour l'API OpenAI")
         images_list = list(encoded_images)
+        system_content: List[dict] = [
+            {
+                "type": "input_text",
+                "text": (
+                    "Tu es un assistant vendeur Vinted. Analyse les photos fournies, "
+                    "identifie uniquement les caractéristiques visibles ou confirmées (taille, couleur, défauts) "
+                    "et produis un titre et une description suivant le template donné. Ne fais aucune supposition "
+                    "ni estimation : laisse un champ vide lorsqu'une information n'est pas prouvée par les photos ou "
+                    "les commentaires. Les informations saisies dans la boîte Commentaire priment sur tout le reste "
+                    "pour remplir les champs, calculer l'estimation de prix et rédiger l'annonce."
+                ),
+            }
+        ]
+
+        if measurement_guidance:
+            system_content.append({"type": "input_text", "text": measurement_guidance})
+
         messages: List[dict] = [
             {
                 "role": "system",
-                "content": [
-                    {
-                        "type": "input_text",
-                        "text": (
-                            "Tu es un assistant vendeur Vinted. Analyse les photos fournies, "
-                            "identifie uniquement les caractéristiques visibles ou confirmées (taille, couleur, défauts) "
-                            "et produis un titre et une description suivant le template donné. Ne fais aucune supposition "
-                            "ni estimation : laisse un champ vide lorsqu'une information n'est pas prouvée par les photos ou "
-                            "les commentaires. Les informations saisies dans la boîte Commentaire priment sur tout le reste "
-                            "pour remplir les champs, calculer l'estimation de prix et rédiger l'annonce."
-                        ),
-                    }
-                ],
+                "content": system_content,
             }
         ]
         user_content: List[dict] = []
@@ -162,6 +169,30 @@ class ListingGenerator:
         messages.append({"role": "user", "content": user_content})
         return messages
 
+    @staticmethod
+    def _build_measurement_guidance(
+        template_name: str, size_from_measurements: bool
+    ) -> str | None:
+        if not size_from_measurements:
+            return None
+
+        if template_name not in {
+            "template-polaire-outdoor",
+            "template-pull-tommy-femme",
+        }:
+            return None
+
+        return (
+            "Si l'étiquette de taille est absente ou illisible, estime la taille (XS/XXL) "
+            "à partir des mesures à plat visibles sur les photos. Utilise ce rappel : "
+            "Aisselles-à-aisselles 45-47=XS, 48-50=S, 51-53=M, 54-56=L, 57-60=XL, 61-64=XXL ; "
+            "Épaules 36-38=XS, 38-40=S, 40-42=M, 42-44=L, 44-47=XL, 47-50=XXL ; "
+            "Longueur dos 58-61=XS, 60-63=S, 62-65=M, 64-67=L, 66-70=XL, 69-73=XXL ; "
+            "Manches 59-61=XS, 60-62=S, 61-63=M, 62-64=L, 63-65=XL, 64-66=XXL ; "
+            "Bas 43-46=XS, 46-49=S, 49-52=M, 52-55=L, 55-58=XL, 59-62=XXL. "
+            "Reste cohérent entre les mesures, laisse vide si les chiffres sont flous."
+        )
+
     def generate_listing(
         self,
         encoded_images: Iterable[str],
@@ -170,11 +201,21 @@ class ListingGenerator:
         fr_size_override: str,
         us_size_override: Optional[str] = None,
         manual_sku: Optional[str] = None,
+        size_from_measurements: bool = False,
     ) -> ListingResult:
         logger.step("Début de la génération d'annonce")
         encoded_images_list = list(encoded_images)
+        measurement_guidance = self._build_measurement_guidance(
+            template.name, size_from_measurements
+        )
+
         try:
-            messages = self._build_messages(encoded_images_list, user_comment, template)
+            messages = self._build_messages(
+                encoded_images_list,
+                user_comment,
+                template,
+                measurement_guidance=measurement_guidance,
+            )
             response = self._create_response(messages, max_tokens=700)
         except Exception:
             logger.exception("Échec de l'appel à l'API OpenAI")
@@ -238,6 +279,7 @@ class ListingGenerator:
             fr_size_override=fr_size_override,
             us_size_override=us_size_override,
             manual_sku=manual_sku,
+            size_label_visible_override=False if size_from_measurements else None,
         )
 
         if template.name == "template-pull-tommy-femme" and not (fields.sku and fields.sku.strip()):
@@ -329,6 +371,7 @@ class ListingGenerator:
         fr_size_override: Optional[str] = None,
         us_size_override: Optional[str] = None,
         manual_sku: Optional[str] = None,
+        size_label_visible_override: Optional[bool] = None,
     ) -> ListingFields:
         """Force model fields with explicit user instructions."""
 
@@ -339,6 +382,13 @@ class ListingGenerator:
         if manual_sku and manual_sku.strip():
             explicit_overrides["sku"] = manual_sku.strip()
             logger.step("SKU renseigné manuellement, application de la valeur fournie")
+
+        if size_label_visible_override is not None:
+            explicit_overrides["size_label_visible"] = bool(size_label_visible_override)
+            if not size_label_visible_override:
+                explicit_overrides.setdefault("fr_size", "")
+                explicit_overrides.setdefault("us_w", "")
+                explicit_overrides.setdefault("us_l", "")
 
         if fr_size_override:
             explicit_overrides["fr_size"] = fr_size_override.strip()
@@ -419,6 +469,19 @@ class ListingGenerator:
                 return group.strip()
         return None
 
+    @staticmethod
+    def _extract_gender_from_segment(normalized_segment: str) -> Optional[str]:
+        if not normalized_segment:
+            return None
+
+        if "femme" in normalized_segment:
+            return "femme"
+        if "homme" in normalized_segment:
+            return "homme"
+        if "mix" in normalized_segment or "unisexe" in normalized_segment:
+            return "mixte"
+        return None
+
     def _extract_overrides_from_comment(
         self, user_comment: str
     ) -> tuple[dict, list[str], bool, bool]:
@@ -469,6 +532,12 @@ class ListingGenerator:
                 brand_value = segment.split(":", 1)[-1].strip() if ":" in segment else ""
                 if brand_value:
                     overrides["brand"] = brand_value
+                    continue
+
+            if "gender" not in overrides:
+                gender_override = self._extract_gender_from_segment(normalized)
+                if gender_override:
+                    overrides["gender"] = gender_override
                     continue
 
             if lower.startswith("modele") or lower.startswith("modèle"):

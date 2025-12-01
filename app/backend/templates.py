@@ -1142,23 +1142,27 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     top_size_estimate = estimate_fr_top_size(
         fields.bust_flat_measurement_cm,
         length_measurement_cm=fields.length_measurement_cm,
+        measurement_profile="polaire_pull",
     )
     estimated_size_label = (
         top_size_estimate.estimated_size
         if (not fields.size_label_visible or not size_value)
         else None
     )
+    estimated_size_primary = (
+        _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
+    )
     estimated_size_note = (
         top_size_estimate.note
         if (not fields.size_label_visible or not size_value)
         else None
     )
-    estimated_size_primary = (
-        _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
-    )
+    if not estimated_size_note and estimated_size_primary:
+        estimated_size_note = (
+            f"Taille {estimated_size_primary}, estimée à la main à partir des mesures à plat (voir photos)."
+        )
+    size_for_title = size_for_title or estimated_size_primary or estimated_size_label or ""
     length_descriptor = top_size_estimate.length_descriptor
-    bust_flat_display = _format_measurement(fields.bust_flat_measurement_cm)
-    length_display = _format_measurement(fields.length_measurement_cm)
     sku = (fields.sku or "").strip()
     sku_display = sku if sku else "SKU/nc"
 
@@ -1228,67 +1232,25 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     title_parts.extend(["-", sku_display])
     title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
 
-    bust_measurement_used = (
-        not fields.size_label_visible
-        and fields.bust_flat_measurement_cm is not None
-        and fields.bust_flat_measurement_cm > 0
-    )
-    length_measurement_used = (
-        not fields.size_label_visible
-        and length_descriptor is not None
-        and fields.length_measurement_cm is not None
-        and fields.length_measurement_cm > 0
-    )
-
-    size_measurement_details: List[str] = []
-    if bust_measurement_used and not estimated_size_note:
-        bust_circumference_display = _format_measurement(
-            fields.bust_flat_measurement_cm * 2 if fields.bust_flat_measurement_cm else None
-        )
-        if bust_circumference_display:
-            size_measurement_details.append(f"{bust_circumference_display} de poitrine")
-    if length_measurement_used and length_display:
-        size_measurement_details.append(f"longueur épaule-ourlet {length_display}")
-
-    size_measurement_suffix = (
-        f" ({', '.join(size_measurement_details)})" if size_measurement_details else ""
-    )
-
     if fields.size_label_visible and (size_for_title or size_value):
         size_sentence = size_for_title or size_value
-        if size_measurement_suffix:
-            first_sentence = (
-                f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}{size_measurement_suffix}."
-            )
-        else:
-            first_sentence = (
-                f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
-            )
+        first_sentence = (
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
+        )
     elif estimated_size_label:
         size_sentence = estimated_size_primary or estimated_size_label
-        estimated_details: List[str] = []
-        if estimated_size_note:
-            estimated_details.append(estimated_size_note)
-        if size_measurement_details:
-            estimated_details.extend(size_measurement_details)
-
         first_sentence = (
-            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}"
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
         )
-        if estimated_details:
-            joined_details = " ".join(detail.strip() for detail in estimated_details)
-            first_sentence = f"{first_sentence} ({joined_details})"
-        if not first_sentence.endswith("."):
-            first_sentence = f"{first_sentence}."
     elif size_value:
         size_sentence = size_value
         first_sentence = (
-            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_value}{size_measurement_suffix}."
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_value}."
         )
     else:
         size_sentence = "non précisée"
         first_sentence = (
-            f"{item_label} Tommy Hilfiger pour {gender_value} taille non précisée{size_measurement_suffix}."
+            f"{item_label} Tommy Hilfiger pour {gender_value} taille non précisée."
         )
 
     pattern_sentence_value = pattern.lower() if pattern else ""
@@ -1409,7 +1371,9 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         defects = raw_defects if raw_defects else ""
 
     first_paragraph_lines: List[str] = [first_sentence]
-    if estimated_size_note and not estimated_size_label:
+    if estimated_size_label and estimated_size_note:
+        first_paragraph_lines.append(estimated_size_note)
+    elif estimated_size_note and not estimated_size_label:
         first_paragraph_lines.append(estimated_size_note)
     if style_sentence:
         first_paragraph_lines.append(style_sentence)
@@ -1542,23 +1506,27 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     top_size_estimate = estimate_fr_top_size(
         fields.bust_flat_measurement_cm,
         length_measurement_cm=fields.length_measurement_cm,
+        measurement_profile="polaire_pull",
     )
     estimated_size_label = (
         top_size_estimate.estimated_size
         if (not fields.size_label_visible or not size_value)
         else None
     )
+    estimated_size_primary = (
+        _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
+    )
     estimated_size_note = (
         top_size_estimate.note
         if (not fields.size_label_visible or not size_value)
         else None
     )
-    estimated_size_primary = (
-        _extract_primary_size_label(estimated_size_label) if estimated_size_label else None
-    )
+    if not estimated_size_note and estimated_size_primary:
+        estimated_size_note = (
+            f"Taille {estimated_size_primary}, estimée à la main à partir des mesures à plat (voir photos)."
+        )
+    size_for_title = size_for_title or estimated_size_primary or estimated_size_label or ""
     length_descriptor = top_size_estimate.length_descriptor
-    bust_flat_display = _format_measurement(fields.bust_flat_measurement_cm)
-    length_display = _format_measurement(fields.length_measurement_cm)
 
     size_label_missing = not fields.size_label_visible
     composition_label_missing = not fields.fabric_label_visible
@@ -1566,9 +1534,7 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     size_label_missing_message = "Étiquette de taille non visible sur les photos."
     composition_label_missing_message = "Étiquette de composition non visible sur les photos."
     composition_label_cut_message = "Étiquette de composition coupée pour plus de confort."
-    combined_label_missing_message = (
-        "Étiquettes de taille et composition non visibles sur les photos."
-    )
+    combined_label_missing_message = "Étiquettes coupées pour plus de confort."
     combined_label_cut_message = (
         "Étiquettes de taille et composition coupées pour plus de confort."
     )
@@ -1665,35 +1631,20 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     title_parts.extend(["-", sku_display])
     title = " ".join(part for part in title_parts if part).replace("  ", " ").strip()
 
-    bust_measurement_used = (
-        not fields.size_label_visible
-        and fields.bust_flat_measurement_cm is not None
-        and fields.bust_flat_measurement_cm > 0
-    )
-    length_measurement_used = (
-        not fields.size_label_visible
-        and length_descriptor is not None
-        and fields.length_measurement_cm is not None
-        and fields.length_measurement_cm > 0
-    )
-
-    size_measurement_details: List[str] = []
-    if bust_measurement_used and not estimated_size_note:
-        bust_circumference_display = _format_measurement(
-            fields.bust_flat_measurement_cm * 2 if fields.bust_flat_measurement_cm else None
-        )
-        if bust_circumference_display:
-            size_measurement_details.append(f"{bust_circumference_display} de poitrine")
-    if length_measurement_used and length_display:
-        size_measurement_details.append(f"longueur épaule-ourlet {length_display}")
-
     first_paragraph_lines: List[str] = []
     audience_label = gender_value or "femme"
     intro_parts = ["Polaire fleece", brand_display, "pour", audience_label]
     first_paragraph_lines.append(" ".join(part for part in intro_parts if part).strip() + ".")
     if fields.size_label_visible and size_value:
         first_paragraph_lines.append(f"Taille FR {size_value}.")
-    elif estimated_size_label and estimated_size_note:
+    elif estimated_size_label:
+        if estimated_size_note:
+            first_paragraph_lines.append(estimated_size_note)
+        else:
+            first_paragraph_lines.append(
+                f"Taille {estimated_size_primary or estimated_size_label}, estimée à la main à partir des mesures à plat (voir photos)."
+            )
+    elif estimated_size_note:
         first_paragraph_lines.append(estimated_size_note)
     style_tokens: List[str] = []
     if color:
@@ -1711,10 +1662,6 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
         style_tokens.append(normalized_logo_value)
     if style_tokens:
         first_paragraph_lines.append(", ".join(style_tokens) + ".")
-    if size_measurement_details:
-        first_paragraph_lines.append(
-            f"Mesures clés : {', '.join(size_measurement_details)} (voir photos)."
-        )
 
     marketing_lines: List[str] = []
     length_sentence = (

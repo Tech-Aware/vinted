@@ -94,14 +94,27 @@ def _format_measurement(value: float) -> str:
 
 
 def _describe_top_length(length_measurement_cm: Optional[float]) -> Optional[str]:
-    if length_measurement_cm is None or length_measurement_cm <= 0:
+    return None
+
+
+def _extract_primary_size_label(value: Optional[str]) -> Optional[str]:
+    if not value:
         return None
 
-    return f"Longueur épaule-ourlet {_format_measurement(length_measurement_cm)}."
+    match = re.search(r"\(([^)]+)\)", value)
+    if match:
+        extracted = match.group(1).strip()
+        if extracted:
+            return extracted
+
+    return value.strip()
 
 
 def estimate_fr_top_size(
-    bust_flat_measurement_cm: Optional[float], *, length_measurement_cm: Optional[float] = None
+    bust_flat_measurement_cm: Optional[float],
+    *,
+    length_measurement_cm: Optional[float] = None,
+    measurement_profile: Optional[str] = None,
 ) -> TopSizeEstimate:
     """Estimate a FR top size from a flat bust measurement.
 
@@ -120,6 +133,36 @@ def estimate_fr_top_size(
     if bust_flat_measurement_cm is None or bust_flat_measurement_cm <= 0:
         return TopSizeEstimate(estimated_size=None, note=None, length_descriptor=length_descriptor)
 
+    if measurement_profile == "polaire_pull":
+        chart = (
+            (45.0, 47.0, "XS"),
+            (48.0, 50.0, "S"),
+            (51.0, 53.0, "M"),
+            (54.0, 56.0, "L"),
+            (57.0, 60.0, "XL"),
+            (61.0, 64.0, "XXL"),
+        )
+        width = float(bust_flat_measurement_cm)
+        estimated_size = None
+        for lower, upper, label in chart:
+            if lower <= width <= upper:
+                estimated_size = label
+                break
+
+        if estimated_size is None:
+            _closest_lower, _closest_upper, closest_label = min(
+                chart,
+                key=lambda entry: abs(width - ((entry[0] + entry[1]) / 2)),
+            )
+            estimated_size = closest_label
+
+        note = f"Taille {estimated_size}, estimée à la main à partir des mesures à plat (voir photos)"
+        return TopSizeEstimate(
+            estimated_size=estimated_size,
+            note=note,
+            length_descriptor=length_descriptor,
+        )
+
     measurement_is_circumference = (
         _MIN_REASONABLE_BUST_CM
         <= bust_flat_measurement_cm
@@ -133,15 +176,11 @@ def estimate_fr_top_size(
     rounded_circumference = int(round(chest_circumference_cm))
 
     if chest_circumference_cm < _MIN_REASONABLE_BUST_CM:
-        note = (
-            f"Mesure de poitrine trop faible pour une taille adulte (~{rounded_circumference} cm)."
-        )
+        note = "Mesure de poitrine trop faible pour une taille adulte (voir photos)."
         return TopSizeEstimate(estimated_size=None, note=note, length_descriptor=length_descriptor)
 
     if chest_circumference_cm > _MAX_REASONABLE_BUST_CM:
-        note = (
-            f"Mesure de poitrine hors plage réaliste (~{rounded_circumference} cm)."
-        )
+        note = "Mesure de poitrine hors plage réaliste (voir photos)."
         return TopSizeEstimate(estimated_size=None, note=note, length_descriptor=length_descriptor)
 
     estimated_size: Optional[str] = None
@@ -151,16 +190,16 @@ def estimate_fr_top_size(
             break
 
     if estimated_size is None:
-        note = f"Mesure de poitrine hors grille (~{rounded_circumference} cm)."
+        note = "Mesure de poitrine hors grille (voir photos)."
         return TopSizeEstimate(estimated_size=None, note=note, length_descriptor=length_descriptor)
 
-    if measurement_is_circumference:
-        note = f"Taille estimée depuis un tour de poitrine ~{rounded_circumference} cm."
-    else:
-        note = (
-            f"Taille estimée depuis un tour de poitrine ~{rounded_circumference} cm "
-            "(largeur à plat x2)."
-        )
+    size_note_label = _extract_primary_size_label(estimated_size) or estimated_size
+    note = (
+        f"Taille {size_note_label}, estimée à la main à partir des mesures à plat (voir photos)"
+        if size_note_label
+        else "Taille estimée à la main à partir des mesures à plat (voir photos)"
+    )
+
     return TopSizeEstimate(
         estimated_size=estimated_size, note=note, length_descriptor=length_descriptor
     )
