@@ -29,7 +29,7 @@ except ImportError:  # pragma: no cover - optional dependency
     OpenAI = None  # type: ignore
 
 from app.logger import get_logger
-from app.backend.gemini_client import GeminiClient
+from app.backend.gemini_client import GeminiClient, GeminiResponseError
 from app.backend.listing_fields import ListingFields
 from app.backend.templates import ListingTemplate
 
@@ -704,9 +704,13 @@ class ListingGenerator:
         if self.provider == "gemini":
             client = self._gemini_client or GeminiClient(self.model, self.api_key or "")
             self._gemini_client = client
-            return client.generate(
-                messages, max_tokens=max_tokens, temperature=self.temperature
-            )
+            try:
+                return client.generate(
+                    messages, max_tokens=max_tokens, temperature=self.temperature
+                )
+            except GeminiResponseError as exc:
+                logger.error("Réponse Gemini inutilisable : %s", exc)
+                raise
 
         client = self.client
         if hasattr(client, "responses"):

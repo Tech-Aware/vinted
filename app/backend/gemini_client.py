@@ -11,6 +11,10 @@ from app.logger import get_logger
 
 logger = get_logger(__name__)
 
+
+class GeminiResponseError(RuntimeError):
+    """Erreur de contenu Gemini destinée à l'affichage utilisateur."""
+
 try:  # pragma: no cover - dépendance optionnelle
     import google.generativeai as genai
 except ImportError:  # pragma: no cover - dépendance optionnelle
@@ -118,8 +122,12 @@ class GeminiClient:
             if texts:
                 return "".join(texts).strip()
             if blocked:
-                raise ValueError(
-                    "Réponse Gemini bloquée par les filtres de sécurité (aucun texte)."
+                raise GeminiResponseError(
+                    "Réponse Gemini bloquée par les filtres de sécurité : aucun texte. "
+                    "Vérifiez le contenu (images/texte) et réessayez."
                 )
 
-        raise ValueError("Réponse Gemini sans contenu textuel exploitable")
+        raise GeminiResponseError(
+            "Réponse Gemini sans contenu textuel exploitable : la sortie est vide ou a "
+            "été filtrée par la sécurité. Vérifiez le message d'entrée et réessayez."
+        )
