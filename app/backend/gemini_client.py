@@ -74,23 +74,28 @@ def _data_url_to_inline_data(url: str) -> dict:
     return {"inline_data": {"mime_type": mime_type, "data": payload}}
 
 
-def _messages_to_contents(messages: Sequence[dict]) -> List[dict]:
-    """Convertit les messages internes en contenus Gemini (role + parts)."""
+def _messages_to_payload(messages: Sequence[dict]) -> tuple[List[dict], dict | None]:
+    """Convertit les messages internes en payload Gemini (contents + system)."""
 
     contents: List[dict] = []
+    system_parts: List[dict] = []
+
     for message in messages:
-        parts: List[object] = []
+        role = message.get("role") or "user"
+        parts: List[dict] = []
+
         for content in message.get("content", []):
             content_type = content.get("type") if isinstance(content, dict) else None
+
             if isinstance(content, str):
                 if content:
-                    parts.append(content)
+                    parts.append({"text": content})
                 continue
 
             if content_type in {"input_text", "text"}:
                 text = content.get("text") or ""
                 if text:
-                    parts.append(text)
+                    parts.append({"text": text})
             elif content_type in {"input_image", "image_url"}:
                 image_url = content.get("image_url") or ""
                 try:
@@ -98,12 +103,17 @@ def _messages_to_contents(messages: Sequence[dict]) -> List[dict]:
                 except ValueError:
                     logger.warning("Image ignorée (format non supporté par Gemini)")
 
-        # Chaque message devient une entrée role + parts si au moins une part est présente
-        role = message.get("role") or "user"
-        if parts:
-            contents.append({"role": role, "parts": parts})
+        if role == "system":
+            system_parts.extend(parts)
+            continue
 
-    return contents
+        # Chaque message devient une entrée role + parts si au moins une part est présente
+        if parts:
+            provider_role = "model" if role == "assistant" else "user"
+            contents.append({"role": provider_role, "parts": parts})
+
+    system_instruction = {"parts": system_parts} if system_parts else None
+    return contents, system_instruction
 
 
 def _coerce_attr(obj: object, name: str):
@@ -173,7 +183,7 @@ class GeminiClient:
         """Déclenche une génération Gemini en convertissant les messages internes."""
 
         self._ensure_client()
-        contents = _messages_to_contents(messages)
+        contents, system_instruction = _messages_to_payload(messages)
         if not contents:
             raise ValueError("Prompt vide pour Gemini")
 
@@ -189,6 +199,7 @@ class GeminiClient:
                 "response_mime_type": "text/plain",
             },
             safety_settings=safety_settings or None,
+            system_instruction=system_instruction,
         )
         return self._extract_text(response)
 
