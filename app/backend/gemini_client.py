@@ -12,6 +12,43 @@ from app.logger import get_logger
 logger = get_logger(__name__)
 
 
+def _ensure_importlib_compatibility() -> None:
+    """Ajoute packages_distributions à importlib.metadata si absent (Python 3.9)."""
+
+    try:  # pragma: no cover - dépendance standard
+        import importlib.metadata as stdlib_metadata
+    except Exception:
+        return
+
+    if hasattr(stdlib_metadata, "packages_distributions"):
+        return
+
+    # Tentative de récupération depuis le backport importlib_metadata si disponible.
+    try:  # pragma: no cover - dépendance optionnelle
+        import importlib_metadata as backport_metadata
+
+        stdlib_metadata.packages_distributions = backport_metadata.packages_distributions  # type: ignore[attr-defined]
+        logger.info(
+            "Compatibilité importlib: packages_distributions injecté depuis importlib_metadata"
+        )
+        return
+    except Exception:
+        pass
+
+    # Dernier recours : stub minimal pour éviter l'AttributeError au chargement de google-generativeai.
+    def _fallback_packages_distributions():
+        return {}
+
+    stdlib_metadata.packages_distributions = _fallback_packages_distributions  # type: ignore[attr-defined]
+    logger.warning(
+        "Compatibilité importlib: utilisation d'un stub packages_distributions; "
+        "mettez à jour Python ou installez importlib_metadata pour un support complet"
+    )
+
+
+_ensure_importlib_compatibility()
+
+
 class GeminiResponseError(RuntimeError):
     """Erreur de contenu Gemini destinée à l'affichage utilisateur."""
 
