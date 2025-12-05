@@ -131,6 +131,10 @@ def _coerce_attr(obj: object, name: str):
 def _safety_settings() -> List[object]:
     """Construit la liste des catégories disponibles dans la version du SDK."""
 
+    # Certains environnements (ex. anciennes versions du SDK sur Python 3.9) ne
+    # supportent pas toutes les catégories. Lorsque la conversion précédente
+    # échoue, on renvoie une liste vide pour laisser Google appliquer ses
+    # réglages par défaut plutôt que de remonter une erreur bloquante.
     if HarmCategory is None or HarmBlockThreshold is None:
         return []
 
@@ -197,8 +201,14 @@ class GeminiClient:
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
             },
-            "safety_settings": safety_settings or None,
         }
+
+        # Ré-autorise la sortie textuelle standard lorsque le SDK le permet.
+        if "response_mime_type" in inspect.signature(model.generate_content).parameters:
+            params["generation_config"]["response_mime_type"] = "text/plain"
+
+        if safety_settings:
+            params["safety_settings"] = safety_settings
 
         supports_system = "system_instruction" in inspect.signature(
             model.generate_content
