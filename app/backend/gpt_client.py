@@ -209,7 +209,8 @@ class ListingGenerator:
         manual_sku: Optional[str] = None,
         size_from_measurements: bool = False,
     ) -> ListingResult:
-        logger.step("Début de la génération d'annonce")
+        provider_label = "Gemini" if self.provider == "gemini" else "OpenAI"
+        logger.step("Début de la génération d'annonce (%s)", provider_label)
         encoded_images_list = list(encoded_images)
         measurement_guidance = self._build_measurement_guidance(
             template.name, size_from_measurements

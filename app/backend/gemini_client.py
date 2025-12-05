@@ -54,8 +54,11 @@ class GeminiResponseError(RuntimeError):
 
 try:  # pragma: no cover - dépendance optionnelle
     import google.generativeai as genai
+    from google.generativeai.types import HarmBlockThreshold, HarmCategory
 except ImportError:  # pragma: no cover - dépendance optionnelle
     genai = None  # type: ignore
+    HarmCategory = None  # type: ignore
+    HarmBlockThreshold = None  # type: ignore
 
 
 _DATA_URL_RE = re.compile(r"^data:(?P<mime>[^;]+);base64,(?P<data>.+)$")
@@ -92,6 +95,19 @@ def _messages_to_parts(messages: Sequence[dict]) -> List[object]:
     return parts
 
 
+def _safety_settings() -> List[object]:
+    if HarmCategory is None or HarmBlockThreshold is None:
+        return []
+
+    return [
+        {"category": HarmCategory.HARM_CATEGORY_HARASSMENT, "threshold": HarmBlockThreshold.BLOCK_NONE},
+        {"category": HarmCategory.HARM_CATEGORY_HATE_SPEECH, "threshold": HarmBlockThreshold.BLOCK_NONE},
+        {"category": HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, "threshold": HarmBlockThreshold.BLOCK_NONE},
+        {"category": HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, "threshold": HarmBlockThreshold.BLOCK_NONE},
+        {"category": HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY, "threshold": HarmBlockThreshold.BLOCK_NONE},
+    ]
+
+
 @dataclass
 class GeminiClient:
     """Enveloppe minimaliste autour du SDK Gemini."""
@@ -126,6 +142,7 @@ class GeminiClient:
                 # peuvent retourner des structures sans texte).
                 "response_mime_type": "text/plain",
             },
+            safety_settings=_safety_settings(),
         )
         return self._extract_text(response)
 
