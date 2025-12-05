@@ -206,11 +206,13 @@ class GeminiClient:
         ).parameters
         if supports_system and system_instruction:
             params["system_instruction"] = system_instruction
-        elif system_instruction:
+        elif system_instruction and system_instruction.get("parts"):
             # Repli pour les versions du SDK qui ne supportent pas system_instruction :
-            # on injecte l'instruction système comme premier message de contenu.
+            # on injecte l'instruction système comme premier message de contenu
+            # en la présentant comme une requête utilisateur (Gemini n'accepte que
+            # les rôles user/model).
             contents = [
-                {"role": "system", "parts": system_instruction.get("parts", [])}
+                {"role": "user", "parts": system_instruction.get("parts", [])}
             ] + contents
 
         response = model.generate_content(contents, **params)
