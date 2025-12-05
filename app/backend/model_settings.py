@@ -181,12 +181,13 @@ def apply_current_model(settings: ModelSettings) -> None:
 
 
 def mask_api_key(api_key: str) -> str:
-    """Masque une clé API en laissant seulement le préfixe et les deux derniers caractères."""
+    """Masque une clé API en conservant le vrai préfixe du fournisseur."""
 
     if not api_key:
         return "Aucune clé configurée"
 
-    visible_prefix = "sk-"
+    prefix_len = min(4, len(api_key))
+    visible_prefix = api_key[:prefix_len]
     suffix = api_key[-2:] if len(api_key) >= 2 else ""
     hidden_length = max(len(api_key) - len(visible_prefix) - len(suffix), 0)
     return f"{visible_prefix}{'*' * hidden_length}{suffix}"
