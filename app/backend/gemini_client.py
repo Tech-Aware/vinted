@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import re
 from dataclasses import dataclass
+import inspect
 from typing import List, Sequence
 
 from app.logger import get_logger
@@ -189,18 +190,30 @@ class GeminiClient:
 
         model = genai.GenerativeModel(self.model)
         safety_settings = _safety_settings()
-        response = model.generate_content(
-            contents,
-            generation_config={
+        params = {
+            "generation_config": {
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
                 # Force une sortie textuelle exploitable (sinon certaines variantes
                 # peuvent retourner des structures sans texte).
                 "response_mime_type": "text/plain",
             },
-            safety_settings=safety_settings or None,
-            system_instruction=system_instruction,
-        )
+            "safety_settings": safety_settings or None,
+        }
+
+        supports_system = "system_instruction" in inspect.signature(
+            model.generate_content
+        ).parameters
+        if supports_system and system_instruction:
+            params["system_instruction"] = system_instruction
+        elif system_instruction:
+            # Repli pour les versions du SDK qui ne supportent pas system_instruction :
+            # on injecte l'instruction système comme premier message de contenu.
+            contents = [
+                {"role": "system", "parts": system_instruction.get("parts", [])}
+            ] + contents
+
+        response = model.generate_content(contents, **params)
         return self._extract_text(response)
 
     def _extract_text(self, response: object) -> str:
