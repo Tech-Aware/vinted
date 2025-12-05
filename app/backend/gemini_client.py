@@ -83,4 +83,43 @@ class GeminiClient:
                 "max_output_tokens": max_tokens,
             },
         )
-        return response.text or ""
+        return self._extract_text(response)
+
+    def _extract_text(self, response: object) -> str:
+        """Récupère le texte même lorsque `response.text` échoue (blocage sécurité)."""
+
+        # Le quick accessor `response.text` déclenche une ValueError si la réponse est
+        # vide ou bloquée par les filtres de sécurité. On l'essaye prudemment puis on
+        # retombe sur les candidats.
+        try:
+            text = getattr(response, "text")  # property potentiellement levante
+            if isinstance(text, str) and text:
+                return text
+        except Exception as exc:  # pragma: no cover - dépendance externe
+            logger.warning("Texte Gemini indisponible via response.text : %s", exc)
+
+        candidates = getattr(response, "candidates", None)
+        if isinstance(candidates, Sequence):
+            texts: List[str] = []
+            blocked = False
+            for candidate in candidates:
+                safety = getattr(candidate, "safety_ratings", None)
+                if safety and any(getattr(rating, "blocked", False) for rating in safety):
+                    blocked = True
+                content = getattr(candidate, "content", None)
+                parts = getattr(content, "parts", None) if content else None
+                if not parts:
+                    parts = getattr(candidate, "parts", None)
+                if isinstance(parts, Sequence):
+                    for part in parts:
+                        text_part = getattr(part, "text", None)
+                        if isinstance(text_part, str) and text_part:
+                            texts.append(text_part)
+            if texts:
+                return "".join(texts).strip()
+            if blocked:
+                raise ValueError(
+                    "Réponse Gemini bloquée par les filtres de sécurité (aucun texte)."
+                )
+
+        raise ValueError("Réponse Gemini sans contenu textuel exploitable")
