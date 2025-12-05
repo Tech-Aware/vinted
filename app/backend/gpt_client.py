@@ -223,9 +223,12 @@ class ListingGenerator:
             )
             response = self._create_response(messages, max_tokens=700)
         except Exception:
-            logger.exception("Échec de l'appel à l'API OpenAI")
+            provider_label = "Gemini" if self.provider == "gemini" else "OpenAI"
+            logger.exception("Échec de l'appel à l'API %s", provider_label)
             raise
-        logger.success("Réponse reçue depuis l'API OpenAI")
+
+        provider_label = "Gemini" if self.provider == "gemini" else "OpenAI"
+        logger.success("Réponse reçue depuis l'API %s", provider_label)
         content = self._extract_response_text(response)
         if not content:
             friendly_message = (

@@ -107,15 +107,25 @@ class GeminiClient:
             texts: List[str] = []
             blocked = False
             blocked_reasons: List[str] = []
+            finish_reasons: List[str] = []
+
             for candidate in candidates:
                 safety = getattr(candidate, "safety_ratings", None)
                 if safety:
                     for rating in safety:
+                        category = getattr(rating, "category", None)
                         if getattr(rating, "blocked", False):
                             blocked = True
-                            category = getattr(rating, "category", None)
                             if isinstance(category, str) and category:
                                 blocked_reasons.append(category)
+                        elif isinstance(category, str) and category:
+                            # Même non bloqué, on conserve les catégories pour le diagnostic.
+                            blocked_reasons.append(category)
+
+                finish_reason = getattr(candidate, "finish_reason", None)
+                if isinstance(finish_reason, str) and finish_reason:
+                    finish_reasons.append(finish_reason)
+
                 content = getattr(candidate, "content", None)
                 parts = getattr(content, "parts", None) if content else None
                 if not parts:
@@ -125,13 +135,32 @@ class GeminiClient:
                         text_part = getattr(part, "text", None)
                         if isinstance(text_part, str) and text_part:
                             texts.append(text_part)
+
             if texts:
                 return "".join(texts).strip()
+
+            reason_chunks: List[str] = []
+            if blocked_reasons:
+                reason_chunks.append(
+                    "raisons de sécurité : " + ", ".join(sorted(set(blocked_reasons)))
+                )
+            if finish_reasons:
+                reason_chunks.append(
+                    "codes de fin : " + ", ".join(sorted(set(finish_reasons)))
+                )
+
             if blocked:
-                reasons = ", ".join(sorted(set(blocked_reasons))) or "sécurité Gemini"
+                detail = f" ({'; '.join(reason_chunks)})" if reason_chunks else ""
                 raise GeminiResponseError(
-                    "Réponse Gemini bloquée : aucun texte renvoyé (raisons : "
-                    f"{reasons}). Vérifiez le contenu (images/texte) et réessayez."
+                    "Réponse Gemini bloquée : aucun texte renvoyé" +
+                    f"{detail}. Vérifiez le contenu (images/texte) et réessayez."
+                )
+
+            if reason_chunks:
+                raise GeminiResponseError(
+                    "Réponse Gemini sans contenu textuel exploitable : "
+                    + "; ".join(reason_chunks)
+                    + ". Vérifiez le message d'entrée et réessayez."
                 )
 
         raise GeminiResponseError(
