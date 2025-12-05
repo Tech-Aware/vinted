@@ -106,10 +106,16 @@ class GeminiClient:
         if isinstance(candidates, Sequence):
             texts: List[str] = []
             blocked = False
+            blocked_reasons: List[str] = []
             for candidate in candidates:
                 safety = getattr(candidate, "safety_ratings", None)
-                if safety and any(getattr(rating, "blocked", False) for rating in safety):
-                    blocked = True
+                if safety:
+                    for rating in safety:
+                        if getattr(rating, "blocked", False):
+                            blocked = True
+                            category = getattr(rating, "category", None)
+                            if isinstance(category, str) and category:
+                                blocked_reasons.append(category)
                 content = getattr(candidate, "content", None)
                 parts = getattr(content, "parts", None) if content else None
                 if not parts:
@@ -122,9 +128,10 @@ class GeminiClient:
             if texts:
                 return "".join(texts).strip()
             if blocked:
+                reasons = ", ".join(sorted(set(blocked_reasons))) or "sécurité Gemini"
                 raise GeminiResponseError(
-                    "Réponse Gemini bloquée par les filtres de sécurité : aucun texte. "
-                    "Vérifiez le contenu (images/texte) et réessayez."
+                    "Réponse Gemini bloquée : aucun texte renvoyé (raisons : "
+                    f"{reasons}). Vérifiez le contenu (images/texte) et réessayez."
                 )
 
         raise GeminiResponseError(
