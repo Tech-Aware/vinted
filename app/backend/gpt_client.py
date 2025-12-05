@@ -29,6 +29,7 @@ except ImportError:  # pragma: no cover - optional dependency
     OpenAI = None  # type: ignore
 
 from app.logger import get_logger
+from app.backend.gemini_client import GeminiClient
 from app.backend.listing_fields import ListingFields
 from app.backend.templates import ListingTemplate
 
@@ -66,19 +67,23 @@ class ListingGenerator:
         *,
         model: Optional[str] = None,
         api_key: Optional[str] = None,
+        provider: str = "openai",
         temperature: float = 0.4,
         response_temperature: float = 0.3,
     ) -> None:
         self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.provider = provider
         self.temperature = self._validate_temperature(temperature)
         self.response_temperature = self._validate_temperature(response_temperature)
         self._client: Optional[OpenAI] = None
+        self._gemini_client: Optional[GeminiClient] = None
         logger.step(
             (
-                "ListingGenerator initialisé avec le modèle %s (annonces: %.2f, "
+                "ListingGenerator initialisé avec le modèle %s/%s (annonces: %.2f, "
                 "réponses clients: %.2f)"
             ),
+            self.provider,
             self.model,
             self.temperature,
             self.response_temperature,
@@ -694,7 +699,14 @@ class ListingGenerator:
         return self._extract_response_text(response)
 
     def _create_response(self, messages: Sequence[dict], *, max_tokens: int):
-        """Call OpenAI using either the new responses API or chat completions."""
+        """Appelle le fournisseur approprié (OpenAI ou Gemini)."""
+
+        if self.provider == "gemini":
+            client = self._gemini_client or GeminiClient(self.model, self.api_key or "")
+            self._gemini_client = client
+            return client.generate(
+                messages, max_tokens=max_tokens, temperature=self.temperature
+            )
 
         client = self.client
         if hasattr(client, "responses"):
@@ -738,6 +750,9 @@ class ListingGenerator:
         """Extract textual content from the OpenAI response payload."""
 
         parts: List[str] = []
+
+        if isinstance(response, str):
+            return response.strip()
 
         def _append_if_text(value: object) -> None:
             text = self._coerce_text(value)

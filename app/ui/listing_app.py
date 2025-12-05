@@ -44,6 +44,8 @@ from app.ui.model_settings_dialog import ModelSettingsDialog
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
 DEFECTS_PLACEHOLDER = "Défauts visibles (ex : trace, trou, usure)"
+COMMENT_PLACEHOLDER = "Ajoutez ici vos commentaires"
+
 
 
 logger = get_logger(__name__)
@@ -72,9 +74,15 @@ class VintedListingApp(ctk.CTk):
         apply_current_model(self.model_settings)
 
         active_model = self.model_settings.current_entry
-        self.generator = ListingGenerator(model=active_model.name, api_key=active_model.api_key)
+        self.generator = ListingGenerator(
+            model=active_model.name,
+            api_key=active_model.api_key,
+            provider=active_model.provider,
+        )
         self.reply_generator = CustomerReplyGenerator(
-            model=active_model.name, api_key=active_model.api_key
+            model=active_model.name,
+            api_key=active_model.api_key,
+            provider=active_model.provider,
         )
         self.template_registry = ListingTemplateRegistry()
         self.selected_images: List[Path] = []
@@ -121,10 +129,14 @@ class VintedListingApp(ctk.CTk):
         self.generator.model = entry.name
         self.generator.api_key = entry.api_key
         self.generator._client = None
+        self.generator.provider = entry.provider
+        self.generator._gemini_client = None
 
         self.reply_generator.model = entry.name
         self.reply_generator.api_key = entry.api_key
         self.reply_generator._client = None
+        self.reply_generator.provider = entry.provider
+        self.reply_generator._gemini_client = None
         logger.step("Modèle actif mis à jour: %s", entry.name)
 
     def _build_listing_tab(self, parent: ctk.CTkFrame) -> None:
@@ -930,6 +942,13 @@ class VintedListingApp(ctk.CTk):
     def _normalize_defects(value: str) -> str:
         cleaned = value.strip()
         if cleaned == DEFECTS_PLACEHOLDER:
+            return ""
+        return cleaned
+
+    @staticmethod
+    def _normalize_comment(value: str) -> str:
+        cleaned = value.strip()
+        if cleaned == COMMENT_PLACEHOLDER:
             return ""
         return cleaned
 

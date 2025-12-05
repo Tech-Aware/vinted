@@ -48,9 +48,13 @@ class ModelSettingsDialog(ctk.CTkToplevel):
         self._model_label = ctk.CTkLabel(frame, text=self.settings.current_entry.name)
         self._model_label.grid(row=1, column=1, sticky="w")
 
-        ctk.CTkLabel(frame, text="Clé API :").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=(6, 0))
+        ctk.CTkLabel(frame, text="Fournisseur :").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=(6, 0))
+        self._provider_label = ctk.CTkLabel(frame, text=self.settings.current_entry.provider)
+        self._provider_label.grid(row=2, column=1, sticky="w", pady=(6, 0))
+
+        ctk.CTkLabel(frame, text="Clé API :").grid(row=3, column=0, sticky="w", padx=(0, 8), pady=(6, 0))
         self._api_label = ctk.CTkLabel(frame, text=mask_api_key(self.settings.current_entry.api_key))
-        self._api_label.grid(row=2, column=1, sticky="w", pady=(6, 0))
+        self._api_label.grid(row=3, column=1, sticky="w", pady=(6, 0))
 
     def _build_add_section(self) -> None:
         frame = ctk.CTkFrame(self)
@@ -65,6 +69,14 @@ class ModelSettingsDialog(ctk.CTkToplevel):
         model_entry = ctk.CTkEntry(frame, textvariable=self._new_model_var, placeholder_text="Nom exact du modèle")
         model_entry.grid(row=1, column=0, sticky="ew", pady=(4, 4))
 
+        self._new_provider_var = ctk.StringVar(value="openai")
+        provider_option = ctk.CTkOptionMenu(
+            frame,
+            values=["openai", "gemini"],
+            variable=self._new_provider_var,
+        )
+        provider_option.grid(row=2, column=0, sticky="ew", pady=(4, 4))
+
         self._new_key_var = ctk.StringVar()
         key_entry = ctk.CTkEntry(
             frame,
@@ -72,10 +84,10 @@ class ModelSettingsDialog(ctk.CTkToplevel):
             placeholder_text="Clé API (sk-...)",
             show="*",
         )
-        key_entry.grid(row=2, column=0, sticky="ew", pady=(4, 8))
+        key_entry.grid(row=3, column=0, sticky="ew", pady=(4, 8))
 
         button_frame = ctk.CTkFrame(frame, fg_color="transparent")
-        button_frame.grid(row=3, column=0, sticky="e", pady=(8, 8))
+        button_frame.grid(row=4, column=0, sticky="e", pady=(8, 8))
         button_frame.columnconfigure((0, 1), weight=1)
 
         add_button = ctk.CTkButton(button_frame, text="+ Ajouter", command=self._add_model)
@@ -89,7 +101,10 @@ class ModelSettingsDialog(ctk.CTkToplevel):
     def _add_model(self) -> None:
         try:
             updated = add_model(
-                self.settings, name=self._new_model_var.get(), api_key=self._new_key_var.get()
+                self.settings,
+                name=self._new_model_var.get(),
+                api_key=self._new_key_var.get(),
+                provider=self._new_provider_var.get(),
             )
         except ValueError as exc:
             messagebox.showerror("Erreur", str(exc))
@@ -112,6 +127,7 @@ class ModelSettingsDialog(ctk.CTkToplevel):
         current = load_model_settings()
         self.settings = current
         self._model_label.configure(text=current.current_entry.name)
+        self._provider_label.configure(text=current.current_entry.provider)
         self._api_label.configure(text=mask_api_key(current.current_entry.api_key))
 
     def _close(self) -> None:

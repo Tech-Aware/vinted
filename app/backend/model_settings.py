@@ -24,6 +24,7 @@ class ModelEntry:
 
     name: str
     api_key: str
+    provider: str = "openai"
 
 
 @dataclass(frozen=True)
@@ -43,7 +44,14 @@ class ModelSettings:
 def _serialize(settings: ModelSettings) -> dict:
     return {
         "current_model": settings.current_model,
-        "models": {name: {"name": entry.name, "api_key": entry.api_key} for name, entry in settings.models.items()},
+        "models": {
+            name: {
+                "name": entry.name,
+                "api_key": entry.api_key,
+                "provider": entry.provider,
+            }
+            for name, entry in settings.models.items()
+        },
     }
 
 
@@ -53,10 +61,13 @@ def _deserialize(data: dict, *, fallback_model: str, fallback_key: str) -> Model
         api_key = str(raw.get("api_key", "")).strip()
         if not name or not api_key:
             continue
-        models[name] = ModelEntry(name=name, api_key=api_key)
+        provider = (str(raw.get("provider") or "openai").strip() or "openai").casefold()
+        models[name] = ModelEntry(name=name, api_key=api_key, provider=provider)
 
     if not models:
-        models[fallback_model] = ModelEntry(name=fallback_model, api_key=fallback_key)
+        models[fallback_model] = ModelEntry(
+            name=fallback_model, api_key=fallback_key, provider="openai"
+        )
 
     current_model = data.get("current_model") or fallback_model
     if current_model not in models:
@@ -75,7 +86,11 @@ def load_model_settings() -> ModelSettings:
         logger.info("Aucun fichier de modèles détecté, création d'une configuration par défaut")
         settings = ModelSettings(
             current_model=default_model,
-            models={default_model: ModelEntry(name=default_model, api_key=default_key)},
+            models={
+                default_model: ModelEntry(
+                    name=default_model, api_key=default_key, provider="openai"
+                )
+            },
         )
         save_model_settings(settings)
         return settings
@@ -87,7 +102,11 @@ def load_model_settings() -> ModelSettings:
         logger.exception("Échec de lecture du fichier de modèles, réinitialisation")
         settings = ModelSettings(
             current_model=default_model,
-            models={default_model: ModelEntry(name=default_model, api_key=default_key)},
+            models={
+                default_model: ModelEntry(
+                    name=default_model, api_key=default_key, provider="openai"
+                )
+            },
         )
         save_model_settings(settings)
         return settings
@@ -95,7 +114,12 @@ def load_model_settings() -> ModelSettings:
     if default_model not in settings.models:
         settings = ModelSettings(
             current_model=settings.current_model,
-            models={**settings.models, default_model: ModelEntry(name=default_model, api_key=default_key)},
+            models={
+                **settings.models,
+                default_model: ModelEntry(
+                    name=default_model, api_key=default_key, provider="openai"
+                ),
+            },
         )
         save_model_settings(settings)
 
@@ -114,18 +138,25 @@ def save_model_settings(settings: ModelSettings) -> None:
         raise
 
 
-def add_model(settings: ModelSettings, *, name: str, api_key: str) -> ModelSettings:
+def add_model(
+    settings: ModelSettings, *, name: str, api_key: str, provider: str = "openai"
+) -> ModelSettings:
     """Ajoute un nouveau modèle et le définit comme actif."""
 
     clean_name = name.strip()
     clean_key = api_key.strip()
+    clean_provider = provider.strip().casefold() or "openai"
     if not clean_name:
         raise ValueError("Le nom du modèle est obligatoire")
     if not clean_key:
         raise ValueError("La clé API du modèle est obligatoire")
+    if clean_provider not in {"openai", "gemini"}:
+        raise ValueError("Fournisseur non supporté (openai ou gemini)")
 
     models = dict(settings.models)
-    models[clean_name] = ModelEntry(name=clean_name, api_key=clean_key)
+    models[clean_name] = ModelEntry(
+        name=clean_name, api_key=clean_key, provider=clean_provider
+    )
     return ModelSettings(current_model=clean_name, models=models)
 
 
@@ -133,10 +164,20 @@ def apply_current_model(settings: ModelSettings) -> None:
     """Expose le modèle actif via les variables d'environnement."""
 
     entry = settings.current_entry
-    os.environ["OPENAI_API_KEY"] = entry.api_key
-    os.environ["OPENAI_TEXT_MODEL"] = entry.name
-    os.environ["OPENAI_VISION_MODEL"] = entry.name
-    logger.step("Modèle actif appliqué (%s)", entry.name)
+    if entry.provider == "openai":
+        os.environ["OPENAI_API_KEY"] = entry.api_key
+        os.environ["OPENAI_TEXT_MODEL"] = entry.name
+        os.environ["OPENAI_VISION_MODEL"] = entry.name
+        os.environ.pop("GOOGLE_API_KEY", None)
+        os.environ.pop("GEMINI_API_KEY", None)
+    elif entry.provider == "gemini":
+        os.environ["GOOGLE_API_KEY"] = entry.api_key
+        os.environ["GEMINI_API_KEY"] = entry.api_key
+        os.environ.pop("OPENAI_API_KEY", None)
+        os.environ.pop("OPENAI_TEXT_MODEL", None)
+        os.environ.pop("OPENAI_VISION_MODEL", None)
+    os.environ["LLM_PROVIDER"] = entry.provider
+    logger.step("Modèle actif appliqué (%s - %s)", entry.provider, entry.name)
 
 
 def mask_api_key(api_key: str) -> str:
