@@ -95,6 +95,17 @@ def _messages_to_parts(messages: Sequence[dict]) -> List[object]:
     return parts
 
 
+def _coerce_attr(obj: object, name: str):
+    """Récupère un attribut ou une clé de dict sans lever d'exception."""
+
+    if isinstance(obj, dict):
+        return obj.get(name)
+    try:
+        return getattr(obj, name)
+    except Exception:
+        return None
+
+
 def _safety_settings() -> List[object]:
     """Construit la liste des catégories disponibles dans la version du SDK."""
 
@@ -112,7 +123,11 @@ def _safety_settings() -> List[object]:
     safety: List[object] = []
     missing: List[str] = []
     for name in desired:
-        category = getattr(HarmCategory, name, None)
+        try:
+            category = getattr(HarmCategory, name)
+        except AttributeError:
+            missing.append(name)
+            continue
         if category is None:
             missing.append(name)
             continue
@@ -152,6 +167,7 @@ class GeminiClient:
             raise ValueError("Prompt vide pour Gemini")
 
         model = genai.GenerativeModel(self.model)
+        safety_settings = _safety_settings()
         response = model.generate_content(
             parts,
             generation_config={
@@ -161,7 +177,7 @@ class GeminiClient:
                 # peuvent retourner des structures sans texte).
                 "response_mime_type": "text/plain",
             },
-            safety_settings=_safety_settings(),
+            safety_settings=safety_settings or None,
         )
         return self._extract_text(response)
 
@@ -186,11 +202,12 @@ class GeminiClient:
             finish_reasons: List[str] = []
 
             for candidate in candidates:
-                safety = getattr(candidate, "safety_ratings", None)
+                safety = _coerce_attr(candidate, "safety_ratings")
                 if safety:
                     for rating in safety:
-                        category = getattr(rating, "category", None)
-                        if getattr(rating, "blocked", False):
+                        category = _coerce_attr(rating, "category")
+                        blocked_flag = _coerce_attr(rating, "blocked")
+                        if bool(blocked_flag):
                             blocked = True
                             if isinstance(category, str) and category:
                                 blocked_reasons.append(category)
@@ -198,19 +215,56 @@ class GeminiClient:
                             # Même non bloqué, on conserve les catégories pour le diagnostic.
                             blocked_reasons.append(category)
 
-                finish_reason = getattr(candidate, "finish_reason", None)
+                finish_reason = _coerce_attr(candidate, "finish_reason")
                 if isinstance(finish_reason, str) and finish_reason:
                     finish_reasons.append(finish_reason)
 
-                content = getattr(candidate, "content", None)
-                parts = getattr(content, "parts", None) if content else None
+                content = _coerce_attr(candidate, "content")
+                parts = _coerce_attr(content, "parts") if content else None
                 if not parts:
-                    parts = getattr(candidate, "parts", None)
+                    parts = _coerce_attr(candidate, "parts")
                 if isinstance(parts, Sequence):
                     for part in parts:
-                        text_part = getattr(part, "text", None)
+                        text_part = _coerce_attr(part, "text")
                         if isinstance(text_part, str) and text_part:
                             texts.append(text_part)
+                        elif isinstance(part, dict) and isinstance(part.get("text"), str):
+                            if part["text"]:
+                                texts.append(part["text"])
+
+            if not candidates and isinstance(response, dict):
+                candidates = response.get("candidates")  # type: ignore[assignment]
+
+            if isinstance(candidates, Sequence) and not texts:
+                for candidate in candidates:
+                    if isinstance(candidate, dict):
+                        finish_reason = candidate.get("finish_reason")
+                        if isinstance(finish_reason, str) and finish_reason:
+                            finish_reasons.append(finish_reason)
+                        safety = candidate.get("safety_ratings")
+                        if isinstance(safety, Sequence):
+                            for rating in safety:
+                                if isinstance(rating, dict):
+                                    category = rating.get("category")
+                                    blocked_flag = rating.get("blocked")
+                                    if blocked_flag:
+                                        blocked = True
+                                    if isinstance(category, str) and category:
+                                        blocked_reasons.append(category)
+                        content = candidate.get("content")
+                        if isinstance(content, dict):
+                            parts = content.get("parts")
+                            if isinstance(parts, Sequence):
+                                for part in parts:
+                                    if isinstance(part, dict) and isinstance(part.get("text"), str):
+                                        if part["text"]:
+                                            texts.append(part["text"])
+                        parts = candidate.get("parts")
+                        if isinstance(parts, Sequence):
+                            for part in parts:
+                                if isinstance(part, dict) and isinstance(part.get("text"), str):
+                                    if part["text"]:
+                                        texts.append(part["text"])
 
             if texts:
                 return "".join(texts).strip()
