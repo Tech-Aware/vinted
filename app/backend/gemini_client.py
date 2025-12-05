@@ -96,16 +96,35 @@ def _messages_to_parts(messages: Sequence[dict]) -> List[object]:
 
 
 def _safety_settings() -> List[object]:
+    """Construit la liste des catégories disponibles dans la version du SDK."""
+
     if HarmCategory is None or HarmBlockThreshold is None:
         return []
 
-    return [
-        {"category": HarmCategory.HARM_CATEGORY_HARASSMENT, "threshold": HarmBlockThreshold.BLOCK_NONE},
-        {"category": HarmCategory.HARM_CATEGORY_HATE_SPEECH, "threshold": HarmBlockThreshold.BLOCK_NONE},
-        {"category": HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, "threshold": HarmBlockThreshold.BLOCK_NONE},
-        {"category": HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, "threshold": HarmBlockThreshold.BLOCK_NONE},
-        {"category": HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY, "threshold": HarmBlockThreshold.BLOCK_NONE},
+    desired = [
+        "HARM_CATEGORY_HARASSMENT",
+        "HARM_CATEGORY_HATE_SPEECH",
+        "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "HARM_CATEGORY_DANGEROUS_CONTENT",
+        "HARM_CATEGORY_CIVIC_INTEGRITY",
     ]
+
+    safety: List[object] = []
+    missing: List[str] = []
+    for name in desired:
+        category = getattr(HarmCategory, name, None)
+        if category is None:
+            missing.append(name)
+            continue
+        safety.append({"category": category, "threshold": HarmBlockThreshold.BLOCK_NONE})
+
+    if missing:
+        logger.warning(
+            "Catégories de sécurité Gemini indisponibles dans ce SDK : %s",
+            ", ".join(missing),
+        )
+
+    return safety
 
 
 @dataclass
