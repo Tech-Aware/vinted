@@ -74,14 +74,19 @@ def _data_url_to_inline_data(url: str) -> dict:
     return {"inline_data": {"mime_type": mime_type, "data": payload}}
 
 
-def _messages_to_parts(messages: Sequence[dict]) -> List[object]:
-    parts: List[object] = []
+def _messages_to_contents(messages: Sequence[dict]) -> List[dict]:
+    """Convertit les messages internes en contenus Gemini (role + parts)."""
+
+    contents: List[dict] = []
     for message in messages:
+        parts: List[object] = []
         for content in message.get("content", []):
             content_type = content.get("type") if isinstance(content, dict) else None
             if isinstance(content, str):
-                parts.append(content)
+                if content:
+                    parts.append(content)
                 continue
+
             if content_type in {"input_text", "text"}:
                 text = content.get("text") or ""
                 if text:
@@ -92,7 +97,13 @@ def _messages_to_parts(messages: Sequence[dict]) -> List[object]:
                     parts.append(_data_url_to_inline_data(image_url))
                 except ValueError:
                     logger.warning("Image ignorée (format non supporté par Gemini)")
-    return parts
+
+        # Chaque message devient une entrée role + parts si au moins une part est présente
+        role = message.get("role") or "user"
+        if parts:
+            contents.append({"role": role, "parts": parts})
+
+    return contents
 
 
 def _coerce_attr(obj: object, name: str):
@@ -162,14 +173,14 @@ class GeminiClient:
         """Déclenche une génération Gemini en convertissant les messages internes."""
 
         self._ensure_client()
-        parts = _messages_to_parts(messages)
-        if not parts:
+        contents = _messages_to_contents(messages)
+        if not contents:
             raise ValueError("Prompt vide pour Gemini")
 
         model = genai.GenerativeModel(self.model)
         safety_settings = _safety_settings()
         response = model.generate_content(
-            parts,
+            contents,
             generation_config={
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
