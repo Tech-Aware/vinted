@@ -122,6 +122,9 @@ class GeminiClient:
             generation_config={
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
+                # Force une sortie textuelle exploitable (sinon certaines variantes
+                # peuvent retourner des structures sans texte).
+                "response_mime_type": "text/plain",
             },
         )
         return self._extract_text(response)

@@ -126,7 +126,8 @@ class ListingGenerator:
         *,
         measurement_guidance: str | None = None,
     ) -> List[dict]:
-        logger.step("Construction du prompt pour l'API OpenAI")
+        provider_label = "Gemini" if self.provider == "gemini" else "OpenAI"
+        logger.step("Construction du prompt pour l'API %s", provider_label)
         images_list = list(encoded_images)
         system_content: List[dict] = [
             {
