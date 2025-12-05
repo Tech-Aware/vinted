@@ -6,8 +6,15 @@ from tkinter import messagebox
 
 import customtkinter as ctk
 
-from app.backend.model_settings import add_model, mask_api_key, save_model_settings
-from app.backend.model_settings import apply_current_model, load_model_settings, ModelSettings
+from app.backend.model_settings import (
+    add_model,
+    apply_current_model,
+    load_model_settings,
+    mask_api_key,
+    save_model_settings,
+    set_current_model,
+    ModelSettings,
+)
 from app.logger import get_logger
 
 
@@ -28,11 +35,13 @@ class ModelSettingsDialog(ctk.CTkToplevel):
 
         self.settings = settings
         self.result_settings: ModelSettings | None = None
+        self._selected_model_var = ctk.StringVar(value=self.settings.current_model)
 
         self.columnconfigure(0, weight=1)
         self.protocol("WM_DELETE_WINDOW", self._close)
 
         self._build_current_section()
+        self._build_switch_section()
         self._build_add_section()
 
     def _build_current_section(self) -> None:
@@ -56,9 +65,31 @@ class ModelSettingsDialog(ctk.CTkToplevel):
         self._api_label = ctk.CTkLabel(frame, text=mask_api_key(self.settings.current_entry.api_key))
         self._api_label.grid(row=3, column=1, sticky="w", pady=(6, 0))
 
+    def _build_switch_section(self) -> None:
+        frame = ctk.CTkFrame(self)
+        frame.grid(row=1, column=0, padx=20, pady=(6, 10), sticky="nsew")
+        frame.columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(frame, text="Basculer vers un modèle existant", font=ctk.CTkFont(size=15, weight="bold")).grid(
+            row=0, column=0, sticky="w", pady=(8, 4)
+        )
+
+        self._switch_option = ctk.CTkOptionMenu(
+            frame,
+            values=self._available_models(),
+            variable=self._selected_model_var,
+            command=lambda _: self._on_select_model(),
+        )
+        self._switch_option.grid(row=1, column=0, sticky="ew", pady=(4, 4))
+
+        activate_button = ctk.CTkButton(
+            frame, text="Activer ce modèle", command=self._activate_selected_model
+        )
+        activate_button.grid(row=2, column=0, sticky="e", pady=(6, 8))
+
     def _build_add_section(self) -> None:
         frame = ctk.CTkFrame(self)
-        frame.grid(row=1, column=0, padx=20, pady=(8, 16), sticky="nsew")
+        frame.grid(row=2, column=0, padx=20, pady=(8, 16), sticky="nsew")
         frame.columnconfigure(0, weight=1)
 
         ctk.CTkLabel(frame, text="Ajouter un modèle", font=ctk.CTkFont(size=15, weight="bold")).grid(
@@ -81,7 +112,7 @@ class ModelSettingsDialog(ctk.CTkToplevel):
         key_entry = ctk.CTkEntry(
             frame,
             textvariable=self._new_key_var,
-            placeholder_text="Clé API (sk-...)",
+            placeholder_text="Clé API (selon le fournisseur)",
             show="*",
         )
         key_entry.grid(row=3, column=0, sticky="ew", pady=(4, 8))
@@ -119,17 +150,63 @@ class ModelSettingsDialog(ctk.CTkToplevel):
 
         self.settings = updated
         self.result_settings = updated
+        self._selected_model_var.set(updated.current_model)
         self._refresh_current_model()
+        self._refresh_switch_values()
         messagebox.showinfo("Succès", f"Le modèle '{updated.current_model}' a été ajouté et activé.")
         apply_current_model(updated)
 
     def _refresh_current_model(self) -> None:
         current = load_model_settings()
         self.settings = current
-        self._model_label.configure(text=current.current_entry.name)
-        self._provider_label.configure(text=current.current_entry.provider)
-        self._api_label.configure(text=mask_api_key(current.current_entry.api_key))
+        selected_name = self._selected_model_var.get() or current.current_model
+        entry = current.models.get(selected_name, current.current_entry)
+        self._model_label.configure(text=entry.name)
+        self._provider_label.configure(text=entry.provider)
+        self._api_label.configure(text=mask_api_key(entry.api_key))
+        self._refresh_switch_values()
 
     def _close(self) -> None:
         self.grab_release()
         self.destroy()
+
+    def _available_models(self) -> list[str]:
+        return sorted(self.settings.models.keys())
+
+    def _on_select_model(self) -> None:
+        """Actualise l'aperçu lorsque la sélection change."""
+
+        name = self._selected_model_var.get()
+        entry = self.settings.models.get(name)
+        if entry:
+            self._model_label.configure(text=entry.name)
+            self._provider_label.configure(text=entry.provider)
+            self._api_label.configure(text=mask_api_key(entry.api_key))
+
+    def _activate_selected_model(self) -> None:
+        target = self._selected_model_var.get()
+        try:
+            updated = set_current_model(self.settings, name=target)
+        except (KeyError, ValueError) as exc:
+            messagebox.showerror("Erreur", str(exc))
+            return
+
+        try:
+            save_model_settings(updated)
+        except OSError:
+            messagebox.showerror("Erreur", "Impossible d'enregistrer la sélection.")
+            logger.exception("Sauvegarde du modèle actif échouée")
+            return
+
+        self.settings = updated
+        self.result_settings = updated
+        self._refresh_current_model()
+        messagebox.showinfo("Succès", f"Le modèle '{updated.current_model}' est maintenant actif.")
+        apply_current_model(updated)
+
+    def _refresh_switch_values(self) -> None:
+        values = self._available_models()
+        current_choice = self._selected_model_var.get()
+        if current_choice not in values and values:
+            self._selected_model_var.set(values[0])
+        self._switch_option.configure(values=values)

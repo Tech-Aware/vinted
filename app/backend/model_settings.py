@@ -160,6 +160,17 @@ def add_model(
     return ModelSettings(current_model=clean_name, models=models)
 
 
+def set_current_model(settings: ModelSettings, *, name: str) -> ModelSettings:
+    """Active un modèle existant sans exiger une nouvelle saisie."""
+
+    target = name.strip()
+    if not target:
+        raise ValueError("Nom de modèle manquant")
+    if target not in settings.models:
+        raise KeyError(f"Modèle inconnu: {target}")
+    return ModelSettings(current_model=target, models=dict(settings.models))
+
+
 def apply_current_model(settings: ModelSettings) -> None:
     """Expose le modèle actif via les variables d'environnement."""
 
