@@ -33,11 +33,13 @@ from app.backend.customer_responses import (
     ScenarioConfig,
 )
 from app.backend.api_key_manager import ensure_api_key
+from app.backend.model_settings import apply_current_model, load_model_settings
 from app.backend.gpt_client import ListingGenerator, ListingResult
 from app.backend.image_encoding import encode_images_to_base64
 from app.backend.templates import ListingTemplateRegistry
 from app.logger import get_logger
 from app.ui.image_preview import ImagePreview
+from app.ui.model_settings_dialog import ModelSettingsDialog
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
@@ -66,8 +68,14 @@ class VintedListingApp(ctk.CTk):
             self.destroy()
             raise
 
-        self.generator = ListingGenerator()
-        self.reply_generator = CustomerReplyGenerator()
+        self.model_settings = load_model_settings()
+        apply_current_model(self.model_settings)
+
+        active_model = self.model_settings.current_entry
+        self.generator = ListingGenerator(model=active_model.name, api_key=active_model.api_key)
+        self.reply_generator = CustomerReplyGenerator(
+            model=active_model.name, api_key=active_model.api_key
+        )
         self.template_registry = ListingTemplateRegistry()
         self.selected_images: List[Path] = []
         self._image_directories: Set[Path] = set()
@@ -99,6 +107,26 @@ class VintedListingApp(ctk.CTk):
         self._loading_after_id: Optional[str] = None
         self._loading_step = 0
 
+    def _open_model_settings(self) -> None:
+        dialog = ModelSettingsDialog(self, self.model_settings)
+        self.wait_window(dialog)
+
+        if dialog.result_settings:
+            self.model_settings = dialog.result_settings
+            apply_current_model(self.model_settings)
+            self._apply_model_to_generators()
+
+    def _apply_model_to_generators(self) -> None:
+        entry = self.model_settings.current_entry
+        self.generator.model = entry.name
+        self.generator.api_key = entry.api_key
+        self.generator._client = None
+
+        self.reply_generator.model = entry.name
+        self.reply_generator.api_key = entry.api_key
+        self.reply_generator._client = None
+        logger.step("Modèle actif mis à jour: %s", entry.name)
+
     def _build_listing_tab(self, parent: ctk.CTkFrame) -> None:
         parent.columnconfigure(0, weight=1)
         parent.rowconfigure(0, weight=0)
@@ -107,8 +135,17 @@ class VintedListingApp(ctk.CTk):
 
         template_frame = ctk.CTkFrame(parent)
         template_frame.grid(row=0, column=0, padx=16, pady=(8, 0), sticky="ew")
-        template_frame.columnconfigure(0, weight=1)
-        template_frame.columnconfigure(1, weight=0)
+        template_frame.columnconfigure(0, weight=0)
+        template_frame.columnconfigure(1, weight=1)
+        template_frame.columnconfigure(2, weight=0)
+
+        self.settings_button = ctk.CTkButton(
+            template_frame,
+            text="⚙",
+            width=46,
+            command=self._open_model_settings,
+        )
+        self.settings_button.grid(row=0, column=0, sticky="w", padx=(12, 4), pady=8)
 
         self.template_var = ctk.StringVar(value=self.template_registry.default_template)
         self.template_combo = ctk.CTkComboBox(
@@ -118,12 +155,12 @@ class VintedListingApp(ctk.CTk):
             width=260,
             command=lambda _=None: self._on_template_change(),
         )
-        self.template_combo.grid(row=0, column=0, sticky="w", padx=12, pady=8)
+        self.template_combo.grid(row=0, column=1, sticky="w", padx=12, pady=8)
         self._template_combo_default_state = self.template_combo.cget("state") or "normal"
 
         self.size_mode_var = ctk.StringVar(value="label")
         self.size_mode_frame = ctk.CTkFrame(template_frame)
-        self.size_mode_frame.grid(row=0, column=1, sticky="e", padx=(12, 12), pady=8)
+        self.size_mode_frame.grid(row=0, column=2, sticky="e", padx=(12, 12), pady=8)
         self.size_mode_frame.columnconfigure((0, 1), weight=0)
 
         self.size_label_radio = ctk.CTkRadioButton(
