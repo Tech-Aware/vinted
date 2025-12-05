@@ -180,7 +180,9 @@ class GeminiClient:
             raise RuntimeError("Clé API Gemini manquante")
         genai.configure(api_key=self.api_key)
 
-    def generate(self, messages: Sequence[dict], *, max_tokens: int, temperature: float) -> str:
+    def generate(
+        self, messages: Sequence[dict], *, max_tokens: int, temperature: float
+    ) -> str:
         """Déclenche une génération Gemini en convertissant les messages internes."""
 
         self._ensure_client()
@@ -194,9 +196,6 @@ class GeminiClient:
             "generation_config": {
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
-                # Force une sortie textuelle exploitable (sinon certaines variantes
-                # peuvent retourner des structures sans texte).
-                "response_mime_type": "text/plain",
             },
             "safety_settings": safety_settings or None,
         }
@@ -231,12 +230,19 @@ class GeminiClient:
         except Exception as exc:  # pragma: no cover - dépendance externe
             logger.warning("Texte Gemini indisponible via response.text : %s", exc)
 
+        # Certaines versions renvoient un champ output_text uniquement
+        # lorsqu'une réponse textuelle est disponible.
+        output_text = _coerce_attr(response, "output_text")
+        if isinstance(output_text, str) and output_text:
+            return output_text
+
         candidates = getattr(response, "candidates", None)
         if isinstance(candidates, Sequence):
             texts: List[str] = []
             blocked = False
             blocked_reasons: List[str] = []
             finish_reasons: List[str] = []
+            feedback_reasons: List[str] = []
 
             for candidate in candidates:
                 safety = _coerce_attr(candidate, "safety_ratings")
@@ -271,6 +277,16 @@ class GeminiClient:
 
             if not candidates and isinstance(response, dict):
                 candidates = response.get("candidates")  # type: ignore[assignment]
+
+            prompt_feedback = _coerce_attr(response, "prompt_feedback")
+            if isinstance(prompt_feedback, dict):
+                reasons = prompt_feedback.get("safety_ratings")
+                if isinstance(reasons, Sequence):
+                    for rating in reasons:
+                        if isinstance(rating, dict):
+                            category = rating.get("category")
+                            if isinstance(category, str) and category:
+                                feedback_reasons.append(category)
 
             if isinstance(candidates, Sequence) and not texts:
                 for candidate in candidates:
@@ -310,6 +326,10 @@ class GeminiClient:
             if blocked_reasons:
                 reason_chunks.append(
                     "raisons de sécurité : " + ", ".join(sorted(set(blocked_reasons)))
+                )
+            if feedback_reasons:
+                reason_chunks.append(
+                    "feedback sécurité : " + ", ".join(sorted(set(feedback_reasons)))
                 )
             if finish_reasons:
                 reason_chunks.append(
