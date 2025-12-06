@@ -1255,7 +1255,8 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
             color_tokens.append(pattern)
     color_phrase = " ".join(token for token in color_tokens if token)
 
-    title_parts = [f"{item_label} Tommy Hilfiger femme"]
+    brand_segment = "Tommy Hilfiger premium femme" if premium_cotton else "Tommy Hilfiger femme"
+    title_parts = [f"{item_label} {brand_segment}"]
     if fields.size_label_visible and (size_for_title or size_value):
         title_parts.append(f"taille {size_for_title or size_value}")
     elif estimated_size_label:
