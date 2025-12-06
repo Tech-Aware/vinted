@@ -1197,22 +1197,14 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         if bust_value <= 0:
             return None
 
-        is_circumference = 70.0 <= bust_value <= 130.0
-        chest_circumference = bust_value if is_circumference else bust_value * 2
-        chest_display = int(round(chest_circumference))
-        bust_note = f"Taille estimée depuis un tour de poitrine ~{chest_display} cm"
-        if not is_circumference:
-            bust_note += " (largeur à plat x2)"
+        bust_note = "Taille estimée à la main à partir des mesures à plat (voir photos)"
 
-        notes = [f"{bust_note}."]
+        notes = [bust_note]
         if fields.length_measurement_cm:
             length_display = int(round(fields.length_measurement_cm))
-            notes.append(f"longueur épaule-ourlet ~{length_display} cm.")
+            notes.append(f"longueur épaule-ourlet ~{length_display} cm")
 
-        joined = " ".join(notes)
-        if fields.length_measurement_cm:
-            return joined.rstrip(".")
-        return joined
+        return ". ".join(notes)
 
     measurement_note = build_measurement_note() if size_label_missing else None
 
