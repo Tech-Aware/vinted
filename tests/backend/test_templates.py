@@ -712,6 +712,41 @@ def test_render_pull_tommy_femme_marks_pima_cotton_as_premium() -> None:
     assert "Coton de qualité premium pour un toucher délicat." in second_paragraph
 
 
+def test_render_pull_tommy_femme_detects_pima_in_secondary_fields() -> None:
+    template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
+
+    fields = ListingFields(
+        model="",
+        fr_size="M",
+        us_w="",
+        us_l="",
+        fit_leg="",
+        rise_class="",
+        rise_measurement_cm=None,
+        waist_measurement_cm=None,
+        cotton_pct="100",
+        polyester_pct="",
+        polyamide_pct="",
+        viscose_pct="",
+        elastane_pct="",
+        gender="",
+        color_main="bleu",
+        defects="",
+        defect_tags=(),
+        size_label_visible=True,
+        fabric_label_visible=True,
+        sku="PTF55",
+        knit_pattern="",
+        special_logo="Patch 100% Pima cotton",
+    )
+
+    title, description, _ = template.render(fields)
+
+    assert "Tommy Hilfiger premium femme" in title
+    second_paragraph = description.split("\n\n")[1]
+    assert "Coton de qualité premium" in second_paragraph
+
+
 def test_render_pull_tommy_femme_omits_irrelevant_bust_measurement() -> None:
     template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
     fields = ListingFields(

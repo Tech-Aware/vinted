@@ -179,6 +179,24 @@ def _has_premium_cotton_indicator(*values: Optional[str]) -> bool:
     return any(_contains_premium_cotton_hint(value) for value in values)
 
 
+def _has_premium_cotton_indicator_anywhere(fields: ListingFields) -> bool:
+    """Return True if any textual field on the listing hints at premium cotton.
+
+    This acts as a safety net when the Pima / Supima mention is captured in a
+    secondary field (e.g. logo note, user comment) instead of the usual
+    feature_notes/technical_features slots.
+    """
+
+    for value in vars(fields).values():
+        if isinstance(value, str) and _contains_premium_cotton_hint(value):
+            return True
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                if isinstance(item, str) and _contains_premium_cotton_hint(item):
+                    return True
+    return False
+
+
 _POLYESTER_CONTRADICTION_KEYWORDS = tuple(
     _normalize_text_for_comparison(keyword)
     for keyword in (
@@ -1220,6 +1238,8 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         fields.technical_features,
         fields.made_in,
     )
+    if not premium_cotton:
+        premium_cotton = _has_premium_cotton_indicator_anywhere(fields)
 
     material_segment = ""
     pattern_lower = pattern.lower() if pattern else ""
