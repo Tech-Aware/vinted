@@ -575,10 +575,8 @@ def test_render_pull_tommy_femme_estimates_size_from_bust_measurement() -> None:
 
     first_paragraph_lines = description.split("\n\n")[0].split("\n")
     assert first_paragraph_lines[0] == (
-        "Pull Tommy Hilfiger pour femme taille L (Taille estimée depuis un tour de poitrine ~96 cm (largeur à plat x2). longueur épaule-ourlet ~50 cm)."
+        "Pull Tommy Hilfiger pour femme taille L (Taille estimée à la main à partir des mesures à plat (voir photos). longueur épaule-ourlet ~50 cm)."
     )
-
-    assert "Taille estimée depuis un tour de poitrine ~96 cm (largeur à plat x2)." in first_paragraph_lines[0]
     assert "Coupe courte" not in description
     assert "Manches mesurées" not in description
 
@@ -626,7 +624,7 @@ def test_render_pull_tommy_femme_estimates_size_from_full_circumference() -> Non
 
     first_sentence = description.split("\n\n")[0].split("\n")[0]
     assert first_sentence == (
-        "Pull Tommy Hilfiger pour femme taille L (Taille estimée depuis un tour de poitrine ~96 cm.)."
+        "Pull Tommy Hilfiger pour femme taille L (Taille estimée à la main à partir des mesures à plat (voir photos))."
     )
 
     hashtags_line = description.splitlines()[-1]
