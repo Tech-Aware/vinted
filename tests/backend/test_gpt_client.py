@@ -175,7 +175,9 @@ def test_generate_listing_recovers_tommy_sku(
     assert "Repère le SKU Tommy Hilfiger" in targeted_prompt
 
 
-def test_generate_listing_raises_when_recovery_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generate_listing_requests_manual_sku_when_recovery_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
     main_response = _listing_response(_base_fields_payload())
     recovery_response = FakeResponse("")
@@ -184,10 +186,16 @@ def test_generate_listing_raises_when_recovery_fails(monkeypatch: pytest.MonkeyP
     generator = ListingGenerator(model="fake", api_key="test")
     generator._client = fake_client  # type: ignore[assignment]
 
-    template = _build_template({})
+    captured: Dict[str, Any] = {}
+    template = _build_template(captured)
 
-    with pytest.raises(ValueError, match="Impossible de récupérer un SKU Tommy Hilfiger lisible"):
-        generator.generate_listing(["data:image/png;base64,BBB"], "", template, "")
+    result = generator.generate_listing(["data:image/png;base64,BBB"], "", template, "")
+
+    assert result.title == "TITLE"
+    assert result.sku_missing is True
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.sku == ""
 
     assert len(fake_client.responses.calls) == 2
 

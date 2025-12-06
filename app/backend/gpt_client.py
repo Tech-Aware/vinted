@@ -298,13 +298,14 @@ class ListingGenerator:
                 if fenced:
                     recovered_sku_raw = fenced.group(1)
                 match = re.search(r"PTF\d{1,3}", recovered_sku_raw, re.IGNORECASE)
-                if not match:
-                    raise ValueError(
-                        "Impossible de récupérer un SKU Tommy Hilfiger lisible. "
-                        "Merci de fournir la référence dans le commentaire ou des photos plus nettes."
+                if match:
+                    recovered_sku = match.group(0).strip().upper()
+                    fields = replace(fields, sku=recovered_sku)
+                else:
+                    logger.warning(
+                        "SKU Tommy Hilfiger introuvable après récupération ciblée, demande de saisie manuelle",
                     )
-                recovered_sku = match.group(0).strip().upper()
-                fields = replace(fields, sku=recovered_sku)
+                    fields = replace(fields, sku="")
 
         if template.name == "template-polaire-outdoor":
             labels_uncertain = not (
