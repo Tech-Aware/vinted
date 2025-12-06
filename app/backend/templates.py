@@ -170,7 +170,11 @@ def _contains_premium_cotton_hint(value: Optional[str]) -> bool:
     if not value:
         return False
     normalized = _normalize_text_for_comparison(value)
-    return any(keyword in normalized for keyword in _PREMIUM_COTTON_KEYWORDS)
+    collapsed = re.sub(r"[^a-z0-9]+", "", normalized)
+    return any(
+        keyword in normalized or keyword in collapsed
+        for keyword in _PREMIUM_COTTON_KEYWORDS
+    )
 
 
 def _has_premium_cotton_indicator(*values: Optional[str]) -> bool:
