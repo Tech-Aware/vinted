@@ -163,18 +163,42 @@ def _contains_normalized_phrase(haystack: str, needle: str) -> bool:
     return _normalize_text_for_comparison(needle) in _normalize_text_for_comparison(haystack)
 
 
-_PREMIUM_COTTON_KEYWORDS = ("pima", "prima")
+_PREMIUM_COTTON_KEYWORDS = ("pima", "supima", "prima")
 
 
 def _contains_premium_cotton_hint(value: Optional[str]) -> bool:
     if not value:
         return False
     normalized = _normalize_text_for_comparison(value)
-    return any(keyword in normalized for keyword in _PREMIUM_COTTON_KEYWORDS)
+    collapsed = re.sub(r"[^a-z0-9]+", "", normalized)
+    return any(
+        keyword in normalized or keyword in collapsed
+        for keyword in _PREMIUM_COTTON_KEYWORDS
+    )
 
 
 def _has_premium_cotton_indicator(*values: Optional[str]) -> bool:
+    """Return True when any provided field hints at Pima cotton."""
+
     return any(_contains_premium_cotton_hint(value) for value in values)
+
+
+def _has_premium_cotton_indicator_anywhere(fields: ListingFields) -> bool:
+    """Return True if any textual field on the listing hints at premium cotton.
+
+    This acts as a safety net when the Pima / Supima mention is captured in a
+    secondary field (e.g. logo note, user comment) instead of the usual
+    feature_notes/technical_features slots.
+    """
+
+    for value in vars(fields).values():
+        if isinstance(value, str) and _contains_premium_cotton_hint(value):
+            return True
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                if isinstance(item, str) and _contains_premium_cotton_hint(item):
+                    return True
+    return False
 
 
 _POLYESTER_CONTRADICTION_KEYWORDS = tuple(
@@ -1214,7 +1238,12 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         fields.defects,
         fields.model,
         fields.color_main,
+        fields.feature_notes,
+        fields.technical_features,
+        fields.made_in,
     )
+    if not premium_cotton:
+        premium_cotton = _has_premium_cotton_indicator_anywhere(fields)
 
     material_segment = ""
     pattern_lower = pattern.lower() if pattern else ""
@@ -1255,7 +1284,8 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
             color_tokens.append(pattern)
     color_phrase = " ".join(token for token in color_tokens if token)
 
-    title_parts = [f"{item_label} Tommy Hilfiger femme"]
+    brand_segment = "Tommy Hilfiger premium femme" if premium_cotton else "Tommy Hilfiger femme"
+    title_parts = [f"{item_label} {brand_segment}"]
     if fields.size_label_visible and (size_for_title or size_value):
         title_parts.append(f"taille {size_for_title or size_value}")
     elif estimated_size_label:
@@ -1910,6 +1940,7 @@ class ListingTemplateRegistry:
                     - Taille = {{fr_size}} (taille visible sur l'étiquette, format XS/S/M/L/XL)
                     - Couleur = {{color_main}} (décris les couleurs principales visibles)
                     - Motif / maille = {{knit_pattern}} (marinière, torsadé, col V, etc.)
+                    - Détail matière (ex : Pima / Supima) = {{feature_notes}} (recopie toute mention premium lisible sur l'étiquette)
                     - Composition = {{cotton_pct}}, {{wool_pct}}, {{cashmere_pct}}, {{polyester_pct}}, {{polyamide_pct}}, {{viscose_pct}}, {{elastane_pct}} telles qu'indiquées sur l'étiquette
                     - Made in = {{made_in}} (copie exactement la mention écrite)
                     - Défauts = {{defects}} (détaille chaque imperfection visible)
