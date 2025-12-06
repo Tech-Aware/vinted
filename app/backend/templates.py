@@ -163,6 +163,20 @@ def _contains_normalized_phrase(haystack: str, needle: str) -> bool:
     return _normalize_text_for_comparison(needle) in _normalize_text_for_comparison(haystack)
 
 
+_PREMIUM_COTTON_KEYWORDS = ("pima", "prima")
+
+
+def _contains_premium_cotton_hint(value: Optional[str]) -> bool:
+    if not value:
+        return False
+    normalized = _normalize_text_for_comparison(value)
+    return any(keyword in normalized for keyword in _PREMIUM_COTTON_KEYWORDS)
+
+
+def _has_premium_cotton_indicator(*values: Optional[str]) -> bool:
+    return any(_contains_premium_cotton_hint(value) for value in values)
+
+
 _POLYESTER_CONTRADICTION_KEYWORDS = tuple(
     _normalize_text_for_comparison(keyword)
     for keyword in (
@@ -1142,7 +1156,6 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     top_size_estimate = estimate_fr_top_size(
         fields.bust_flat_measurement_cm,
         length_measurement_cm=fields.length_measurement_cm,
-        measurement_profile="polaire_pull",
     )
     estimated_size_label = (
         top_size_estimate.estimated_size
@@ -1174,6 +1187,43 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     composition_label_cut_message = "Étiquette de composition coupée pour plus de confort."
     combined_label_cut_message = "Étiquettes de taille et composition coupées pour plus de confort."
 
+    def build_measurement_note() -> Optional[str]:
+        if fields.bust_flat_measurement_cm is None:
+            return None
+        try:
+            bust_value = float(fields.bust_flat_measurement_cm)
+        except (TypeError, ValueError):
+            return None
+        if bust_value <= 0:
+            return None
+
+        is_circumference = 70.0 <= bust_value <= 130.0
+        chest_circumference = bust_value if is_circumference else bust_value * 2
+        chest_display = int(round(chest_circumference))
+        bust_note = f"Taille estimée depuis un tour de poitrine ~{chest_display} cm"
+        if not is_circumference:
+            bust_note += " (largeur à plat x2)"
+
+        notes = [f"{bust_note}."]
+        if fields.length_measurement_cm:
+            length_display = int(round(fields.length_measurement_cm))
+            notes.append(f"longueur épaule-ourlet ~{length_display} cm.")
+
+        joined = " ".join(notes)
+        if fields.length_measurement_cm:
+            return joined.rstrip(".")
+        return joined
+
+    measurement_note = build_measurement_note() if size_label_missing else None
+
+    premium_cotton = _has_premium_cotton_indicator(
+        fields.cotton_pct,
+        fields.knit_pattern,
+        fields.defects,
+        fields.model,
+        fields.color_main,
+    )
+
     material_segment = ""
     pattern_lower = pattern.lower() if pattern else ""
     pattern_normalized = (
@@ -1185,12 +1235,13 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
     elif fields.has_wool:
         material_segment = "en laine"
     elif cotton_percent:
+        cotton_label = "coton premium" if premium_cotton else "coton"
         if cotton_value is not None and cotton_value >= 60:
-            material_segment = f"{cotton_percent} coton"
+            material_segment = f"{cotton_percent} {cotton_label}"
         else:
-            material_segment = "coton"
+            material_segment = cotton_label
     elif fields.fabric_label_visible and fields.cotton_pct:
-        material_segment = "coton"
+        material_segment = "coton premium" if premium_cotton else "coton"
 
     if rule and rule.material_override:
         if rule.material_override == "en laine torsadée":
@@ -1239,9 +1290,16 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         )
     elif estimated_size_label:
         size_sentence = estimated_size_primary or estimated_size_label
-        first_sentence = (
-            f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
-        )
+        if measurement_note:
+            first_sentence = (
+                f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence} "
+                f"({measurement_note})."
+            )
+            estimated_size_note = None
+        else:
+            first_sentence = (
+                f"{item_label} Tommy Hilfiger pour {gender_value} taille {size_sentence}."
+            )
     elif size_value:
         size_sentence = size_value
         first_sentence = (
@@ -1380,7 +1438,12 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
 
     marketing_highlight = build_tommy_marketing_highlight(fields, pattern_raw)
 
-    second_paragraph_lines = [marketing_highlight, composition_sentence]
+    second_paragraph_lines = [marketing_highlight]
+    if premium_cotton:
+        second_paragraph_lines.append(
+            "Coton de qualité premium pour un toucher délicat."
+        )
+    second_paragraph_lines.append(composition_sentence)
     if made_in_sentence:
         second_paragraph_lines.append(made_in_sentence)
 
