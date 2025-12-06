@@ -17,6 +17,7 @@ except ImportError:  # pragma: no cover - optional dependency
     OpenAI = None  # type: ignore
 
 from app.logger import get_logger
+from app.backend.gemini_client import GeminiClient
 
 logger = get_logger(__name__)
 
@@ -315,16 +316,20 @@ class CustomerReplyGenerator:
         *,
         model: Optional[str] = None,
         api_key: Optional[str] = None,
+        provider: str = "openai",
         temperature: float = 0.3,
     ) -> None:
         self.model = model or os.getenv("OPENAI_TEXT_MODEL", "gpt-4o-mini")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.provider = provider
         if not 0 <= temperature <= 1:
             raise ValueError("La température doit être comprise entre 0 et 1")
         self.temperature = temperature
         self._client: Optional[OpenAI] = None
+        self._gemini_client: Optional[GeminiClient] = None
         logger.step(
-            "CustomerReplyGenerator initialisé avec le modèle %s et une température de %.2f",
+            "CustomerReplyGenerator initialisé avec le modèle %s/%s et une température de %.2f",
+            self.provider,
             self.model,
             self.temperature,
         )
@@ -515,7 +520,14 @@ class CustomerReplyGenerator:
         return rules
 
     def _create_response(self, messages: Sequence[dict], *, max_tokens: int):
-        """Call the OpenAI client using the available API surface."""
+        """Appelle le fournisseur approprié (OpenAI ou Gemini)."""
+
+        if self.provider == "gemini":
+            client = self._gemini_client or GeminiClient(self.model, self.api_key or "")
+            self._gemini_client = client
+            return client.generate(
+                messages, max_tokens=max_tokens, temperature=self.temperature
+            )
 
         client = self.client
         if hasattr(client, "responses"):
@@ -558,6 +570,9 @@ class CustomerReplyGenerator:
 
     def _extract_response_text(self, response: object) -> str:
         parts: List[str] = []
+
+        if isinstance(response, str):
+            return response.strip()
 
         def _append_if_text(value: object) -> None:
             text = self._coerce_text(value)
