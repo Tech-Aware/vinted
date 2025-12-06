@@ -163,7 +163,7 @@ def _contains_normalized_phrase(haystack: str, needle: str) -> bool:
     return _normalize_text_for_comparison(needle) in _normalize_text_for_comparison(haystack)
 
 
-_PREMIUM_COTTON_KEYWORDS = ("pima", "prima")
+_PREMIUM_COTTON_KEYWORDS = ("pima", "supima", "prima")
 
 
 def _contains_premium_cotton_hint(value: Optional[str]) -> bool:
@@ -1916,6 +1916,7 @@ class ListingTemplateRegistry:
                     - Taille = {{fr_size}} (taille visible sur l'étiquette, format XS/S/M/L/XL)
                     - Couleur = {{color_main}} (décris les couleurs principales visibles)
                     - Motif / maille = {{knit_pattern}} (marinière, torsadé, col V, etc.)
+                    - Détail matière (ex : Pima / Supima) = {{feature_notes}} (recopie toute mention premium lisible sur l'étiquette)
                     - Composition = {{cotton_pct}}, {{wool_pct}}, {{cashmere_pct}}, {{polyester_pct}}, {{polyamide_pct}}, {{viscose_pct}}, {{elastane_pct}} telles qu'indiquées sur l'étiquette
                     - Made in = {{made_in}} (copie exactement la mention écrite)
                     - Défauts = {{defects}} (détaille chaque imperfection visible)
