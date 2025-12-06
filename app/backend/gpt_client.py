@@ -264,6 +264,15 @@ class ListingGenerator:
                     fields = ListingFields.from_dict(
                         sanitized_payload, template_name=template.name
                     )
+                elif template_name == "template-pull-tommy-femme":
+                    logger.warning(
+                        "SKU Tommy Hilfiger invalide renvoyé par le modèle, neutralisation pour déclencher la saisie",
+                    )
+                    sanitized_payload = dict(fields_payload)
+                    sanitized_payload["sku"] = ""
+                    fields = ListingFields.from_dict(
+                        sanitized_payload, template_name=template.name
+                    )
             else:
                 logger.exception("Échec de l'analyse de la réponse JSON")
                 snippet = content_to_parse[:200]

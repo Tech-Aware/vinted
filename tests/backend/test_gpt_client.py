@@ -228,6 +228,30 @@ def test_generate_listing_discards_tommy_sku_without_visible_labels(
     assert result.sku_missing is True
 
 
+def test_generate_listing_neutralizes_invalid_tommy_sku(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    payload = _base_fields_payload(sku="PTF1234")
+    main_response = _listing_response(payload)
+    fake_client = FakeClient([main_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {}
+    template = _build_template(captured)
+
+    result = generator.generate_listing(["data:image/png;base64,DDD"], "", template, "")
+
+    assert result.title == "TITLE"
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.sku == ""
+    assert result.sku_missing is True
+    assert len(fake_client.responses.calls) == 1
+
+
 def test_listing_fields_allows_missing_measurements_for_levis() -> None:
     payload = _base_fields_payload(sku="JLF10", gender="Femme")
     for key in (
