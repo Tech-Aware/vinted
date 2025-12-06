@@ -174,6 +174,8 @@ def _contains_premium_cotton_hint(value: Optional[str]) -> bool:
 
 
 def _has_premium_cotton_indicator(*values: Optional[str]) -> bool:
+    """Return True when any provided field hints at Pima cotton."""
+
     return any(_contains_premium_cotton_hint(value) for value in values)
 
 
@@ -1214,6 +1216,9 @@ def render_template_pull_tommy_femme(fields: ListingFields) -> Tuple[str, str]:
         fields.defects,
         fields.model,
         fields.color_main,
+        fields.feature_notes,
+        fields.technical_features,
+        fields.made_in,
     )
 
     material_segment = ""
