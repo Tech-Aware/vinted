@@ -1082,9 +1082,9 @@ def test_render_pull_tommy_femme_marketing_highlight_varies_with_materials() -> 
         sku="",
     )
 
-    _, cotton_description = template.render(cotton_fields)
-    _, cashmere_description = template.render(cashmere_fields)
-    _, pure_cotton_description = template.render(pure_cotton_fields)
+    _, cotton_description, _ = template.render(cotton_fields)
+    _, cashmere_description, _ = template.render(cashmere_fields)
+    _, pure_cotton_description, _ = template.render(pure_cotton_fields)
 
     cotton_highlight = cotton_description.split("\n\n")[1].splitlines()[0]
     cashmere_highlight = cashmere_description.split("\n\n")[1].splitlines()[0]
