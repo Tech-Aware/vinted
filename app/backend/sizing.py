@@ -193,13 +193,6 @@ def estimate_fr_top_size(
         _closest_upper, estimated_size = min(
             _SIZE_CHART_BUST_CM, key=lambda entry: abs(chest_circumference_cm - entry[0])
         )
-        note = (
-            "Mesure de poitrine hors grille; taille la plus proche estimée à partir des "
-            f"mesures à plat (voir photos)"
-        )
-        return TopSizeEstimate(
-            estimated_size=estimated_size, note=note, length_descriptor=length_descriptor
-        )
 
     size_note_label = _extract_primary_size_label(estimated_size) or estimated_size
     note = (
