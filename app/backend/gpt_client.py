@@ -264,6 +264,15 @@ class ListingGenerator:
                     fields = ListingFields.from_dict(
                         sanitized_payload, template_name=template.name
                     )
+                elif template_name == "template-pull-tommy-femme":
+                    logger.warning(
+                        "SKU Tommy Hilfiger invalide renvoyé par le modèle, neutralisation pour déclencher la saisie",
+                    )
+                    sanitized_payload = dict(fields_payload)
+                    sanitized_payload["sku"] = ""
+                    fields = ListingFields.from_dict(
+                        sanitized_payload, template_name=template.name
+                    )
             else:
                 logger.exception("Échec de l'analyse de la réponse JSON")
                 snippet = content_to_parse[:200]
@@ -282,21 +291,39 @@ class ListingGenerator:
             size_label_visible_override=False if size_from_measurements else None,
         )
 
-        if template.name == "template-pull-tommy-femme" and not (fields.sku and fields.sku.strip()):
-            logger.step("Récupération ciblée du SKU Tommy Hilfiger")
-            recovered_sku_raw = self._recover_tommy_sku(encoded_images_list, user_comment)
-            recovered_sku_raw = (recovered_sku_raw or "").strip()
-            fenced = re.fullmatch(r"```[a-zA-Z0-9_-]*\s*(.*?)\s*```", recovered_sku_raw, re.DOTALL)
-            if fenced:
-                recovered_sku_raw = fenced.group(1)
-            match = re.search(r"PTF\d{1,3}", recovered_sku_raw, re.IGNORECASE)
-            if not match:
-                raise ValueError(
-                    "Impossible de récupérer un SKU Tommy Hilfiger lisible. "
-                    "Merci de fournir la référence dans le commentaire ou des photos plus nettes."
+        if template.name == "template-pull-tommy-femme":
+            labels_support_sku = fields.fabric_label_visible or fields.non_size_labels_visible
+            if fields.sku and fields.sku.strip() and not (labels_support_sku or manual_sku_provided):
+                logger.warning(
+                    "SKU Tommy Hilfiger renvoyé sans étiquette visible, suppression avant récupération ciblée",
                 )
-            recovered_sku = match.group(0).strip().upper()
-            fields = replace(fields, sku=recovered_sku)
+                fields = replace(fields, sku="")
+
+            should_attempt_tommy_recovery = labels_support_sku and not (
+                fields.sku and fields.sku.strip()
+            )
+
+            if should_attempt_tommy_recovery:
+                logger.step("Récupération ciblée du SKU Tommy Hilfiger")
+                recovered_sku_raw = self._recover_tommy_sku(encoded_images_list, user_comment)
+                recovered_sku_raw = (recovered_sku_raw or "").strip()
+                fenced = re.fullmatch(r"```[a-zA-Z0-9_-]*\s*(.*?)\s*```", recovered_sku_raw, re.DOTALL)
+                if fenced:
+                    recovered_sku_raw = fenced.group(1)
+                match = re.search(r"PTF\d{1,3}", recovered_sku_raw, re.IGNORECASE)
+                if match:
+                    recovered_sku = match.group(0).strip().upper()
+                    fields = replace(fields, sku=recovered_sku)
+                else:
+                    logger.warning(
+                        "SKU Tommy Hilfiger introuvable après récupération ciblée, demande de saisie manuelle",
+                    )
+                    fields = replace(fields, sku="")
+            elif not (fields.sku and fields.sku.strip()):
+                logger.warning(
+                    "SKU Tommy Hilfiger absent ou illisible sans étiquette visible, demande de saisie manuelle",
+                )
+                fields = replace(fields, sku="")
 
         if template.name == "template-polaire-outdoor":
             labels_uncertain = not (

@@ -153,7 +153,9 @@ def test_generate_listing_recovers_tommy_sku(
     monkeypatch: pytest.MonkeyPatch, sku_reply: str, expected: str
 ) -> None:
     monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
-    main_response = _listing_response(_base_fields_payload())
+    main_response = _listing_response(
+        _base_fields_payload(fabric_label_visible=True, non_size_labels_visible=True)
+    )
     recovery_response = FakeResponse(sku_reply)
     fake_client = FakeClient([main_response, recovery_response])
 
@@ -175,21 +177,79 @@ def test_generate_listing_recovers_tommy_sku(
     assert "Repère le SKU Tommy Hilfiger" in targeted_prompt
 
 
-def test_generate_listing_raises_when_recovery_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generate_listing_requests_manual_sku_when_recovery_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
-    main_response = _listing_response(_base_fields_payload())
+    main_response = _listing_response(
+        _base_fields_payload(fabric_label_visible=True, non_size_labels_visible=True)
+    )
     recovery_response = FakeResponse("")
     fake_client = FakeClient([main_response, recovery_response])
 
     generator = ListingGenerator(model="fake", api_key="test")
     generator._client = fake_client  # type: ignore[assignment]
 
-    template = _build_template({})
+    captured: Dict[str, Any] = {}
+    template = _build_template(captured)
 
-    with pytest.raises(ValueError, match="Impossible de récupérer un SKU Tommy Hilfiger lisible"):
-        generator.generate_listing(["data:image/png;base64,BBB"], "", template, "")
+    result = generator.generate_listing(["data:image/png;base64,BBB"], "", template, "")
+
+    assert result.title == "TITLE"
+    assert result.sku_missing is True
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.sku == ""
 
     assert len(fake_client.responses.calls) == 2
+
+
+def test_generate_listing_discards_tommy_sku_without_visible_labels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    payload = _base_fields_payload(sku="PTF99")
+    main_response = _listing_response(payload)
+    fake_client = FakeClient([main_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {}
+    template = _build_template(captured)
+
+    result = generator.generate_listing(["data:image/png;base64,CCC"], "", template, "")
+
+    assert result.title == "TITLE"
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.sku == ""
+    assert len(fake_client.responses.calls) == 1
+    assert result.sku_missing is True
+
+
+def test_generate_listing_neutralizes_invalid_tommy_sku(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    payload = _base_fields_payload(sku="PTF1234")
+    main_response = _listing_response(payload)
+    fake_client = FakeClient([main_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {}
+    template = _build_template(captured)
+
+    result = generator.generate_listing(["data:image/png;base64,DDD"], "", template, "")
+
+    assert result.title == "TITLE"
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.sku == ""
+    assert result.sku_missing is True
+    assert len(fake_client.responses.calls) == 1
 
 
 def test_listing_fields_allows_missing_measurements_for_levis() -> None:
@@ -240,7 +300,7 @@ def test_comment_overrides_fr_size(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_comment_without_explicit_size_keeps_model_value(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
-    payload = _base_fields_payload(fr_size="40", sku="PTF1")
+    payload = _base_fields_payload(fr_size="40", sku="PTF1", size_label_visible=True)
     main_response = _listing_response(payload)
     fake_client = FakeClient([main_response])
 
