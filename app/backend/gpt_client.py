@@ -290,7 +290,11 @@ class ListingGenerator:
                 )
                 fields = replace(fields, sku="")
 
-            if not (fields.sku and fields.sku.strip()):
+            should_attempt_tommy_recovery = labels_support_sku and not (
+                fields.sku and fields.sku.strip()
+            )
+
+            if should_attempt_tommy_recovery:
                 logger.step("Récupération ciblée du SKU Tommy Hilfiger")
                 recovered_sku_raw = self._recover_tommy_sku(encoded_images_list, user_comment)
                 recovered_sku_raw = (recovered_sku_raw or "").strip()
@@ -306,6 +310,11 @@ class ListingGenerator:
                         "SKU Tommy Hilfiger introuvable après récupération ciblée, demande de saisie manuelle",
                     )
                     fields = replace(fields, sku="")
+            elif not (fields.sku and fields.sku.strip()):
+                logger.warning(
+                    "SKU Tommy Hilfiger absent ou illisible sans étiquette visible, demande de saisie manuelle",
+                )
+                fields = replace(fields, sku="")
 
         if template.name == "template-polaire-outdoor":
             labels_uncertain = not (
