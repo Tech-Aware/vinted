@@ -192,6 +192,33 @@ def test_generate_listing_raises_when_recovery_fails(monkeypatch: pytest.MonkeyP
     assert len(fake_client.responses.calls) == 2
 
 
+def test_generate_listing_discards_tommy_sku_without_visible_labels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.backend.gpt_client.OpenAI", object)
+    payload = _base_fields_payload(sku="PTF99")
+    main_response = _listing_response(payload)
+    recovery_response = FakeResponse("PTF12")
+    fake_client = FakeClient([main_response, recovery_response])
+
+    generator = ListingGenerator(model="fake", api_key="test")
+    generator._client = fake_client  # type: ignore[assignment]
+
+    captured: Dict[str, Any] = {}
+    template = _build_template(captured)
+
+    result = generator.generate_listing(["data:image/png;base64,CCC"], "", template, "")
+
+    assert result.title == "TITLE"
+    fields = captured.get("fields")
+    assert fields is not None
+    assert fields.sku == "PTF12"
+    assert len(fake_client.responses.calls) == 2
+    second_call = fake_client.responses.calls[1]
+    targeted_prompt = second_call["input"][1]["content"][-1]["text"]
+    assert "Repère le SKU Tommy Hilfiger" in targeted_prompt
+
+
 def test_listing_fields_allows_missing_measurements_for_levis() -> None:
     payload = _base_fields_payload(sku="JLF10", gender="Femme")
     for key in (

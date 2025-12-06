@@ -15,6 +15,9 @@ sous Windows que sous Chromebook (via l'environnement Linux).
 - Gestion des templates d'annonces (fournit un modèle Levi's femme par défaut).
 - Onglet « Réponses aux clients » : scénarios prêts à l'emploi (favoris, contre-offre,
   remerciements, suivi d'envoi...) avec champs dynamiques selon le cas.
+- Relance SKU manquant : si le rendu affiche « SKU/nc » ou qu'aucune référence n'est
+  détectée (p. ex. Pull Tommy Hilfiger, Levi's ou polaire), une fenêtre modale invite
+  à saisir le SKU manuellement puis relance l'analyse avec cette valeur.
 
 ## Pré-requis
 
