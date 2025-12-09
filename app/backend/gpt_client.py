@@ -266,7 +266,7 @@ class ListingGenerator:
         except Exception as exc:
             repaired_fields: ListingFields | None = None
             repaired = self._repair_json_content(content_to_parse)
-            if repaired and repaired != content_to_parse:
+            if repaired:
                 try:
                     payload = json.loads(repaired)
                     fields_payload = payload.get("fields")
@@ -274,9 +274,14 @@ class ListingGenerator:
                         raise ValueError(
                             "Structure JSON invalide après réparation: clé 'fields' manquante ou incorrecte"
                         )
-                    logger.warning(
-                        "Réponse JSON réparée après tronquage ou bruit résiduel du modèle"
-                    )
+                    if repaired != content_to_parse:
+                        logger.warning(
+                            "Réponse JSON réparée après tronquage ou bruit résiduel du modèle"
+                        )
+                    else:
+                        logger.warning(
+                            "Réponse JSON corrigée sans modification visible (nettoyage idempotent)"
+                        )
                     repaired_fields = ListingFields.from_dict(
                         fields_payload, template_name=template.name
                     )
