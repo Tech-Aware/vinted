@@ -235,13 +235,28 @@ class GeminiClient:
             else:
                 safe_parts.append(part)
 
-        response = client.generate_content(
-            safe_parts,
-            generation_config={
-                "temperature": temperature,
-                "max_output_tokens": max_tokens,
-            },
-        )
+        generation_config = {
+            "temperature": temperature,
+            "max_output_tokens": max_tokens,
+        }
+
+        try:
+            response = client.generate_content(
+                safe_parts, generation_config=generation_config
+            )
+        except Exception as exc:
+            # Certains environnements (python 3.9 + google-generativeai) peuvent
+            # échouer dès la normalisation du schema JSON (ex: anyOf non supporté).
+            # On retente sans configuration explicite pour éviter ce chemin.
+            if "Schema" in str(exc) or "anyOf" in str(exc):
+                logger.warning(
+                    "Configuration Gemini incompatible avec le SDK hérité ; "
+                    "nouvelle tentative sans generation_config"
+                )
+                response = client.generate_content(safe_parts)
+            else:
+                raise
+
         return self._extract_text(response)
 
     def _extract_text(self, response: object) -> str:
