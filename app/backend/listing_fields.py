@@ -175,8 +175,9 @@ class ListingFields:
             "template-pull-tommy-femme",
         }
 
-        always_required_fields = (
+        jeans_required_fields = (
             "model",
+            "fr_size",
             "us_w",
             "us_l",
             "fit_leg",
@@ -194,31 +195,20 @@ class ListingFields:
             "defects",
             "sku",
         )
-        measurement_fields = (
-            "bust_flat_measurement_cm",
-            "length_measurement_cm",
-            "sleeve_measurement_cm",
-            "shoulder_measurement_cm",
-            "waist_flat_measurement_cm",
-            "hem_flat_measurement_cm",
+
+        template_required_fields = {
+            "template-jean-levis-femme": jeans_required_fields,
+            "template-pull-tommy-femme": (),
+            "template-polaire-outdoor": (
+                "color_main",
+                "gender",
+                "defects",
+            ),
+        }
+
+        required_fields = template_required_fields.get(
+            template_normalized, jeans_required_fields
         )
-
-        required_fields: tuple[str, ...]
-        polaire_additional_fields = ("neckline_style", "special_logo")
-
-        fr_size_required = template_normalized not in optional_fr_size_templates
-        base_fields: tuple[str, ...]
-        if fr_size_required:
-            base_fields = ("fr_size",) + always_required_fields
-        else:
-            base_fields = always_required_fields
-
-        if template_normalized == "template-polaire-outdoor":
-            required_fields = base_fields + measurement_fields + polaire_additional_fields
-        elif template_normalized == "template-pull-tommy-femme":
-            required_fields = base_fields + measurement_fields
-        else:
-            required_fields = base_fields
 
         missing = [key for key in required_fields if key not in data]
         if missing:
@@ -293,6 +283,10 @@ class ListingFields:
                 sku = ListingFields._normalize_polaire_sku(sku, brand)
             else:
                 sku = ""
+        elif template_normalized == "template-pull-tommy-femme":
+            color_main = color_main or "non précisé"
+            gender = gender or "non précisé"
+            defects = defects or "non précisé"
         is_cardigan = ListingFields._normalize_visibility_flag(
             data.get("is_cardigan"), default=False
         )
@@ -409,6 +403,13 @@ class ListingFields:
         cleaned = value.strip().upper()
         if not cleaned:
             return cleaned
+
+        if (
+            cleaned.startswith("PC")
+            and len(cleaned) > 3
+            and not any(sep in cleaned for sep in (" ", "-"))
+        ):
+            return ""
 
         match = re.search(r"(PTNF|PC)[\s-]?(\d+)", cleaned)
         if not match:
@@ -650,7 +651,6 @@ class ListingFields:
                 Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :
                 {{
                   \"fields\": {{
-                    \"model\": \"code produit lisible si présent ; renvoie \"\" si l'information n'est pas certaine\",
                     \"fr_size\": \"taille affichée (XS, S, M, etc.) ; renvoie \"\" si non lisible\",
                     \"us_w\": \"laisse ce champ vide pour les pulls (renvoie \"\")\",
                     \"us_l\": \"laisse ce champ vide pour les pulls (renvoie \"\")\",
@@ -689,6 +689,7 @@ class ListingFields:
                   }}
                 }}
                 N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
+                Ne fournis pas de champ \"model\" pour les pulls Tommy : cette information n'est pas pertinente ; laisse-le absent ou vide.
                 Ne remplis jamais un champ avec une valeur estimée ou supposée ; retourne la chaîne vide quand une information est manquante ou incertaine.
                 N'invente jamais de matière : si une fibre n'est pas clairement indiquée ou que la ligne est illisible, renvoie la chaîne vide pour ce champ.
                 Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.

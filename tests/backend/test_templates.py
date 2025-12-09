@@ -966,6 +966,16 @@ def test_render_pull_tommy_femme_updates_hashtag_with_size() -> None:
     assert "#durin31tfXL" in hashtags
 
 
+def test_pull_tommy_femme_accepts_missing_color_gender_defects() -> None:
+    fields = ListingFields.from_dict(
+        {"fr_size": "M"}, template_name="template-pull-tommy-femme"
+    )
+
+    assert fields.color_main == "non précisé"
+    assert fields.gender == "non précisé"
+    assert fields.defects == "non précisé"
+
+
 def test_render_pull_tommy_femme_normalizes_extended_sizes() -> None:
     template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
 
@@ -1458,6 +1468,21 @@ def _build_base_polaire_payload(**overrides: object) -> dict[str, object]:
     }
     payload.update(overrides)
     return payload
+
+
+def test_listing_fields_accepts_minimal_polaire_payload() -> None:
+    payload = {
+        "gender": "femme",
+        "color_main": "noir",
+        "defects": "",
+        "defect_tags": [],
+    }
+
+    fields = ListingFields.from_dict(payload, template_name="template-polaire-outdoor")
+
+    assert fields.gender == "femme"
+    assert fields.color_main == "noir"
+    assert fields.defects == ""
 
 
 def test_listing_fields_accepts_polaire_sku_prefixes() -> None:

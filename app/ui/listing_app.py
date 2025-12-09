@@ -877,7 +877,13 @@ class VintedListingApp(ctk.CTk):
 
     def _handle_error(self, error: Exception) -> None:
         self._stop_loading_state()
-        self._show_error_popup(f"Erreur: {error}")
+        hint = ""
+        if "last_gemini_response.txt" in str(error):
+            hint = (
+                "\nLa réponse brute du modèle a été sauvegardée dans "
+                "last_gemini_response.txt pour diagnostic."
+            )
+        self._show_error_popup(f"Erreur: {error}{hint}")
 
     def _show_error_popup(self, message: str) -> None:
         messagebox.showerror("Erreur", message)

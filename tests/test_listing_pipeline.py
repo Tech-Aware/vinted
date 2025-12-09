@@ -71,6 +71,7 @@ def test_json_instruction_for_pull_tommy_mentions_new_fields() -> None:
     assert "N'invente jamais de matière" in instruction
     assert "dans le titre" in instruction.lower()
     assert "la génération échouera" in instruction
+    assert "Ne fournis pas de champ \"model\"" in instruction
 
 
 def test_listing_fields_from_dict_requires_all_keys() -> None:
@@ -245,6 +246,23 @@ def test_listing_fields_parse_new_measurements_for_tommy_template() -> None:
     assert fields.shoulder_measurement_cm == pytest.approx(38)
     assert fields.waist_flat_measurement_cm == pytest.approx(46)
     assert fields.hem_flat_measurement_cm == pytest.approx(47)
+
+
+def test_listing_fields_allows_missing_jean_fields_for_tommy_template() -> None:
+    payload = {
+        "color_main": "marine",
+        "gender": "Femme",
+        "defects": "",
+    }
+
+    fields = ListingFields.from_dict(
+        payload,
+        template_name="template-pull-tommy-femme",
+    )
+
+    assert fields.color_main == "marine"
+    assert fields.gender == "Femme"
+    assert fields.defects == ""
 
 def test_listing_fields_parses_visibility_flags() -> None:
     payload = {

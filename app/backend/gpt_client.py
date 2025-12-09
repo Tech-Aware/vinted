@@ -19,6 +19,7 @@ import os
 import re
 import unicodedata
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any, Iterable, List, Optional, Sequence
 
 import httpx
@@ -61,6 +62,8 @@ def _normalize_text(value: str) -> str:
 
 class ListingGenerator:
     """Generate a Vinted listing from encoded images and user comments."""
+
+    _DEBUG_RESPONSE_FILE = Path("last_gemini_response.txt")
 
     def __init__(
         self,
@@ -169,11 +172,27 @@ class ListingGenerator:
             )
         else:
             logger.info("Aucun commentaire utilisateur fourni")
-        structured_prompt = f"{template.prompt}\n\n{ListingFields.json_instruction(template.name)}"
+        guardrail = self._json_guardrail_instructions()
+        structured_prompt = "\n\n".join(
+            [template.prompt, ListingFields.json_instruction(template.name), guardrail]
+        )
         user_content.append({"type": "input_text", "text": structured_prompt})
         logger.step("Template de description ajouté au prompt")
         messages.append({"role": "user", "content": user_content})
         return messages
+
+    @staticmethod
+    def _json_guardrail_instructions() -> str:
+        return (
+            "Réponds STRICTEMENT avec un objet JSON valide et rien d'autre.\n"
+            "Règles obligatoires :\n"
+            "- Aucun texte avant ou après l'objet JSON.\n"
+            "- Pas de commentaires, pas de parenthèses dans le JSON.\n"
+            "- Jamais de virgule après le dernier champ ou le dernier élément d'un tableau.\n"
+            "- Les clés et valeurs textuelles doivent être entre doubles guillemets \"\".\n"
+            "- Utilise true/false pour les booléens, jamais de majuscules.\n"
+            "- Si une information est absente ou incertaine, renvoie la chaîne vide pour le champ."
+        )
 
     @staticmethod
     def _build_measurement_guidance(
@@ -244,6 +263,8 @@ class ListingGenerator:
             content_to_parse = fenced_match.group(1).strip()
         else:
             content_to_parse = content.strip()
+        content_to_parse = self._strip_unclosed_code_fence(content_to_parse)
+
         if not content_to_parse:
             logger.error(
                 "Réponse textuelle vide renvoyée par le modèle, impossible de l'analyser"
@@ -254,7 +275,7 @@ class ListingGenerator:
         fields_payload: dict[str, Any] | None = None
         logger.step("Analyse de la réponse JSON")
         try:
-            payload = json.loads(content_to_parse)
+            payload = self._parse_model_response(content_to_parse)
             fields_payload = payload.get("fields")
             if not isinstance(fields_payload, dict):
                 raise ValueError("Structure JSON invalide: clé 'fields' manquante ou incorrecte")
@@ -262,54 +283,34 @@ class ListingGenerator:
                 fields_payload, template_name=template.name
             )
         except Exception as exc:
-            repaired_fields: ListingFields | None = None
-            repaired = self._repair_json_content(content_to_parse)
-            if repaired and repaired != content_to_parse:
-                try:
-                    payload = json.loads(repaired)
-                    fields_payload = payload.get("fields")
-                    if not isinstance(fields_payload, dict):
-                        raise ValueError(
-                            "Structure JSON invalide après réparation: clé 'fields' manquante ou incorrecte"
-                        )
+            template_name = template.name or ""
+            if isinstance(exc, ValueError) and "SKU invalide" in str(exc) and fields_payload:
+                if template_name.startswith("template-jean-levis"):
                     logger.warning(
-                        "Réponse JSON réparée après tronquage ou bruit résiduel du modèle"
+                        "SKU Levi's invalide renvoyé par le modèle, application du fallback",
                     )
-                    repaired_fields = ListingFields.from_dict(
-                        fields_payload, template_name=template.name
+                    sanitized_payload = dict(fields_payload)
+                    sanitized_payload["sku"] = ""
+                    fields = ListingFields.from_dict(
+                        sanitized_payload, template_name=template.name
                     )
-                except Exception:
-                    repaired_fields = None
-            if repaired_fields is not None:
-                fields = repaired_fields
-                exc = None  # type: ignore[assignment]
-            if exc is not None:
-                template_name = template.name or ""
-                if isinstance(exc, ValueError) and "SKU invalide" in str(exc):
-                    if template_name.startswith("template-jean-levis"):
-                        logger.warning(
-                            "SKU Levi's invalide renvoyé par le modèle, application du fallback",
-                        )
-                        sanitized_payload = dict(fields_payload)
-                        sanitized_payload["sku"] = ""
-                        fields = ListingFields.from_dict(
-                            sanitized_payload, template_name=template.name
-                        )
-                    elif template_name == "template-polaire-outdoor":
-                        logger.warning(
-                            "SKU polaire invalide renvoyé par le modèle, suppression de la valeur",
-                        )
-                        sanitized_payload = dict(fields_payload)
-                        sanitized_payload["sku"] = ""
-                        fields = ListingFields.from_dict(
-                            sanitized_payload, template_name=template.name
-                        )
+                elif template_name == "template-polaire-outdoor":
+                    logger.warning(
+                        "SKU polaire invalide renvoyé par le modèle, suppression de la valeur",
+                    )
+                    sanitized_payload = dict(fields_payload)
+                    sanitized_payload["sku"] = ""
+                    fields = ListingFields.from_dict(
+                        sanitized_payload, template_name=template.name
+                    )
                 else:
-                    logger.exception("Échec de l'analyse de la réponse JSON")
-                    snippet = content_to_parse[:200]
-                    raise ValueError(
-                        "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
-                    ) from exc
+                    raise
+            else:
+                logger.exception("Échec de l'analyse de la réponse JSON")
+                snippet = content_to_parse[:200]
+                raise ValueError(
+                    "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
+                ) from exc
 
         manual_sku_provided = bool(manual_sku and manual_sku.strip())
 
@@ -842,6 +843,106 @@ class ListingGenerator:
 
         return "".join(part for part in parts if part).strip()
 
+    def _parse_model_response(self, raw_content: str) -> dict[str, Any]:
+        if "{" not in raw_content:
+            dump_path = self._dump_failed_response(raw_content, "", None, None)
+            raise ValueError(
+                "Aucun objet JSON trouvé dans la réponse du modèle (aucune accolade détectée). "
+                f"Détails sauvegardés dans {dump_path}"
+            )
+
+        candidate = self._extract_json_candidate(raw_content)
+
+        attempts: list[str] = [candidate]
+        repaired = self._repair_json_content(candidate)
+        if repaired and repaired not in attempts:
+            attempts.append(repaired)
+
+        trimmed_trailing_commas = re.sub(r",\s*(?=[}\]])", "", candidate)
+        if trimmed_trailing_commas not in attempts:
+            attempts.append(trimmed_trailing_commas)
+
+        last_error: Exception | None = None
+        for attempt in attempts:
+            try:
+                return json.loads(attempt)
+            except Exception as err:  # pragma: no cover - diagnostic path
+                last_error = err
+                continue
+
+        dump_path = self._dump_failed_response(raw_content, candidate, repaired, last_error)
+        raise ValueError(
+            "Réponse du modèle invalide : JSON illisible après tentative de réparation. "
+            f"Détails sauvegardés dans {dump_path}"
+        ) from last_error
+
+    @staticmethod
+    def _extract_json_candidate(raw: str) -> str:
+        start = raw.find("{")
+        if start == -1:
+            raise ValueError(
+                "Aucun objet JSON trouvé dans la réponse du modèle (aucune accolade détectée)."
+            )
+
+        brace_level = 0
+        in_string = False
+        escape = False
+        end_index = None
+
+        for idx, ch in enumerate(raw[start:], start=start):
+            if escape:
+                escape = False
+                continue
+            if ch == "\\":
+                escape = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == "{":
+                brace_level += 1
+            elif ch == "}":
+                brace_level -= 1
+                if brace_level == 0:
+                    end_index = idx
+                    break
+
+        if end_index is not None:
+            return raw[start : end_index + 1].strip()
+
+        # Aucun crochet fermant : on renvoie depuis la première accolade pour laisser
+        # le réparateur compléter le JSON.
+        return raw[start:].strip()
+
+    def _dump_failed_response(
+        self,
+        raw_content: str,
+        candidate: str,
+        repaired: str | None,
+        error: Exception | None,
+    ) -> str:
+        path = self._DEBUG_RESPONSE_FILE
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("w", encoding="utf-8") as handle:
+                handle.write("=== Réponse brute du modèle ===\n")
+                handle.write(raw_content)
+                handle.write("\n\n=== Première extraction JSON ===\n")
+                handle.write(candidate)
+                if repaired:
+                    handle.write("\n\n=== JSON réparé ===\n")
+                    handle.write(repaired)
+                if error:
+                    handle.write("\n\n=== Dernière erreur ===\n")
+                    handle.write(str(error))
+        except Exception:
+            logger.error(
+                "Impossible de sauvegarder la réponse brute du modèle dans %s", path, exc_info=True
+            )
+        return str(path)
+
     @staticmethod
     def _repair_json_content(raw: str) -> str | None:
         """Tente d'extraire un JSON équilibré depuis une réponse bruitée.
@@ -891,6 +992,13 @@ class ListingGenerator:
         # Supprime les virgules finales avant une fermeture pour éviter les JSONDecodeError.
         candidate = re.sub(r",(\s*[}\]])", r"\1", candidate)
 
+        # Certaines réponses Gemini laissent des virgules orphelines juste avant
+        # une parenthèse fermante ou en toute fin de buffer. On les retire sans
+        # supprimer les virgules valides qui précèdent une clé sur la ligne
+        # suivante.
+        candidate = re.sub(r",(?=\s*\))", "", candidate)
+        candidate = re.sub(r",\s*$", "", candidate)
+
         # Ajoute des guillemets manquants sur les clés non citées (telles que `fields:`)
         # pour tolérer des sorties pseudo-YAML du modèle.
         candidate = re.sub(r"([,{]\s*)([A-Za-z0-9_-]+)\s*:", r'\1"\2":', candidate)
@@ -900,11 +1008,98 @@ class ListingGenerator:
         candidate = re.sub(r",\s*\)", "", candidate)
         candidate = re.sub(r"\)\s*(?=[}\]]|$)", "", candidate)
 
-        try:
-            json.loads(candidate)
-            return candidate
-        except Exception:
-            return None
+        # Supprime une chaîne ouverte non terminée en fin de contenu pour éviter les
+        # JSONDecodeError « Unterminated string ».
+        def _strip_unterminated_string_tail(text: str) -> str:
+            in_string_tail = False
+            escape_char = False
+            last_quote = None
+
+            for pos, char in enumerate(text):
+                if escape_char:
+                    escape_char = False
+                    continue
+                if char == "\\":
+                    escape_char = True
+                    continue
+                if char == '"':
+                    in_string_tail = not in_string_tail
+                    if in_string_tail:
+                        last_quote = pos
+
+            if in_string_tail and last_quote is not None:
+                truncated = text[:last_quote]
+                truncated = re.sub(r"[: ,\[]*$", "", truncated)
+                return truncated
+
+            return text
+
+        candidate = _strip_unterminated_string_tail(candidate)
+
+        # Rééquilibre les accolades après suppression du fragment tronqué.
+        brace_balance = 0
+        in_string_tail = False
+        escape_char = False
+        for char in candidate:
+            if escape_char:
+                escape_char = False
+                continue
+            if char == "\\":
+                escape_char = True
+                continue
+            if char == '"':
+                in_string_tail = not in_string_tail
+                continue
+            if in_string_tail:
+                continue
+            if char == "{":
+                brace_balance += 1
+            elif char == "}":
+                brace_balance -= 1
+
+        if brace_balance > 0:
+            candidate = candidate.rstrip() + ("}" * brace_balance)
+
+        # Supprime les virgules finales restées après le rééquilibrage.
+        candidate = re.sub(r",(\s*[}\]])", r"\1", candidate)
+
+        # Coupe le bruit résiduel après la dernière accolade fermante.
+        last_closing_idx = max(candidate.rfind("}"), candidate.rfind("]"))
+        if last_closing_idx != -1:
+            candidate = candidate[: last_closing_idx + 1]
+
+        def _attempt_load(text: str) -> str | None:
+            try:
+                json.loads(text)
+                return text
+            except json.JSONDecodeError as err:
+                # Trailing comma juste avant la fin du buffer : on la supprime et on reteste.
+                if "Expecting property name enclosed in double quotes" in str(err):
+                    trimmed = re.sub(r",\s*(?=[}\]]|$)", "", text)
+                    try:
+                        json.loads(trimmed)
+                        return trimmed
+                    except Exception:
+                        return None
+                return None
+            except Exception:
+                return None
+
+        return _attempt_load(candidate)
+
+    @staticmethod
+    def _strip_unclosed_code_fence(raw: str) -> str:
+        """Supprime une ouverture de bloc de code non fermée par le modèle.
+
+        Certaines réponses Gemini renvoient un préfixe ```json sans fermer le bloc,
+        ce qui rend le JSON illisible. On retire le préambule pour laisser le
+        réparateur JSON extraire correctement les accolades.
+        """
+
+        if not raw.startswith("```"):
+            return raw
+
+        return re.sub(r"^```[a-zA-Z0-9_-]*\s*", "", raw).rstrip()
 
     @staticmethod
     def _coerce_text(value: object) -> str:
