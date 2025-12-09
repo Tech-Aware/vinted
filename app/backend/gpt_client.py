@@ -19,7 +19,7 @@ import os
 import re
 import unicodedata
 from dataclasses import dataclass, replace
-from typing import Iterable, List, Optional, Sequence
+from typing import Any, Iterable, List, Optional, Sequence
 
 import httpx
 
@@ -244,6 +244,7 @@ class ListingGenerator:
             content_to_parse = fenced_match.group(1).strip()
         else:
             content_to_parse = content.strip()
+        fields_payload: dict[str, Any] | None = None
         logger.step("Analyse de la réponse JSON")
         try:
             payload = json.loads(content_to_parse)
@@ -254,32 +255,54 @@ class ListingGenerator:
                 fields_payload, template_name=template.name
             )
         except Exception as exc:
-            template_name = template.name or ""
-            if isinstance(exc, ValueError) and "SKU invalide" in str(exc):
-                if template_name.startswith("template-jean-levis"):
+            repaired_fields: ListingFields | None = None
+            repaired = self._repair_json_content(content_to_parse)
+            if repaired and repaired != content_to_parse:
+                try:
+                    payload = json.loads(repaired)
+                    fields_payload = payload.get("fields")
+                    if not isinstance(fields_payload, dict):
+                        raise ValueError(
+                            "Structure JSON invalide après réparation: clé 'fields' manquante ou incorrecte"
+                        )
                     logger.warning(
-                        "SKU Levi's invalide renvoyé par le modèle, application du fallback",
+                        "Réponse JSON réparée après tronquage ou bruit résiduel du modèle"
                     )
-                    sanitized_payload = dict(fields_payload)
-                    sanitized_payload["sku"] = ""
-                    fields = ListingFields.from_dict(
-                        sanitized_payload, template_name=template.name
+                    repaired_fields = ListingFields.from_dict(
+                        fields_payload, template_name=template.name
                     )
-                elif template_name == "template-polaire-outdoor":
-                    logger.warning(
-                        "SKU polaire invalide renvoyé par le modèle, suppression de la valeur",
-                    )
-                    sanitized_payload = dict(fields_payload)
-                    sanitized_payload["sku"] = ""
-                    fields = ListingFields.from_dict(
-                        sanitized_payload, template_name=template.name
-                    )
-            else:
-                logger.exception("Échec de l'analyse de la réponse JSON")
-                snippet = content_to_parse[:200]
-                raise ValueError(
-                    "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
-                ) from exc
+                except Exception:
+                    repaired_fields = None
+            if repaired_fields is not None:
+                fields = repaired_fields
+                exc = None  # type: ignore[assignment]
+            if exc is not None:
+                template_name = template.name or ""
+                if isinstance(exc, ValueError) and "SKU invalide" in str(exc):
+                    if template_name.startswith("template-jean-levis"):
+                        logger.warning(
+                            "SKU Levi's invalide renvoyé par le modèle, application du fallback",
+                        )
+                        sanitized_payload = dict(fields_payload)
+                        sanitized_payload["sku"] = ""
+                        fields = ListingFields.from_dict(
+                            sanitized_payload, template_name=template.name
+                        )
+                    elif template_name == "template-polaire-outdoor":
+                        logger.warning(
+                            "SKU polaire invalide renvoyé par le modèle, suppression de la valeur",
+                        )
+                        sanitized_payload = dict(fields_payload)
+                        sanitized_payload["sku"] = ""
+                        fields = ListingFields.from_dict(
+                            sanitized_payload, template_name=template.name
+                        )
+                else:
+                    logger.exception("Échec de l'analyse de la réponse JSON")
+                    snippet = content_to_parse[:200]
+                    raise ValueError(
+                        "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
+                    ) from exc
 
         manual_sku_provided = bool(manual_sku and manual_sku.strip())
 
@@ -811,6 +834,50 @@ class ListingGenerator:
                 _append_if_text(getattr(response, "output_text", None))
 
         return "".join(part for part in parts if part).strip()
+
+    @staticmethod
+    def _repair_json_content(raw: str) -> str | None:
+        """Tente d'extraire un JSON équilibré depuis une réponse bruitée.
+
+        Cette fonction repère la première accolade ouvrante, parcours le texte
+        en suivant l'équilibrage des accolades hors des chaînes de caractères
+        et renvoie le segment complet le plus court qui se ferme correctement.
+        Elle permet de supprimer du bruit résiduel ou des troncatures après la
+        dernière accolade fermante.
+        """
+
+        start = raw.find("{")
+        if start == -1:
+            return None
+
+        brace_level = 0
+        in_string = False
+        escape = False
+        end_index = None
+
+        for idx, ch in enumerate(raw[start:], start=start):
+            if escape:
+                escape = False
+                continue
+            if ch == "\\":
+                escape = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == "{":
+                brace_level += 1
+            elif ch == "}":
+                brace_level -= 1
+                if brace_level == 0:
+                    end_index = idx
+                    break
+
+        if end_index is None:
+            return None
+        return raw[start : end_index + 1]
 
     @staticmethod
     def _coerce_text(value: object) -> str:
