@@ -898,11 +898,12 @@ class ListingGenerator:
         # Supprime les virgules finales avant une fermeture pour éviter les JSONDecodeError.
         candidate = re.sub(r",(\s*[}\]])", r"\1", candidate)
 
-        # Certaines réponses Gemini laissent des virgules orphelines en fin de ligne
-        # (avant même qu'une accolade fermante soit ajoutée par le rééquilibrage).
-        # On les retire de façon itérative pour éviter l'erreur
-        # « Expecting property name enclosed in double quotes ».
-        candidate = re.sub(r",\s*(?=\n|\r|$)", "", candidate)
+        # Certaines réponses Gemini laissent des virgules orphelines juste avant
+        # une parenthèse fermante ou en toute fin de buffer. On les retire sans
+        # supprimer les virgules valides qui précèdent une clé sur la ligne
+        # suivante.
+        candidate = re.sub(r",(?=\s*\))", "", candidate)
+        candidate = re.sub(r",\s*$", "", candidate)
 
         # Ajoute des guillemets manquants sur les clés non citées (telles que `fields:`)
         # pour tolérer des sorties pseudo-YAML du modèle.
