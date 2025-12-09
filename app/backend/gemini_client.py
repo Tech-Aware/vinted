@@ -8,6 +8,8 @@ pour obtenir une réponse textuelle exploitable.
 from __future__ import annotations
 
 import base64
+import importlib
+import importlib.metadata
 import re
 from dataclasses import dataclass
 from typing import Any, List, Sequence
@@ -38,6 +40,31 @@ def _coerce_attr(obj: object, name: str):
         return getattr(obj, name)
     except Exception:
         return None
+
+
+def _patch_importlib_metadata() -> None:
+    """Assure la présence de ``packages_distributions`` pour google-generativeai."""
+
+    try:
+        importlib.metadata.packages_distributions  # type: ignore[attr-defined]
+        return
+    except Exception:
+        pass
+
+    try:  # pragma: no cover - dépendance externe
+        import importlib_metadata
+
+        if hasattr(importlib_metadata, "packages_distributions"):
+            importlib.metadata.packages_distributions = (  # type: ignore[attr-defined]
+                importlib_metadata.packages_distributions
+            )
+            logger.info(
+                "Compatibilité importlib: packages_distributions injecté depuis importlib_metadata"
+            )
+    except Exception:
+        logger.warning(
+            "Impossible d'injecter packages_distributions ; l'import de google-generativeai peut échouer"
+        )
 
 
 def _data_url_to_part(url: str) -> Any:
@@ -123,6 +150,8 @@ class GeminiClient:
         if self._client is not None:
             return self._client
 
+        _patch_importlib_metadata()
+
         # Tentative d'utilisation du SDK google-genai (recommandé)
         if genai is None or types is None:
             try:
@@ -155,8 +184,9 @@ class GeminiClient:
             return self._client
         except Exception as exc_legacy:  # pragma: no cover - dépendance externe
             raise GeminiResponseError(
-                "Le package 'google-genai' est requis pour utiliser Gemini. "
-                "Installez la dépendance via `pip install -r requirements.txt`."
+                "Les dépendances Gemini sont manquantes ou incompatibles. "
+                "Installez `google-genai` ou `google-generativeai` via "
+                "`pip install -r requirements.txt`."
             ) from exc_legacy
 
     def generate(
@@ -173,6 +203,7 @@ class GeminiClient:
             config_kwargs = {
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
+                "response_mime_type": "application/json",
             }
             if system_instruction:
                 config_kwargs["system_instruction"] = system_instruction
@@ -203,6 +234,7 @@ class GeminiClient:
             generation_config={
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
+                "response_mime_type": "application/json",
             },
         )
         return self._extract_text(response)
