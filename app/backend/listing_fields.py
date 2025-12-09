@@ -216,7 +216,11 @@ class ListingFields:
         if template_normalized == "template-polaire-outdoor":
             required_fields = base_fields + measurement_fields + polaire_additional_fields
         elif template_normalized == "template-pull-tommy-femme":
-            required_fields = base_fields + measurement_fields
+            required_fields = (
+                "color_main",
+                "gender",
+                "defects",
+            )
         else:
             required_fields = base_fields
 
