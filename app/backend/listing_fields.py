@@ -175,8 +175,9 @@ class ListingFields:
             "template-pull-tommy-femme",
         }
 
-        always_required_fields = (
+        jeans_required_fields = (
             "model",
+            "fr_size",
             "us_w",
             "us_l",
             "fit_leg",
@@ -194,35 +195,24 @@ class ListingFields:
             "defects",
             "sku",
         )
-        measurement_fields = (
-            "bust_flat_measurement_cm",
-            "length_measurement_cm",
-            "sleeve_measurement_cm",
-            "shoulder_measurement_cm",
-            "waist_flat_measurement_cm",
-            "hem_flat_measurement_cm",
-        )
 
-        required_fields: tuple[str, ...]
-        polaire_additional_fields = ("neckline_style", "special_logo")
-
-        fr_size_required = template_normalized not in optional_fr_size_templates
-        base_fields: tuple[str, ...]
-        if fr_size_required:
-            base_fields = ("fr_size",) + always_required_fields
-        else:
-            base_fields = always_required_fields
-
-        if template_normalized == "template-polaire-outdoor":
-            required_fields = base_fields + measurement_fields + polaire_additional_fields
-        elif template_normalized == "template-pull-tommy-femme":
-            required_fields = (
+        template_required_fields = {
+            "template-jean-levis-femme": jeans_required_fields,
+            "template-pull-tommy-femme": (
                 "color_main",
                 "gender",
                 "defects",
-            )
-        else:
-            required_fields = base_fields
+            ),
+            "template-polaire-outdoor": (
+                "color_main",
+                "gender",
+                "defects",
+            ),
+        }
+
+        required_fields = template_required_fields.get(
+            template_normalized, jeans_required_fields
+        )
 
         missing = [key for key in required_fields if key not in data]
         if missing:
@@ -413,6 +403,13 @@ class ListingFields:
         cleaned = value.strip().upper()
         if not cleaned:
             return cleaned
+
+        if (
+            cleaned.startswith("PC")
+            and len(cleaned) > 3
+            and not any(sep in cleaned for sep in (" ", "-"))
+        ):
+            return ""
 
         match = re.search(r"(PTNF|PC)[\s-]?(\d+)", cleaned)
         if not match:

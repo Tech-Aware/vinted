@@ -1460,6 +1460,21 @@ def _build_base_polaire_payload(**overrides: object) -> dict[str, object]:
     return payload
 
 
+def test_listing_fields_accepts_minimal_polaire_payload() -> None:
+    payload = {
+        "gender": "femme",
+        "color_main": "noir",
+        "defects": "",
+        "defect_tags": [],
+    }
+
+    fields = ListingFields.from_dict(payload, template_name="template-polaire-outdoor")
+
+    assert fields.gender == "femme"
+    assert fields.color_main == "noir"
+    assert fields.defects == ""
+
+
 def test_listing_fields_accepts_polaire_sku_prefixes() -> None:
     base_payload = _build_base_polaire_payload(sku="PTNF12", brand="The North Face")
     fields = ListingFields.from_dict(base_payload, template_name="template-polaire-outdoor")
