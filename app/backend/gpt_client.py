@@ -907,6 +907,61 @@ class ListingGenerator:
         candidate = re.sub(r",\s*\)", "", candidate)
         candidate = re.sub(r"\)\s*(?=[}\]]|$)", "", candidate)
 
+        # Supprime une chaîne ouverte non terminée en fin de contenu pour éviter les
+        # JSONDecodeError « Unterminated string ».
+        def _strip_unterminated_string_tail(text: str) -> str:
+            in_string_tail = False
+            escape_char = False
+            last_quote = None
+
+            for pos, char in enumerate(text):
+                if escape_char:
+                    escape_char = False
+                    continue
+                if char == "\\":
+                    escape_char = True
+                    continue
+                if char == '"':
+                    in_string_tail = not in_string_tail
+                    if in_string_tail:
+                        last_quote = pos
+
+            if in_string_tail and last_quote is not None:
+                truncated = text[:last_quote]
+                truncated = re.sub(r"[: ,\[]*$", "", truncated)
+                return truncated
+
+            return text
+
+        candidate = _strip_unterminated_string_tail(candidate)
+
+        # Rééquilibre les accolades après suppression du fragment tronqué.
+        brace_balance = 0
+        in_string_tail = False
+        escape_char = False
+        for char in candidate:
+            if escape_char:
+                escape_char = False
+                continue
+            if char == "\\":
+                escape_char = True
+                continue
+            if char == '"':
+                in_string_tail = not in_string_tail
+                continue
+            if in_string_tail:
+                continue
+            if char == "{":
+                brace_balance += 1
+            elif char == "}":
+                brace_balance -= 1
+
+        if brace_balance > 0:
+            candidate = candidate.rstrip() + ("}" * brace_balance)
+
+        # Supprime les virgules finales restées après le rééquilibrage.
+        candidate = re.sub(r",(\s*[}\]])", r"\1", candidate)
+
         # Coupe le bruit résiduel après la dernière accolade fermante.
         last_closing_idx = max(candidate.rfind("}"), candidate.rfind("]"))
         if last_closing_idx != -1:
