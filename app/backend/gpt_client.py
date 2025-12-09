@@ -893,7 +893,12 @@ class ListingGenerator:
 
         # Ajoute des guillemets manquants sur les clés non citées (telles que `fields:`)
         # pour tolérer des sorties pseudo-YAML du modèle.
-        candidate = re.sub(r"([,{]\s*)([A-Za-z0-9_]+)\s*:", r'\1"\2":', candidate)
+        candidate = re.sub(r"([,{]\s*)([A-Za-z0-9_-]+)\s*:", r'\1"\2":', candidate)
+
+        # Nettoie quelques artefacts courants (`,)` ou parenthèses isolées) générés par
+        # certaines réponses Gemini tronquées.
+        candidate = re.sub(r",\s*\)", "", candidate)
+        candidate = re.sub(r"\)\s*(?=[}\]]|$)", "", candidate)
 
         try:
             json.loads(candidate)
