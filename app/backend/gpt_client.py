@@ -907,6 +907,11 @@ class ListingGenerator:
         candidate = re.sub(r",\s*\)", "", candidate)
         candidate = re.sub(r"\)\s*(?=[}\]]|$)", "", candidate)
 
+        # Coupe le bruit résiduel après la dernière accolade fermante.
+        last_closing_idx = max(candidate.rfind("}"), candidate.rfind("]"))
+        if last_closing_idx != -1:
+            candidate = candidate[: last_closing_idx + 1]
+
         try:
             json.loads(candidate)
             return candidate
