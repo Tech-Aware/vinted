@@ -891,6 +891,10 @@ class ListingGenerator:
         # Supprime les virgules finales avant une fermeture pour éviter les JSONDecodeError.
         candidate = re.sub(r",(\s*[}\]])", r"\1", candidate)
 
+        # Ajoute des guillemets manquants sur les clés non citées (telles que `fields:`)
+        # pour tolérer des sorties pseudo-YAML du modèle.
+        candidate = re.sub(r"([,{]\s*)([A-Za-z0-9_]+)\s*:", r"\1"\2\":", candidate)
+
         try:
             json.loads(candidate)
             return candidate
