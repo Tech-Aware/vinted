@@ -898,6 +898,12 @@ class ListingGenerator:
         # Supprime les virgules finales avant une fermeture pour éviter les JSONDecodeError.
         candidate = re.sub(r",(\s*[}\]])", r"\1", candidate)
 
+        # Certaines réponses Gemini laissent des virgules orphelines en fin de ligne
+        # (avant même qu'une accolade fermante soit ajoutée par le rééquilibrage).
+        # On les retire de façon itérative pour éviter l'erreur
+        # « Expecting property name enclosed in double quotes ».
+        candidate = re.sub(r",\s*(?=\n|\r|$)", "", candidate)
+
         # Ajoute des guillemets manquants sur les clés non citées (telles que `fields:`)
         # pour tolérer des sorties pseudo-YAML du modèle.
         candidate = re.sub(r"([,{]\s*)([A-Za-z0-9_-]+)\s*:", r'\1"\2":', candidate)
@@ -967,11 +973,24 @@ class ListingGenerator:
         if last_closing_idx != -1:
             candidate = candidate[: last_closing_idx + 1]
 
-        try:
-            json.loads(candidate)
-            return candidate
-        except Exception:
-            return None
+        def _attempt_load(text: str) -> str | None:
+            try:
+                json.loads(text)
+                return text
+            except json.JSONDecodeError as err:
+                # Trailing comma juste avant la fin du buffer : on la supprime et on reteste.
+                if "Expecting property name enclosed in double quotes" in str(err):
+                    trimmed = re.sub(r",\s*(?=[}\]]|$)", "", text)
+                    try:
+                        json.loads(trimmed)
+                        return trimmed
+                    except Exception:
+                        return None
+                return None
+            except Exception:
+                return None
+
+        return _attempt_load(candidate)
 
     @staticmethod
     def _strip_unclosed_code_fence(raw: str) -> str:
