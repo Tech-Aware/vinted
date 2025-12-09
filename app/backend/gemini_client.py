@@ -203,6 +203,7 @@ class GeminiClient:
             config_kwargs = {
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
+                "response_mime_type": "application/json",
             }
             if system_instruction:
                 config_kwargs["system_instruction"] = system_instruction
@@ -233,6 +234,7 @@ class GeminiClient:
             generation_config={
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
+                "response_mime_type": "application/json",
             },
         )
         return self._extract_text(response)
