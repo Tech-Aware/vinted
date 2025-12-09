@@ -966,6 +966,16 @@ def test_render_pull_tommy_femme_updates_hashtag_with_size() -> None:
     assert "#durin31tfXL" in hashtags
 
 
+def test_pull_tommy_femme_accepts_missing_color_gender_defects() -> None:
+    fields = ListingFields.from_dict(
+        {"fr_size": "M"}, template_name="template-pull-tommy-femme"
+    )
+
+    assert fields.color_main == "non précisé"
+    assert fields.gender == "non précisé"
+    assert fields.defects == "non précisé"
+
+
 def test_render_pull_tommy_femme_normalizes_extended_sizes() -> None:
     template = ListingTemplateRegistry().get_template("template-pull-tommy-femme")
 

@@ -198,11 +198,7 @@ class ListingFields:
 
         template_required_fields = {
             "template-jean-levis-femme": jeans_required_fields,
-            "template-pull-tommy-femme": (
-                "color_main",
-                "gender",
-                "defects",
-            ),
+            "template-pull-tommy-femme": (),
             "template-polaire-outdoor": (
                 "color_main",
                 "gender",
@@ -287,6 +283,10 @@ class ListingFields:
                 sku = ListingFields._normalize_polaire_sku(sku, brand)
             else:
                 sku = ""
+        elif template_normalized == "template-pull-tommy-femme":
+            color_main = color_main or "non précisé"
+            gender = gender or "non précisé"
+            defects = defects or "non précisé"
         is_cardigan = ListingFields._normalize_visibility_flag(
             data.get("is_cardigan"), default=False
         )
