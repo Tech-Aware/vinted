@@ -128,6 +128,22 @@ def _messages_to_payload(messages: Sequence[dict]) -> tuple[List[Any], str | Non
     return contents, system_instruction
 
 
+def _response_schema() -> dict[str, Any]:
+    """Schéma JSON minimal pour forcer une clé ``fields`` objet."""
+
+    return {
+        "type": "object",
+        "properties": {
+            "fields": {
+                "type": "object",
+                "additionalProperties": True,
+            }
+        },
+        "required": ["fields"],
+        "additionalProperties": True,
+    }
+
+
 class GeminiResponseError(RuntimeError):
     """Erreur de contenu Gemini destinée à l'affichage utilisateur."""
 
@@ -204,6 +220,7 @@ class GeminiClient:
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
                 "response_mime_type": "application/json",
+                "response_schema": _response_schema(),
             }
             if system_instruction:
                 config_kwargs["system_instruction"] = system_instruction
@@ -235,6 +252,7 @@ class GeminiClient:
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
                 "response_mime_type": "application/json",
+                "response_schema": _response_schema(),
             },
         )
         return self._extract_text(response)
