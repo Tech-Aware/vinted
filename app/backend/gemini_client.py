@@ -128,6 +128,89 @@ def _messages_to_payload(messages: Sequence[dict]) -> tuple[List[Any], str | Non
     return contents, system_instruction
 
 
+def _listing_json_schema() -> dict:
+    """Schéma minimal pour fiabiliser la sortie JSON des listings."""
+
+    number_or_null = {"anyOf": [{"type": "number"}, {"type": "null"}]}
+    string_or_null = {"anyOf": [{"type": "string"}, {"type": "null"}]}
+
+    fields_properties = {
+        "model": string_or_null,
+        "fr_size": string_or_null,
+        "us_w": string_or_null,
+        "us_l": string_or_null,
+        "fit_leg": string_or_null,
+        "rise_class": string_or_null,
+        "rise_measurement_cm": number_or_null,
+        "waist_measurement_cm": number_or_null,
+        "cotton_pct": string_or_null,
+        "polyester_pct": string_or_null,
+        "polyamide_pct": string_or_null,
+        "viscose_pct": string_or_null,
+        "elastane_pct": string_or_null,
+        "acrylic_pct": string_or_null,
+        "gender": string_or_null,
+        "color_main": string_or_null,
+        "defects": string_or_null,
+        "defect_tags": {"type": "array", "items": {"type": "string"}},
+        "size_label_visible": {"type": "boolean"},
+        "fabric_label_visible": {"type": "boolean"},
+        "sku": string_or_null,
+        "fabric_label_cut": {"type": "boolean"},
+        "is_cardigan": {"type": "boolean"},
+        "is_dress": {"type": "boolean"},
+        "wool_pct": string_or_null,
+        "cashmere_pct": string_or_null,
+        "nylon_pct": string_or_null,
+        "knit_pattern": string_or_null,
+        "made_in": string_or_null,
+        "brand": string_or_null,
+        "zip_style": string_or_null,
+        "feature_notes": string_or_null,
+        "technical_features": string_or_null,
+        "has_hood": {"type": "boolean"},
+        "neckline_style": string_or_null,
+        "special_logo": string_or_null,
+        "bust_flat_measurement_cm": number_or_null,
+        "length_measurement_cm": number_or_null,
+        "sleeve_measurement_cm": number_or_null,
+        "shoulder_measurement_cm": number_or_null,
+        "waist_flat_measurement_cm": number_or_null,
+        "hem_flat_measurement_cm": number_or_null,
+        "non_size_labels_visible": {"type": "boolean"},
+    }
+
+    return {
+        "type": "object",
+        "properties": {
+            "fields": {
+                "type": "object",
+                "properties": fields_properties,
+                "required": [
+                    "model",
+                    "fr_size",
+                    "us_w",
+                    "us_l",
+                    "fit_leg",
+                    "rise_class",
+                    "rise_measurement_cm",
+                    "waist_measurement_cm",
+                    "cotton_pct",
+                    "polyester_pct",
+                    "polyamide_pct",
+                    "viscose_pct",
+                    "elastane_pct",
+                    "gender",
+                    "color_main",
+                    "defects",
+                    "sku",
+                ],
+            }
+        },
+        "required": ["fields"],
+    }
+
+
 class GeminiResponseError(RuntimeError):
     """Erreur de contenu Gemini destinée à l'affichage utilisateur."""
 
@@ -204,11 +287,14 @@ class GeminiClient:
         if not contents:
             raise ValueError("Prompt vide pour Gemini")
 
+        json_schema = _listing_json_schema()
+
         if self._backend == "genai":
             config_kwargs = {
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
                 "response_mime_type": "application/json",
+                "response_json_schema": json_schema,
             }
             if system_instruction:
                 config_kwargs["system_instruction"] = system_instruction
@@ -242,6 +328,7 @@ class GeminiClient:
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
                 "response_mime_type": "application/json",
+                "response_schema": json_schema,
             },
         )
         return self._extract_text(response)
