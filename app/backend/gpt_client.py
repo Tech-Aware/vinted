@@ -882,9 +882,20 @@ class ListingGenerator:
                     end_index = idx
                     break
 
-        if end_index is None:
+        candidate = raw[start : end_index + 1] if end_index is not None else raw[start:]
+
+        # Si les accolades ne sont pas fermées, on rajoute les fermetures manquantes.
+        if brace_level > 0:
+            candidate = candidate.rstrip() + ("}" * brace_level)
+
+        # Supprime les virgules finales avant une fermeture pour éviter les JSONDecodeError.
+        candidate = re.sub(r",(\s*[}\]])", r"\1", candidate)
+
+        try:
+            json.loads(candidate)
+            return candidate
+        except Exception:
             return None
-        return raw[start : end_index + 1]
 
     @staticmethod
     def _coerce_text(value: object) -> str:
