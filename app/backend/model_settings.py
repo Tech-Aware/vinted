@@ -182,8 +182,12 @@ def apply_current_model(settings: ModelSettings) -> None:
         os.environ.pop("GOOGLE_API_KEY", None)
         os.environ.pop("GEMINI_API_KEY", None)
     elif entry.provider == "gemini":
-        os.environ["GOOGLE_API_KEY"] = entry.api_key
+        # L'API Gemini officielle recommande d'utiliser la variable GEMINI_API_KEY.
+        # On évite d'exposer GOOGLE_API_KEY pour ne pas déclencher le message
+        # "Both GOOGLE_API_KEY and GEMINI_API_KEY are set" et garantir que la
+        # bonne clé est sélectionnée côté SDK.
         os.environ["GEMINI_API_KEY"] = entry.api_key
+        os.environ.pop("GOOGLE_API_KEY", None)
         os.environ.pop("OPENAI_API_KEY", None)
         os.environ.pop("OPENAI_TEXT_MODEL", None)
         os.environ.pop("OPENAI_VISION_MODEL", None)

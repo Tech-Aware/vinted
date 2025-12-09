@@ -145,6 +145,11 @@ class GeminiClient:
         # Import paresseux pour permettre l'installation après le démarrage.
         global genai, types  # pragma: no cover - dépendance externe
         if not self.api_key:
+            import os
+
+            self.api_key = os.getenv("GEMINI_API_KEY") or ""
+
+        if not self.api_key:
             raise RuntimeError("Clé API Gemini manquante")
 
         if self._client is not None:
