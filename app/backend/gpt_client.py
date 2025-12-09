@@ -244,6 +244,8 @@ class ListingGenerator:
             content_to_parse = fenced_match.group(1).strip()
         else:
             content_to_parse = content.strip()
+        content_to_parse = self._strip_unclosed_code_fence(content_to_parse)
+
         if not content_to_parse:
             logger.error(
                 "Réponse textuelle vide renvoyée par le modèle, impossible de l'analyser"
@@ -905,6 +907,20 @@ class ListingGenerator:
             return candidate
         except Exception:
             return None
+
+    @staticmethod
+    def _strip_unclosed_code_fence(raw: str) -> str:
+        """Supprime une ouverture de bloc de code non fermée par le modèle.
+
+        Certaines réponses Gemini renvoient un préfixe ```json sans fermer le bloc,
+        ce qui rend le JSON illisible. On retire le préambule pour laisser le
+        réparateur JSON extraire correctement les accolades.
+        """
+
+        if not raw.startswith("```"):
+            return raw
+
+        return re.sub(r"^```[a-zA-Z0-9_-]*\s*", "", raw).rstrip()
 
     @staticmethod
     def _coerce_text(value: object) -> str:
