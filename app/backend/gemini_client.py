@@ -111,10 +111,20 @@ class GeminiClient:
     _client: Any | None = None
 
     def _ensure_client(self):
+        # Import paresseux pour permettre l'installation après le démarrage.
+        global genai, types  # pragma: no cover - dépendance externe
         if genai is None or types is None:
-            raise RuntimeError(
-                "Le package 'google-genai' est requis pour utiliser Gemini."
-            )
+            try:
+                from google import genai as genai_module  # type: ignore
+                from google.genai import types as genai_types  # type: ignore
+
+                genai = genai_module
+                types = genai_types
+            except Exception as exc:  # pragma: no cover - dépendance externe
+                raise GeminiResponseError(
+                    "Le package 'google-genai' est requis pour utiliser Gemini. "
+                    "Installez la dépendance via `pip install -r requirements.txt`."
+                ) from exc
         if not self.api_key:
             raise RuntimeError("Clé API Gemini manquante")
         if self._client is None:
