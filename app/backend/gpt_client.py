@@ -19,7 +19,7 @@ import os
 import re
 import unicodedata
 from dataclasses import dataclass, replace
-from typing import Iterable, List, Optional, Sequence
+from typing import Any, Iterable, List, Optional, Sequence
 
 import httpx
 
@@ -29,6 +29,7 @@ except ImportError:  # pragma: no cover - optional dependency
     OpenAI = None  # type: ignore
 
 from app.logger import get_logger
+from app.backend.gemini_client import GeminiClient, GeminiResponseError
 from app.backend.listing_fields import ListingFields
 from app.backend.templates import ListingTemplate
 
@@ -66,19 +67,23 @@ class ListingGenerator:
         *,
         model: Optional[str] = None,
         api_key: Optional[str] = None,
+        provider: str = "openai",
         temperature: float = 0.4,
         response_temperature: float = 0.3,
     ) -> None:
         self.model = model or os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.provider = provider
         self.temperature = self._validate_temperature(temperature)
         self.response_temperature = self._validate_temperature(response_temperature)
         self._client: Optional[OpenAI] = None
+        self._gemini_client: Optional[GeminiClient] = None
         logger.step(
             (
-                "ListingGenerator initialisé avec le modèle %s (annonces: %.2f, "
+                "ListingGenerator initialisé avec le modèle %s/%s (annonces: %.2f, "
                 "réponses clients: %.2f)"
             ),
+            self.provider,
             self.model,
             self.temperature,
             self.response_temperature,
@@ -121,7 +126,8 @@ class ListingGenerator:
         *,
         measurement_guidance: str | None = None,
     ) -> List[dict]:
-        logger.step("Construction du prompt pour l'API OpenAI")
+        provider_label = "Gemini" if self.provider == "gemini" else "OpenAI"
+        logger.step("Construction du prompt pour l'API %s", provider_label)
         images_list = list(encoded_images)
         system_content: List[dict] = [
             {
@@ -203,7 +209,8 @@ class ListingGenerator:
         manual_sku: Optional[str] = None,
         size_from_measurements: bool = False,
     ) -> ListingResult:
-        logger.step("Début de la génération d'annonce")
+        provider_label = "Gemini" if self.provider == "gemini" else "OpenAI"
+        logger.step("Début de la génération d'annonce (%s)", provider_label)
         encoded_images_list = list(encoded_images)
         measurement_guidance = self._build_measurement_guidance(
             template.name, size_from_measurements
@@ -218,9 +225,12 @@ class ListingGenerator:
             )
             response = self._create_response(messages, max_tokens=700)
         except Exception:
-            logger.exception("Échec de l'appel à l'API OpenAI")
+            provider_label = "Gemini" if self.provider == "gemini" else "OpenAI"
+            logger.exception("Échec de l'appel à l'API %s", provider_label)
             raise
-        logger.success("Réponse reçue depuis l'API OpenAI")
+
+        provider_label = "Gemini" if self.provider == "gemini" else "OpenAI"
+        logger.success("Réponse reçue depuis l'API %s", provider_label)
         content = self._extract_response_text(response)
         if not content:
             friendly_message = (
@@ -234,6 +244,14 @@ class ListingGenerator:
             content_to_parse = fenced_match.group(1).strip()
         else:
             content_to_parse = content.strip()
+        if not content_to_parse:
+            logger.error(
+                "Réponse textuelle vide renvoyée par le modèle, impossible de l'analyser"
+            )
+            raise ValueError(
+                "Réponse du modèle vide, merci de relancer la génération ou de changer de modèle"
+            )
+        fields_payload: dict[str, Any] | None = None
         logger.step("Analyse de la réponse JSON")
         try:
             payload = json.loads(content_to_parse)
@@ -244,32 +262,54 @@ class ListingGenerator:
                 fields_payload, template_name=template.name
             )
         except Exception as exc:
-            template_name = template.name or ""
-            if isinstance(exc, ValueError) and "SKU invalide" in str(exc):
-                if template_name.startswith("template-jean-levis"):
+            repaired_fields: ListingFields | None = None
+            repaired = self._repair_json_content(content_to_parse)
+            if repaired and repaired != content_to_parse:
+                try:
+                    payload = json.loads(repaired)
+                    fields_payload = payload.get("fields")
+                    if not isinstance(fields_payload, dict):
+                        raise ValueError(
+                            "Structure JSON invalide après réparation: clé 'fields' manquante ou incorrecte"
+                        )
                     logger.warning(
-                        "SKU Levi's invalide renvoyé par le modèle, application du fallback",
+                        "Réponse JSON réparée après tronquage ou bruit résiduel du modèle"
                     )
-                    sanitized_payload = dict(fields_payload)
-                    sanitized_payload["sku"] = ""
-                    fields = ListingFields.from_dict(
-                        sanitized_payload, template_name=template.name
+                    repaired_fields = ListingFields.from_dict(
+                        fields_payload, template_name=template.name
                     )
-                elif template_name == "template-polaire-outdoor":
-                    logger.warning(
-                        "SKU polaire invalide renvoyé par le modèle, suppression de la valeur",
-                    )
-                    sanitized_payload = dict(fields_payload)
-                    sanitized_payload["sku"] = ""
-                    fields = ListingFields.from_dict(
-                        sanitized_payload, template_name=template.name
-                    )
-            else:
-                logger.exception("Échec de l'analyse de la réponse JSON")
-                snippet = content_to_parse[:200]
-                raise ValueError(
-                    "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
-                ) from exc
+                except Exception:
+                    repaired_fields = None
+            if repaired_fields is not None:
+                fields = repaired_fields
+                exc = None  # type: ignore[assignment]
+            if exc is not None:
+                template_name = template.name or ""
+                if isinstance(exc, ValueError) and "SKU invalide" in str(exc):
+                    if template_name.startswith("template-jean-levis"):
+                        logger.warning(
+                            "SKU Levi's invalide renvoyé par le modèle, application du fallback",
+                        )
+                        sanitized_payload = dict(fields_payload)
+                        sanitized_payload["sku"] = ""
+                        fields = ListingFields.from_dict(
+                            sanitized_payload, template_name=template.name
+                        )
+                    elif template_name == "template-polaire-outdoor":
+                        logger.warning(
+                            "SKU polaire invalide renvoyé par le modèle, suppression de la valeur",
+                        )
+                        sanitized_payload = dict(fields_payload)
+                        sanitized_payload["sku"] = ""
+                        fields = ListingFields.from_dict(
+                            sanitized_payload, template_name=template.name
+                        )
+                else:
+                    logger.exception("Échec de l'analyse de la réponse JSON")
+                    snippet = content_to_parse[:200]
+                    raise ValueError(
+                        "Réponse du modèle invalide, impossible de parser le JSON (extrait: %s)" % snippet
+                    ) from exc
 
         manual_sku_provided = bool(manual_sku and manual_sku.strip())
 
@@ -694,7 +734,18 @@ class ListingGenerator:
         return self._extract_response_text(response)
 
     def _create_response(self, messages: Sequence[dict], *, max_tokens: int):
-        """Call OpenAI using either the new responses API or chat completions."""
+        """Appelle le fournisseur approprié (OpenAI ou Gemini)."""
+
+        if self.provider == "gemini":
+            client = self._gemini_client or GeminiClient(self.model, self.api_key or "")
+            self._gemini_client = client
+            try:
+                return client.generate(
+                    messages, max_tokens=max_tokens, temperature=self.temperature
+                )
+            except GeminiResponseError as exc:
+                logger.error("Réponse Gemini inutilisable : %s", exc)
+                raise
 
         client = self.client
         if hasattr(client, "responses"):
@@ -738,6 +789,9 @@ class ListingGenerator:
         """Extract textual content from the OpenAI response payload."""
 
         parts: List[str] = []
+
+        if isinstance(response, str):
+            return response.strip()
 
         def _append_if_text(value: object) -> None:
             text = self._coerce_text(value)
@@ -787,6 +841,70 @@ class ListingGenerator:
                 _append_if_text(getattr(response, "output_text", None))
 
         return "".join(part for part in parts if part).strip()
+
+    @staticmethod
+    def _repair_json_content(raw: str) -> str | None:
+        """Tente d'extraire un JSON équilibré depuis une réponse bruitée.
+
+        Cette fonction repère la première accolade ouvrante, parcours le texte
+        en suivant l'équilibrage des accolades hors des chaînes de caractères
+        et renvoie le segment complet le plus court qui se ferme correctement.
+        Elle permet de supprimer du bruit résiduel ou des troncatures après la
+        dernière accolade fermante.
+        """
+
+        start = raw.find("{")
+        if start == -1:
+            return None
+
+        brace_level = 0
+        in_string = False
+        escape = False
+        end_index = None
+
+        for idx, ch in enumerate(raw[start:], start=start):
+            if escape:
+                escape = False
+                continue
+            if ch == "\\":
+                escape = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == "{":
+                brace_level += 1
+            elif ch == "}":
+                brace_level -= 1
+                if brace_level == 0:
+                    end_index = idx
+                    break
+
+        candidate = raw[start : end_index + 1] if end_index is not None else raw[start:]
+
+        # Si les accolades ne sont pas fermées, on rajoute les fermetures manquantes.
+        if brace_level > 0:
+            candidate = candidate.rstrip() + ("}" * brace_level)
+
+        # Supprime les virgules finales avant une fermeture pour éviter les JSONDecodeError.
+        candidate = re.sub(r",(\s*[}\]])", r"\1", candidate)
+
+        # Ajoute des guillemets manquants sur les clés non citées (telles que `fields:`)
+        # pour tolérer des sorties pseudo-YAML du modèle.
+        candidate = re.sub(r"([,{]\s*)([A-Za-z0-9_-]+)\s*:", r'\1"\2":', candidate)
+
+        # Nettoie quelques artefacts courants (`,)` ou parenthèses isolées) générés par
+        # certaines réponses Gemini tronquées.
+        candidate = re.sub(r",\s*\)", "", candidate)
+        candidate = re.sub(r"\)\s*(?=[}\]]|$)", "", candidate)
+
+        try:
+            json.loads(candidate)
+            return candidate
+        except Exception:
+            return None
 
     @staticmethod
     def _coerce_text(value: object) -> str:
