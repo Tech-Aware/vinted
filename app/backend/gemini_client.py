@@ -216,16 +216,14 @@ class GeminiClient:
             )
             return self._extract_text(response)
 
-        # Repli google-generativeai (API proche mais sans config objet dédié)
-        # Ce SDK attend une liste de contenus structurés avec un rôle et des parts.
-        combined_parts: List[Any] = []
-
+        # Repli google-generativeai (API "contents" comme dans la doc officielle)
+        payload_parts: List[Any] = []
         if system_instruction:
-            combined_parts.append(system_instruction)
-        combined_parts.extend(contents)
+            payload_parts.append(system_instruction)
+        payload_parts.extend(contents)
 
         safe_parts: List[Any] = []
-        for part in combined_parts:
+        for part in payload_parts:
             if hasattr(part, "to_dict"):
                 safe_parts.append(part.to_dict())
             elif isinstance(part, dict):
@@ -233,10 +231,8 @@ class GeminiClient:
             else:
                 safe_parts.append(part)
 
-        payload = [{"role": "user", "parts": safe_parts}]
-
         response = client.generate_content(
-            payload,
+            safe_parts,
             generation_config={
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
