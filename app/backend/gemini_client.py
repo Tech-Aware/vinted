@@ -19,9 +19,11 @@ logger = get_logger(__name__)
 try:  # pragma: no cover - dépendance externe
     from google import genai
     from google.genai import types
+    GENAI_AVAILABLE = True
 except Exception:  # pragma: no cover - dépendance externe
     genai = None  # type: ignore
     types = None  # type: ignore
+    GENAI_AVAILABLE = False
 
 
 _DATA_URL_RE = re.compile(r"^data:(?P<mime>[^;]+);base64,(?P<data>.+)$")
@@ -54,7 +56,8 @@ def _data_url_to_part(url: str) -> Any:
         except Exception:
             pass
 
-    return {"inline_data": {"mime_type": mime_type, "data": payload}}
+    b64_payload = base64.b64encode(payload).decode("utf-8")
+    return {"inline_data": {"mime_type": mime_type, "data": b64_payload}}
 
 
 def _messages_to_payload(messages: Sequence[dict]) -> tuple[List[Any], str | None]:
@@ -109,10 +112,18 @@ class GeminiClient:
     model: str
     api_key: str
     _client: Any | None = None
+    _backend: str | None = None  # "genai" ou "generativeai"
 
     def _ensure_client(self):
         # Import paresseux pour permettre l'installation après le démarrage.
         global genai, types  # pragma: no cover - dépendance externe
+        if not self.api_key:
+            raise RuntimeError("Clé API Gemini manquante")
+
+        if self._client is not None:
+            return self._client
+
+        # Tentative d'utilisation du SDK google-genai (recommandé)
         if genai is None or types is None:
             try:
                 from google import genai as genai_module  # type: ignore
@@ -120,16 +131,33 @@ class GeminiClient:
 
                 genai = genai_module
                 types = genai_types
-            except Exception as exc:  # pragma: no cover - dépendance externe
-                raise GeminiResponseError(
-                    "Le package 'google-genai' est requis pour utiliser Gemini. "
-                    "Installez la dépendance via `pip install -r requirements.txt`."
-                ) from exc
-        if not self.api_key:
-            raise RuntimeError("Clé API Gemini manquante")
-        if self._client is None:
+                self._backend = "genai"
+                self._client = genai.Client(api_key=self.api_key)
+                return self._client
+            except Exception as exc_genai:  # pragma: no cover - dépendance externe
+                logger.warning(
+                    "Import google-genai impossible, tentative avec google-generativeai : %s",
+                    exc_genai,
+                )
+
+        if genai is not None and types is not None:
+            self._backend = "genai"
             self._client = genai.Client(api_key=self.api_key)
-        return self._client
+            return self._client
+
+        # Repli sur google-generativeai (compatible Python 3.9)
+        try:  # pragma: no cover - dépendance externe
+            import google.generativeai as genai_legacy  # type: ignore
+
+            genai_legacy.configure(api_key=self.api_key)
+            self._backend = "generativeai"
+            self._client = genai_legacy.GenerativeModel(self.model)
+            return self._client
+        except Exception as exc_legacy:  # pragma: no cover - dépendance externe
+            raise GeminiResponseError(
+                "Le package 'google-genai' est requis pour utiliser Gemini. "
+                "Installez la dépendance via `pip install -r requirements.txt`."
+            ) from exc_legacy
 
     def generate(
         self, messages: Sequence[dict], *, max_tokens: int, temperature: float
@@ -141,18 +169,41 @@ class GeminiClient:
         if not contents:
             raise ValueError("Prompt vide pour Gemini")
 
-        config_kwargs = {
-            "temperature": temperature,
-            "max_output_tokens": max_tokens,
-        }
-        if system_instruction:
-            config_kwargs["system_instruction"] = system_instruction
+        if self._backend == "genai":
+            config_kwargs = {
+                "temperature": temperature,
+                "max_output_tokens": max_tokens,
+            }
+            if system_instruction:
+                config_kwargs["system_instruction"] = system_instruction
 
-        config = types.GenerateContentConfig(**config_kwargs)
-        response = client.models.generate_content(
-            model=self.model,
-            contents=contents,
-            config=config,
+            config = types.GenerateContentConfig(**config_kwargs)
+            response = client.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=config,
+            )
+            return self._extract_text(response)
+
+        # Repli google-generativeai (API proche mais sans config objet dédié)
+        if system_instruction:
+            contents = [system_instruction] + contents
+
+        safe_contents: List[Any] = []
+        for part in contents:
+            if hasattr(part, "to_dict"):
+                safe_contents.append(part.to_dict())
+            elif isinstance(part, dict):
+                safe_contents.append(part)
+            else:
+                safe_contents.append(part)
+
+        response = client.generate_content(
+            safe_contents,
+            generation_config={
+                "temperature": temperature,
+                "max_output_tokens": max_tokens,
+            },
         )
         return self._extract_text(response)
 
