@@ -203,8 +203,6 @@ class GeminiClient:
             config_kwargs = {
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
-                # Forcer une sortie JSON explicite pour fiabiliser le parsing aval.
-                "response_mime_type": "application/json",
             }
             if system_instruction:
                 config_kwargs["system_instruction"] = system_instruction
@@ -235,8 +233,6 @@ class GeminiClient:
             generation_config={
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
-                # Demander explicitement du JSON pour limiter le bruit textuel.
-                "response_mime_type": "application/json",
             },
         )
         return self._extract_text(response)

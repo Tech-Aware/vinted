@@ -244,6 +244,13 @@ class ListingGenerator:
             content_to_parse = fenced_match.group(1).strip()
         else:
             content_to_parse = content.strip()
+        if not content_to_parse:
+            logger.error(
+                "Réponse textuelle vide renvoyée par le modèle, impossible de l'analyser"
+            )
+            raise ValueError(
+                "Réponse du modèle vide, merci de relancer la génération ou de changer de modèle"
+            )
         fields_payload: dict[str, Any] | None = None
         logger.step("Analyse de la réponse JSON")
         try:
