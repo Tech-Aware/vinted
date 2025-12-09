@@ -6,7 +6,7 @@ import base64
 import re
 from dataclasses import dataclass
 import inspect
-from typing import List, Sequence
+from typing import Any, List, Sequence
 
 from app.logger import get_logger
 
@@ -65,53 +65,61 @@ except ImportError:  # pragma: no cover - dépendance optionnelle
 _DATA_URL_RE = re.compile(r"^data:(?P<mime>[^;]+);base64,(?P<data>.+)$")
 
 
-def _data_url_to_inline_data(url: str) -> dict:
+def _data_url_to_inline_data(url: str) -> Any:
     match = _DATA_URL_RE.match(url)
     if not match:
         raise ValueError("URL d'image invalide pour Gemini")
 
     mime_type = match.group("mime")
     payload = base64.b64decode(match.group("data"))
+
+    # Utilise la fabrique officielle du SDK si disponible pour éviter tout écart
+    # de formatage sur les parties d'images.
+    try:  # pragma: no cover - dépendance externe
+        if genai is not None and hasattr(genai, "types"):
+            return genai.types.Part.from_bytes(data=payload, mime_type=mime_type)
+    except Exception:
+        pass
+
     return {"inline_data": {"mime_type": mime_type, "data": payload}}
 
 
-def _messages_to_payload(messages: Sequence[dict]) -> tuple[List[dict], dict | None]:
-    """Convertit les messages internes en payload Gemini (contents + system)."""
+def _messages_to_payload(messages: Sequence[dict]) -> tuple[List[Any], dict | None]:
+    """Convertit les messages internes en payload Gemini (contents + system).
 
-    contents: List[dict] = []
-    system_parts: List[dict] = []
+    L'API Gemini accepte une liste de parties (texte, images) et éventuellement
+    une instruction système. On privilégie des parties natives du SDK (Part)
+    lorsqu'elles sont disponibles pour les images.
+    """
+
+    contents: List[Any] = []
+    system_parts: List[Any] = []
 
     for message in messages:
         role = message.get("role") or "user"
-        parts: List[dict] = []
 
         for content in message.get("content", []):
             content_type = content.get("type") if isinstance(content, dict) else None
 
             if isinstance(content, str):
+                target = system_parts if role == "system" else contents
                 if content:
-                    parts.append({"text": content})
+                    target.append(content)
                 continue
 
             if content_type in {"input_text", "text"}:
                 text = content.get("text") or ""
                 if text:
-                    parts.append({"text": text})
+                    target = system_parts if role == "system" else contents
+                    target.append(text)
             elif content_type in {"input_image", "image_url"}:
                 image_url = content.get("image_url") or ""
                 try:
-                    parts.append(_data_url_to_inline_data(image_url))
+                    part = _data_url_to_inline_data(image_url)
+                    target = system_parts if role == "system" else contents
+                    target.append(part)
                 except ValueError:
                     logger.warning("Image ignorée (format non supporté par Gemini)")
-
-        if role == "system":
-            system_parts.extend(parts)
-            continue
-
-        # Chaque message devient une entrée role + parts si au moins une part est présente
-        if parts:
-            provider_role = "model" if role == "assistant" else "user"
-            contents.append({"role": provider_role, "parts": parts})
 
     system_instruction = {"parts": system_parts} if system_parts else None
     return contents, system_instruction
@@ -217,12 +225,9 @@ class GeminiClient:
             params["system_instruction"] = system_instruction
         elif system_instruction and system_instruction.get("parts"):
             # Repli pour les versions du SDK qui ne supportent pas system_instruction :
-            # on injecte l'instruction système comme premier message de contenu
-            # en la présentant comme une requête utilisateur (Gemini n'accepte que
-            # les rôles user/model).
-            contents = [
-                {"role": "user", "parts": system_instruction.get("parts", [])}
-            ] + contents
+            # on préfixe le prompt avec les parties système pour conserver
+            # l'intention initiale.
+            contents = list(system_instruction.get("parts", [])) + contents
 
         response = model.generate_content(contents, **params)
         return self._extract_text(response)
