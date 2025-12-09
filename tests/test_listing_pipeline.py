@@ -71,6 +71,7 @@ def test_json_instruction_for_pull_tommy_mentions_new_fields() -> None:
     assert "N'invente jamais de matière" in instruction
     assert "dans le titre" in instruction.lower()
     assert "la génération échouera" in instruction
+    assert "Ne fournis pas de champ \"model\"" in instruction
 
 
 def test_listing_fields_from_dict_requires_all_keys() -> None:

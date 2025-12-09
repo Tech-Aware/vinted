@@ -651,7 +651,6 @@ class ListingFields:
                 Réponds EXCLUSIVEMENT avec un JSON valide contenant une clé 'fields' structurée comme suit :
                 {{
                   \"fields\": {{
-                    \"model\": \"code produit lisible si présent ; renvoie \"\" si l'information n'est pas certaine\",
                     \"fr_size\": \"taille affichée (XS, S, M, etc.) ; renvoie \"\" si non lisible\",
                     \"us_w\": \"laisse ce champ vide pour les pulls (renvoie \"\")\",
                     \"us_l\": \"laisse ce champ vide pour les pulls (renvoie \"\")\",
@@ -690,6 +689,7 @@ class ListingFields:
                   }}
                 }}
                 N'inclus aucun autre texte hors de ce JSON. Les valeurs doivent être au format chaîne, sauf les booléens qui doivent être true/false.
+                Ne fournis pas de champ \"model\" pour les pulls Tommy : cette information n'est pas pertinente ; laisse-le absent ou vide.
                 Ne remplis jamais un champ avec une valeur estimée ou supposée ; retourne la chaîne vide quand une information est manquante ou incertaine.
                 N'invente jamais de matière : si une fibre n'est pas clairement indiquée ou que la ligne est illisible, renvoie la chaîne vide pour ce champ.
                 Renseigne size_label_visible et fabric_label_visible à false par défaut et ne les mets à true que si l'étiquette correspondante est parfaitement lisible.
