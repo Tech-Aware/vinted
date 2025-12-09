@@ -417,3 +417,26 @@ def test_manual_polaire_sku_without_digits_requests_user(
     fields = captured.get("fields")
     assert fields is not None
     assert fields.sku == ""
+
+
+def test_parse_model_response_repairs_truncated_payload() -> None:
+    generator = ListingGenerator(model="fake", api_key="test")
+
+    broken = '{"fields": {"model": "", "fr_size": "XS",'
+
+    parsed = generator._parse_model_response(broken)
+
+    assert parsed["fields"]["fr_size"] == "XS"
+
+
+def test_parse_model_response_dumps_when_no_brace(tmp_path: Path) -> None:
+    generator = ListingGenerator(model="fake", api_key="test")
+    dump_file = tmp_path / "dump.txt"
+    generator._DEBUG_RESPONSE_FILE = dump_file
+
+    with pytest.raises(ValueError, match="Aucun objet JSON trouvé"):
+        generator._parse_model_response("Réponse libre sans JSON")
+
+    assert dump_file.exists()
+    content = dump_file.read_text(encoding="utf-8")
+    assert "Réponse libre sans JSON" in content

@@ -1534,7 +1534,7 @@ def render_template_polaire_outdoor(fields: ListingFields) -> Tuple[str, str]:
     size_label_missing_message = "Étiquette de taille non visible sur les photos."
     composition_label_missing_message = "Étiquette de composition non visible sur les photos."
     composition_label_cut_message = "Étiquette de composition coupée pour plus de confort."
-    combined_label_missing_message = "Étiquettes coupées pour plus de confort."
+    combined_label_missing_message = "Étiquettes de taille et composition non visibles sur les photos."
     combined_label_cut_message = (
         "Étiquettes de taille et composition coupées pour plus de confort."
     )
