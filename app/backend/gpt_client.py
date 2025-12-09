@@ -844,6 +844,13 @@ class ListingGenerator:
         return "".join(part for part in parts if part).strip()
 
     def _parse_model_response(self, raw_content: str) -> dict[str, Any]:
+        if "{" not in raw_content:
+            dump_path = self._dump_failed_response(raw_content, "", None, None)
+            raise ValueError(
+                "Aucun objet JSON trouvé dans la réponse du modèle (aucune accolade détectée). "
+                f"Détails sauvegardés dans {dump_path}"
+            )
+
         candidate = self._extract_json_candidate(raw_content)
 
         attempts: list[str] = [candidate]
@@ -871,12 +878,43 @@ class ListingGenerator:
 
     @staticmethod
     def _extract_json_candidate(raw: str) -> str:
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        if not match:
+        start = raw.find("{")
+        if start == -1:
             raise ValueError(
                 "Aucun objet JSON trouvé dans la réponse du modèle (aucune accolade détectée)."
             )
-        return match.group(0).strip()
+
+        brace_level = 0
+        in_string = False
+        escape = False
+        end_index = None
+
+        for idx, ch in enumerate(raw[start:], start=start):
+            if escape:
+                escape = False
+                continue
+            if ch == "\\":
+                escape = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == "{":
+                brace_level += 1
+            elif ch == "}":
+                brace_level -= 1
+                if brace_level == 0:
+                    end_index = idx
+                    break
+
+        if end_index is not None:
+            return raw[start : end_index + 1].strip()
+
+        # Aucun crochet fermant : on renvoie depuis la première accolade pour laisser
+        # le réparateur compléter le JSON.
+        return raw[start:].strip()
 
     def _dump_failed_response(
         self,
